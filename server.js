@@ -44,33 +44,50 @@ function requireAuth(req, res, next) {
     if (req.session.userId) {
         next();
     } else {
-        res.redirect('/');
+        // Si es una petición de API, devolver JSON
+        if (req.path.startsWith('/api/')) {
+            return res.status(401).json({ error: 'No autorizado' });
+        }
+        // Si es una página, redirigir
+        res.redirect('/login');
     }
 }
 
 // Rutas
 
-// Página principal (login)
+// Página principal (índice)
 app.get('/', (req, res) => {
-    if (req.session.userId) {
-        res.redirect('/dashboard');
-    } else {
-        res.sendFile(path.join(__dirname, 'public', 'login.html'));
-    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Página de login
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
 // Página de registro
 app.get('/register', (req, res) => {
-    if (req.session.userId) {
-        res.redirect('/dashboard');
-    } else {
-        res.sendFile(path.join(__dirname, 'public', 'register.html'));
-    }
+    res.sendFile(path.join(__dirname, 'public', 'register.html'));
 });
 
-// Dashboard (área protegida)
-app.get('/dashboard', requireAuth, (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+// API para iniciar un tour
+app.post('/api/start-tour', requireAuth, (req, res) => {
+    const { tourType } = req.body;
+    
+    if (!tourType) {
+        return res.status(400).json({ error: 'Tipo de tour requerido' });
+    }
+
+    // Aquí se integraría con el sistema del robot
+    // Por ahora simulamos el inicio del tour
+    const tourId = Math.random().toString(36).substr(2, 9);
+    
+    res.json({ 
+        success: true, 
+        message: `Tour ${tourType} iniciado exitosamente`,
+        tourId: tourId,
+        startTime: new Date().toISOString()
+    });
 });
 
 // API para login
@@ -78,16 +95,17 @@ app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-        return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+        return res.status(400).json({ error: 'Usuario/Email y contraseña son requeridos' });
     }
 
-    db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
+    // Buscar por username o email
+    db.get('SELECT * FROM users WHERE username = ? OR email = ?', [username, username], async (err, user) => {
         if (err) {
             return res.status(500).json({ error: 'Error en la base de datos' });
         }
 
         if (!user) {
-            return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+            return res.status(401).json({ error: 'Usuario/Email o contraseña incorrectos' });
         }
 
         try {
@@ -97,7 +115,7 @@ app.post('/api/login', (req, res) => {
                 req.session.username = user.username;
                 res.json({ success: true, message: 'Login exitoso' });
             } else {
-                res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+                res.status(401).json({ error: 'Usuario/Email o contraseña incorrectos' });
             }
         } catch (error) {
             res.status(500).json({ error: 'Error al verificar contraseña' });
@@ -154,6 +172,8 @@ app.post('/api/logout', (req, res) => {
         if (err) {
             return res.status(500).json({ error: 'Error al cerrar sesión' });
         }
+        // Limpiar la cookie de sesión
+        res.clearCookie('connect.sid');
         res.json({ success: true, message: 'Sesión cerrada' });
     });
 });

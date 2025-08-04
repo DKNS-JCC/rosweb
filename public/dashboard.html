@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - WebApp</title>
+    <link rel="icon" type="image/x-icon" href="icon.ico">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <div class="dashboard">
             <div class="header">
-                <h1>Dashboard</h1>
+                <div class="header-left">
+                    <img src="icon.ico" alt="Logo" class="header-logo">
+                    <h1>Dashboard</h1>
+                </div>
                 <button id="logoutBtn" class="btn btn-secondary">Cerrar Sesión</button>
             </div>
             
@@ -45,11 +49,38 @@
     </div>
 
     <script>
+        // Verificar autenticación al cargar la página
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/user');
+                if (response.status === 401 || response.status === 403) {
+                    // No autenticado, redirigir al login
+                    window.location.href = '/login';
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                // Error de red o servidor, redirigir por seguridad
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
         // Cargar información del usuario al cargar la página
         window.addEventListener('load', async () => {
+            // Primero verificar autenticación
+            const isAuthenticated = await checkAuth();
+            if (!isAuthenticated) return;
+
             try {
                 const response = await fetch('/api/user');
                 const userData = await response.json();
+
+                if (userData.error) {
+                    // Error en la respuesta, posiblemente no autenticado
+                    window.location.href = '/login';
+                    return;
+                }
 
                 if (userData.id) {
                     document.getElementById('userDetails').innerHTML = `
@@ -61,8 +92,14 @@
                 }
             } catch (error) {
                 console.error('Error cargando datos del usuario:', error);
+                window.location.href = '/login';
             }
         });
+
+        // Verificación periódica de sesión (cada 30 segundos)
+        setInterval(async () => {
+            await checkAuth();
+        }, 30000);
 
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', async () => {
@@ -78,9 +115,8 @@
                 if (data.success) {
                     messageDiv.textContent = 'Sesión cerrada. Redirigiendo...';
                     messageDiv.className = 'message success';
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
+                    // Forzar recarga completa para limpiar cualquier estado
+                    window.location.replace('/login');
                 } else {
                     messageDiv.textContent = 'Error al cerrar sesión';
                     messageDiv.className = 'message error';

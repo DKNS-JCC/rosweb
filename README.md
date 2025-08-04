@@ -5,13 +5,15 @@ Una aplicación web básica con sistema de autenticación usando Node.js, Expres
 ## Características
 
 - ✅ Sistema de registro de usuarios
-- ✅ Login con validación de credenciales
+- ✅ Login con email o nombre de usuario
 - ✅ Contraseñas hasheadas con bcrypt
 - ✅ Sesiones de usuario
 - ✅ Base de datos SQLite
 - ✅ Dashboard protegido
 - ✅ Diseño responsive
 - ✅ Validación de formularios
+- ✅ Logo corporativo integrado
+- ✅ Favicon personalizado
 
 ## Requisitos
 
@@ -44,7 +46,9 @@ rosweb/
 ├── package.json          # Dependencias y scripts
 ├── server.js             # Servidor Express principal
 ├── database.db           # Base de datos SQLite (se crea automáticamente)
+├── icon.ico              # Logo de la aplicación
 ├── public/               # Archivos estáticos
+│   ├── icon.ico          # Logo accesible desde el frontend
 │   ├── login.html        # Página de login
 │   ├── register.html     # Página de registro
 │   ├── dashboard.html    # Dashboard (área protegida)
@@ -55,7 +59,7 @@ rosweb/
 ## Uso
 
 1. **Registro**: Ve a `/register` para crear una nueva cuenta
-2. **Login**: Inicia sesión en la página principal `/`
+2. **Login**: Inicia sesión en `/login` usando tu nombre de usuario o email
 3. **Dashboard**: Accede al área protegida después del login
 
 ## API Endpoints

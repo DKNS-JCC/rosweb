@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>artTEC</title>
+    <link rel="icon" type="image/x-icon" href="icon.ico">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="index-container">
+        <!-- Barra superior con estado de sesión -->
+        <div class="session-bar" id="sessionBar" style="display: none;">
+            <div class="container">
+                <div class="session-info">
+                    <span class="welcome-text">Bienvenido, <span id="userName"></span></span>
+                    <button id="logoutBtn" class="btn btn-secondary btn-small">Cerrar Sesión</button>
+                </div>
+            </div>
+        </div>
+
+        <header class="hero-section">
+            <div class="hero-content">
+                <div class="logo-container">
+                    <img src="icon.ico" alt="artTEC Logo" class="hero-logo">
+                </div>
+                <h1>artTEC</h1>
+                <p class="hero-subtitle">Descubre el arte del pasado con la tecnología del futuro</p>
+                <p class="hero-description">
+                    Descubre el arte como nunca antes. Nuestros guías robóticos te acompañan 
+                    en tours personalizados por las mejores obras y exposiciones.
+                </p>
+                <div class="hero-buttons" id="heroButtons">
+                    <a href="/login" class="btn btn-primary btn-large">Iniciar Sesión</a>
+                    <a href="/register" class="btn btn-outline">Registrarse</a>
+                </div>
+                
+                <!-- Flecha indicadora de más contenido -->
+                <div class="scroll-indicator">
+                    <div class="scroll-arrow">
+                        <span>Ver tours disponibles</span>
+                        <div class="arrow-down">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <section class="tours-section" id="tours">
+            <div class="container">
+                <h2>Tours Disponibles</h2>
+                <div class="tours-grid">
+                    <div class="tour-card">
+                        <div class="tour-icon">🎨</div>
+                        <h3>Obras de Da Vinci</h3>
+                        <p>Sumérgete en el genio renacentista. Descubre los secretos detrás de La Mona Lisa, La Última Cena y otras obras maestras.</p>
+                        <div class="tour-info">
+                            <span class="duration">⏱️ 45 minutos</span>
+                            <span class="languages">🌍 Español, Inglés, Francés</span>
+                        </div>
+                        <button class="btn btn-primary tour-btn" data-tour="da-vinci">
+                             Comenzar Tour
+                        </button>
+                    </div>
+                    <div class="tour-card">
+                        <div class="tour-icon">🏛️</div>
+                        <h3>Arte Renacentista</h3>
+                        <p>Un viaje por el Renacimiento italiano. Desde Botticelli hasta Miguel Ángel y de Florencia a Roma, conoce la época dorada del arte.</p>
+                        <div class="tour-info">
+                            <span class="duration">⏱️ 60 minutos</span>
+                            <span class="languages">🌍 Español, Inglés</span>
+                        </div>
+                        <button class="btn btn-primary tour-btn" data-tour="renacimiento">
+                             Comenzar Tour
+                        </button>
+                    </div>
+                    <div class="tour-card">
+                        <div class="tour-icon">🖼️</div>
+                        <h3>Impresionismo Francés</h3>
+                        <p>Explora la luz y el color con Monet, Renoir y Degas. Una experiencia sensorial única del arte impresionista. Disponible en Francés para mayor inmersión.</p>
+                        <div class="tour-info">
+                            <span class="duration">⏱️ 50 minutos</span>
+                            <span class="languages">🌍 Español, Francés</span>
+                        </div>
+                        <button class="btn btn-primary tour-btn" data-tour="impresionismo">
+                             Comenzar Tour
+                        </button>
+                    </div>
+                    <div class="tour-card">
+                        <div class="tour-icon">🎭</div>
+                        <h3>Arte Contemporáneo</h3>
+                        <p>Descubre las corrientes más actuales del arte. Desde Picasso hasta las instalaciones más modernas.</p>
+                        <div class="tour-info">
+                            <span class="duration">⏱️ 40 minutos</span>
+                            <span class="languages">🌍 Español, Inglés, Alemán</span>
+                        </div>
+                        <button class="btn btn-primary tour-btn" data-tour="contemporaneo">
+                             Comenzar Tour
+                        </button>
+                    </div>
+                    <div class="tour-card">
+                        <div class="tour-icon">👑</div>
+                        <h3>Arte Real Español</h3>
+                        <p>Recorre la historia de España a través del arte. Desde Velázquez hasta Goya, conoce nuestro patrimonio.</p>
+                        <div class="tour-info">
+                            <span class="duration">⏱️ 55 minutos</span>
+                            <span class="languages">🌍 Español, Inglés</span>
+                        </div>
+                        <button class="btn btn-primary tour-btn" data-tour="arte-espanol">
+                             Comenzar Tour
+                        </button>
+                    </div>
+                    <div class="tour-card">
+                        <div class="tour-icon">🌟</div>
+                        <h3>Tour Familiar</h3>
+                        <p>Perfecto para niños y familias. Arte explicado de forma divertida con juegos y actividades interactivas.</p>
+                        <div class="tour-info">
+                            <span class="duration">⏱️ 35 minutos</span>
+                            <span class="languages">🌍 Español, Inglés</span>
+                        </div>
+                        <button class="btn btn-primary tour-btn" data-tour="familiar">
+                             Comenzar Tour
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-it-works">
+            <div class="container">
+                <h2>¿Cómo Funciona?</h2>
+                <div class="steps-grid">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <h3>Elige tu Tour</h3>
+                        <p>Selecciona el recorrido que más te interese: Da Vinci, Renacimiento, Impresionismo o muchos más.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <h3>Reserva tu Horario</h3>
+                        <p>Escoge el día y la hora que mejor te convenga. Los tours están disponibles todos los días.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <h3>Conoce a tu Guía</h3>
+                        <p>Tu guía robótico personal te estará esperando en la entrada del museo con toda la información.</p>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <h3>Disfruta la Experiencia</h3>
+                        <p>Sumérgete en el arte con explicaciones detalladas, curiosidades y una experiencia única.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="benefits-section">
+            <div class="container">
+                <h2>¿Por qué elegir artTEC?</h2>
+                <div class="benefits-grid">
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🎯</div>
+                        <h3>Personalizado</h3>
+                        <p>Tours adaptados a tus intereses y tiempo disponible</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">🌍</div>
+                        <h3>Multiidioma</h3>
+                        <p>Disponible en español, inglés, francés y más idiomas</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">👥</div>
+                        <h3>Para Todos</h3>
+                        <p>Experiencias para adultos, niños y familias</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon">📱</div>
+                        <h3>Interactivo</h3>
+                        <p>Información multimedia y experiencias inmersivas</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta-section">
+            <div class="container">
+                <h2>¿Listo para descubrir el arte?</h2>
+                <p>Únete a miles de visitantes que ya han disfrutado de una experiencia única con nuestros guías del futuro.</p>
+                <div class="cta-buttons">
+                    <a href="/register" class="btn btn-primary btn-large">Reservar Ahora</a>
+                    <a href="tel:+34900123456" class="btn btn-outline">Llamar: 900 123 456</a>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-section">
+                        <img src="icon.ico" alt="Logo" class="footer-logo">
+                        <p>Descubre el arte del pasado con la tecnología del futuro.</p>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Tours</h4>
+                        <ul>
+                            <li><a href="#tours">Da Vinci</a></li>
+                            <li><a href="#tours">Renacimiento</a></li>
+                            <li><a href="#tours">Impresionismo</a></li>
+                            <li><a href="#tours">Tour Familiar</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Información</h4>
+                        <ul>
+                            <li><a href="#horarios">Horarios</a></li>
+                            <li><a href="#precios">Precios</a></li>
+                            <li><a href="#contacto">Contacto</a></li>
+                            <li><a href="#faq">Preguntas</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Contacto</h4>
+                        <ul>
+                            <li>📞 900 123 456</li>
+                            <li>📧 info@arttec.com</li>
+                            <li>📍 Facultad de ciencias</li>
+                            <li>🕒 9:00 - 18:00</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="footer-bottom">
+                    <p>&copy; 2025 artTEC. Todos los derechos reservados.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Variables globales
+        let isLoggedIn = false;
+        let currentUser = null;
+
+        // Verificar estado de sesión al cargar la página
+        window.addEventListener('load', async () => {
+            await checkSession();
+        });
+
+        // Verificar si hay una sesión activa
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/user');
+                if (response.ok) {
+                    const userData = await response.json();
+                    if (userData.id) {
+                        showLoggedInState(userData);
+                    } else {
+                        showLoggedOutState();
+                    }
+                } else {
+                    showLoggedOutState();
+                }
+            } catch (error) {
+                showLoggedOutState();
+            }
+        }
+
+        // Mostrar estado cuando el usuario está logueado
+        function showLoggedInState(user) {
+            isLoggedIn = true;
+            currentUser = user;
+            
+            // Mostrar barra de sesión
+            document.getElementById('sessionBar').style.display = 'block';
+            document.getElementById('userName').textContent = user.username;
+            
+            // Ocultar botones de login/registro
+            document.getElementById('heroButtons').style.display = 'none';
+        }
+
+        // Mostrar estado cuando el usuario no está logueado
+        function showLoggedOutState() {
+            isLoggedIn = false;
+            currentUser = null;
+            
+            // Ocultar barra de sesión
+            document.getElementById('sessionBar').style.display = 'none';
+            
+            // Mostrar botones de login/registro
+            document.getElementById('heroButtons').style.display = 'flex';
+        }
+
+        // Manejar logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    showLoggedOutState();
+                    // Mostrar mensaje de éxito
+                    showMessage('Sesión cerrada exitosamente', 'success');
+                }
+            } catch (error) {
+                showMessage('Error al cerrar sesión', 'error');
+            }
+        });
+
+        // Manejar inicio de tours
+        document.querySelectorAll('.tour-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const tourType = e.target.getAttribute('data-tour');
+                const tourName = e.target.closest('.tour-card').querySelector('h3').textContent;
+                
+                // Si no está logueado, redirigir al login
+                if (!isLoggedIn) {
+                    showMessage('Debes iniciar sesión para reservar un tour', 'info');
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1500);
+                    return;
+                }
+                
+                if (confirm(`¿Deseas iniciar el tour "${tourName}"?\n\nTu guía robótico te estará esperando en la sala principal.`)) {
+                    await startTour(tourType, tourName);
+                }
+            });
+        });
+
+        // Iniciar tour
+        async function startTour(tourType, tourName) {
+            try {
+                const response = await fetch('/api/start-tour', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tourType })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showTourStartedModal(tourName, data.tourId);
+                } else {
+                    showMessage(data.error || 'Error al iniciar el tour', 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Mostrar modal de tour iniciado
+        function showTourStartedModal(tourName, tourId) {
+            const modal = document.createElement('div');
+            modal.className = 'tour-modal';
+            modal.innerHTML = `
+                <div class="tour-modal-content">
+                    <div class="tour-success-icon">✨</div>
+                    <h2>¡Tour Iniciado!</h2>
+                    <p><strong>${tourName}</strong></p>
+                    <p>Tu guía robótico te está esperando en la <strong>sala principal</strong>.</p>
+                    <p class="tour-id">ID del tour: <code>${tourId}</code></p>
+                    <button onclick="this.closest('.tour-modal').remove()" class="btn btn-primary">
+                        Entendido
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Mostrar mensajes
+        function showMessage(text, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `floating-message ${type}`;
+            messageDiv.textContent = text;
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        // Manejar clic en la flecha de scroll
+        document.querySelector('.scroll-indicator').addEventListener('click', () => {
+            document.querySelector('#tours').scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        });
+    </script>
+</body>
+</html>

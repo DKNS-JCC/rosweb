@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
+        <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro - WebApp</title>
+    <title>Registrarse - artTEC</title>
+    <link rel="icon" type="image/x-icon" href="icon.ico">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <div class="login-form">
+            <div class="logo-container">
+                <img src="icon.ico" alt="Logo" class="logo">
+            </div>
             <h2>Crear Cuenta</h2>
             <form id="registerForm">
                 <div class="form-group">
@@ -27,12 +31,13 @@
             </form>
             <div id="message" class="message"></div>
             <p class="register-link">
-                ¿Ya tienes cuenta? <a href="/">Inicia sesión aquí</a>
+                ¿Ya tienes cuenta? <a href="/login">Inicia sesión aquí</a>
             </p>
         </div>
     </div>
 
     <script>
+        // Manejar envío del formulario
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -53,11 +58,11 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    messageDiv.textContent = 'Cuenta creada exitosamente. Redirigiendo al login...';
+                    messageDiv.textContent = 'Cuenta creada exitosamente. Redirigiendo...';
                     messageDiv.className = 'message success';
                     setTimeout(() => {
                         window.location.href = '/';
-                    }, 2000);
+                    }, 1500);
                 } else {
                     messageDiv.textContent = data.error || 'Error al crear la cuenta';
                     messageDiv.className = 'message error';
