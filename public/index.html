@@ -344,7 +344,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    showTourStartedModal(tourName, data.tourId);
+                    showTourStartedModal(tourName, data.tourId, data.PIN);
                 } else {
                     showMessage(data.error || 'Error al iniciar el tour', 'error');
                 }
@@ -354,7 +354,7 @@
         }
 
         // Mostrar modal de tour iniciado
-        function showTourStartedModal(tourName, tourId) {
+        function showTourStartedModal(tourName, tourId, tourPIN) {
             const modal = document.createElement('div');
             modal.className = 'tour-modal';
             modal.innerHTML = `
@@ -362,7 +362,14 @@
                     <div class="tour-success-icon">✨</div>
                     <h2>¡Tour Iniciado!</h2>
                     <p><strong>${tourName}</strong></p>
-                    <p>Tu guía robótico te está esperando en la <strong>sala principal</strong>.</p>
+                    <p>Tu guía robótico te está esperando en la <strong>entrada del museo</strong>.</p>
+                    <div class="tour-pin-highlight">
+                        <p class="tour-pin-label">PIN para el robot:</p>
+                        <div class="tour-pin-value">
+                            <strong>${tourPIN}</strong>
+                        </div>
+                        <p class="tour-pin-note">¡Recuerda este PIN! Es necesario para comenzar tu tour.</p>
+                    </div>
                     <p class="tour-id">ID del tour: <code>${tourId}</code></p>
                     <button onclick="this.closest('.tour-modal').remove()" class="btn btn-primary">
                         Entendido

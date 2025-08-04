@@ -52,7 +52,19 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    window.location.href = '/';
+                    messageDiv.textContent = 'Login exitoso. Redirigiendo...';
+                    messageDiv.className = 'message success';
+                    
+                    // Si es admin, redirigir al panel administrativo
+                    if (data.isAdmin) {
+                        setTimeout(() => {
+                            window.location.href = data.redirectTo;
+                        }, 1000);
+                    } else {
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                    }
                 } else {
                     messageDiv.textContent = data.error || 'Error en el login';
                     messageDiv.className = 'message error';
