@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - WebApp</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="dashboard">
+            <div class="header">
+                <h1>Dashboard</h1>
+                <button id="logoutBtn" class="btn btn-secondary">Cerrar Sesión</button>
+            </div>
+            
+            <div class="user-info">
+                <h3>Información del Usuario</h3>
+                <div id="userDetails" class="user-details">
+                    <p>Cargando...</p>
+                </div>
+            </div>
+
+            <div class="content">
+                <h3>Bienvenido a tu Dashboard</h3>
+                <p>Esta es un área protegida que solo pueden ver los usuarios autenticados.</p>
+                <div class="stats">
+                    <div class="stat-card">
+                        <h4>Total de Usuarios</h4>
+                        <p id="totalUsers">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Tu ID de Usuario</h4>
+                        <p id="userId">-</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>Fecha de Registro</h4>
+                        <p id="userDate">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="message" class="message"></div>
+        </div>
+    </div>
+
+    <script>
+        // Cargar información del usuario al cargar la página
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/api/user');
+                const userData = await response.json();
+
+                if (userData.id) {
+                    document.getElementById('userDetails').innerHTML = `
+                        <p><strong>Usuario:</strong> ${userData.username}</p>
+                        <p><strong>Email:</strong> ${userData.email}</p>
+                    `;
+                    document.getElementById('userId').textContent = userData.id;
+                    document.getElementById('userDate').textContent = new Date(userData.created_at).toLocaleDateString();
+                }
+            } catch (error) {
+                console.error('Error cargando datos del usuario:', error);
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.textContent = 'Sesión cerrada. Redirigiendo...';
+                    messageDiv.className = 'message success';
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    messageDiv.textContent = 'Error al cerrar sesión';
+                    messageDiv.className = 'message error';
+                }
+            } catch (error) {
+                messageDiv.textContent = 'Error de conexión';
+                messageDiv.className = 'message error';
+            }
+        });
+    </script>
+</body>
+</html>
