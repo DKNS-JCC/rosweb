@@ -14,7 +14,11 @@
             <div class="container">
                 <div class="session-info">
                     <span class="welcome-text">Bienvenido, <span id="userName"></span></span>
-                    <button id="logoutBtn" class="btn btn-secondary btn-small">Cerrar Sesión</button>
+                    <div class="session-buttons">
+                        <a href="/robot" class="btn btn-outline btn-small">🤖 Control Robot</a>
+                        <button id="adminBtn" class="btn btn-outline btn-small" style="display: none;">⚙️ Admin</button>
+                        <button id="logoutBtn" class="btn btn-secondary btn-small">Cerrar Sesión</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -275,6 +279,15 @@
             // Mostrar barra de sesión
             document.getElementById('sessionBar').style.display = 'block';
             document.getElementById('userName').textContent = user.username;
+            
+            // Mostrar botón de admin solo si es administrador
+            const adminBtn = document.getElementById('adminBtn');
+            if (user.role === 'admin') {
+                adminBtn.style.display = 'inline-block';
+                adminBtn.onclick = () => window.location.href = '/admin';
+            } else {
+                adminBtn.style.display = 'none';
+            }
             
             // Ocultar botones de login/registro
             document.getElementById('heroButtons').style.display = 'none';

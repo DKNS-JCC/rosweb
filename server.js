@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const path = require('path');
+const robotManager = require('./robotManager');
 
 const app = express();
 const PORT = 3000;
@@ -510,6 +511,183 @@ app.post('/api/logout', (req, res) => {
         // Limpiar la cookie de sesión
         res.clearCookie('connect.sid');
         res.json({ success: true, message: 'Sesión cerrada' });
+    });
+});
+
+// ===== RUTAS DEL ROBOT =====
+
+// Servir la página de control del robot
+app.get('/robot', requireAuth, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'robot.html'));
+});
+
+// API para obtener estado del robot
+app.get('/api/robot/status', requireAuth, (req, res) => {
+    const status = robotManager.getStatus();
+    const robotInfo = robotManager.getRobotInfo();
+    
+    res.json({
+        ...status,
+        robot_info: robotInfo,
+        topics_available: [
+            '/mobile_base/commands/velocity',
+            '/odom',
+            '/laser',
+            '/camera/color/image_raw',
+            '/diagnostics',
+            '/imu/data',
+            '/mobile_base/sensors/bumper_pointcloud',
+            '/mobile_base/sensors/core',
+            '/tf',
+            '/map',
+            '/move_base/goal',
+            '/amcl_pose',
+            '/initialpose'
+        ]
+    });
+});
+
+// API para comandos básicos del robot
+app.post('/api/robot/command', requireAuth, (req, res) => {
+    const { action, parameters = {} } = req.body;
+    let result;
+    
+    try {
+        switch (action) {
+            case 'move_forward':
+                result = robotManager.moveForward(parameters.speed || 0.2);
+                break;
+            case 'move_backward':
+                result = robotManager.moveBackward(parameters.speed || 0.2);
+                break;
+            case 'turn_left':
+                result = robotManager.turnLeft(parameters.speed || 0.5);
+                break;
+            case 'turn_right':
+                result = robotManager.turnRight(parameters.speed || 0.5);
+                break;
+            case 'stop':
+                result = robotManager.stopRobot();
+                break;
+            case 'custom_velocity':
+                result = robotManager.sendVelocityCommand(
+                    parameters.linear || 0, 
+                    parameters.angular || 0
+                );
+                break;
+            default:
+                return res.status(400).json({ error: 'Acción no reconocida' });
+        }
+        
+        // Log de la acción en la base de datos
+        const logQuery = `INSERT INTO robot_commands (user_id, action, parameters, timestamp) 
+                          VALUES (?, ?, ?, datetime('now'))`;
+        
+        // Crear tabla de comandos si no existe
+        db.run(`CREATE TABLE IF NOT EXISTS robot_commands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            action TEXT,
+            parameters TEXT,
+            timestamp DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )`, (err) => {
+            if (err && !err.message.includes('already exists')) {
+                console.log('Tabla robot_commands creada');
+            }
+        });
+        
+        db.run(logQuery, [req.session.userId, action, JSON.stringify(parameters)], function(err) {
+            if (err) {
+                console.error('Error al registrar comando:', err.message);
+            }
+        });
+        
+        res.json({ 
+            success: result.success, 
+            message: result.message || result.error,
+            action: action,
+            parameters: parameters,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+// API para obtener información detallada del robot
+app.get('/api/robot/info', requireAuth, (req, res) => {
+    const robotInfo = robotManager.getRobotInfo();
+    const status = robotManager.getStatus();
+    
+    res.json({
+        ...robotInfo,
+        connection_status: status,
+        available_actions: [
+            'move_forward',
+            'move_backward', 
+            'turn_left',
+            'turn_right',
+            'stop',
+            'custom_velocity'
+        ]
+    });
+});
+
+// API para obtener lista de tópicos en tiempo real
+app.get('/api/robot/topics', requireAuth, (req, res) => {
+    if (!robotManager.connected) {
+        return res.status(503).json({ 
+            error: 'Robot no conectado',
+            topics: []
+        });
+    }
+
+    // Simular obtención de tópicos (en una implementación real, 
+    // esto se obtendría directamente del robot via rosbridge)
+    const simulatedTopics = [
+        '/mobile_base/commands/velocity',
+        '/odom', 
+        '/laser',
+        '/camera/color/image_raw',
+        '/diagnostics',
+        '/imu/data',
+        '/mobile_base/sensors/bumper_pointcloud',
+        '/mobile_base/sensors/core',
+        '/tf',
+        '/tf_static',
+        '/clock',
+        '/rosout',
+        '/rosout_agg'
+    ];
+
+    res.json({
+        success: true,
+        topic_count: simulatedTopics.length,
+        topics: simulatedTopics,
+        timestamp: new Date().toISOString()
+    });
+});
+
+// API para historial de comandos del robot (solo admin)
+app.get('/api/admin/robot/commands', requireAuth, requireAdmin, (req, res) => {
+    const query = `
+        SELECT rc.*, u.username 
+        FROM robot_commands rc
+        JOIN users u ON rc.user_id = u.id
+        ORDER BY rc.timestamp DESC
+        LIMIT 100
+    `;
+    
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(rows);
     });
 });
 

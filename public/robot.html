@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Robot - artTEC</title>
+    <link rel="icon" type="image/x-icon" href="icon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
+    <style>
+        .robot-container {
+            min-width: 90%;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            min-height: 100vh;
+        }
+        
+        .robot-header {
+            background: #4129ca;
+            color: white;
+            padding: 20px;
+            margin: -20px -20px 30px -20px;
+            border-radius: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .robot-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .robot-title h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        
+        .robot-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #4129ca;
+        }
+        
+        .robot-section h2 {
+            color: #4129ca;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-top: 4px solid #4129ca;
+        }
+        
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        .status-connected {
+            background: #28a745;
+        }
+        
+        .status-disconnected {
+            background: #dc3545;
+        }
+        
+        .control-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .movement-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .movement-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        .movement-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            background: #4129ca;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .movement-btn:hover {
+            background: #3a23b8;
+        }
+        
+        .movement-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .movement-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .sensor-data {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .topic-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        
+        .topic-item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .topic-item:last-child {
+            border-bottom: none;
+        }
+        
+        .log-area {
+            background: #1e1e1e;
+            color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .velocity-display {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .velocity-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .velocity-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4129ca;
+        }
+    </style>
+</head>
+<body>
+    <div class="robot-container">
+        <div class="robot-header">
+            <div class="robot-title">
+                <img src="icon.ico" alt="Logo" style="width: 40px; height: 40px;">
+                <h1>Control de ArtTEC-bot</h1>
+            </div>
+            <div>
+                <span id="userName" style="margin-right: 10px;">Usuario</span>
+                <button id="logoutBtn" class="btn btn-secondary btn-small">Cerrar Sesión</button>
+                <a href="/admin" class="btn btn-outline btn-small" style="margin-left: 10px;">Panel Admin</a>
+                <a href="/" class="btn btn-outline btn-small" style="margin-left: 10px;">Inicio</a>
+            </div>
+        </div>
+
+        <!-- Estado de Conexión -->
+        <div class="robot-section">
+            <h2>Estado del Sistema</h2>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div>
+                        <span class="status-indicator" id="rosStatus"></span>
+                        <strong>ROS Bridge</strong>
+                    </div>
+                    <div id="rosStatusText">Desconectado</div>
+                </div>
+                <div class="status-card">
+                    <div>
+                        <span class="status-indicator" id="robotStatus"></span>
+                        <strong>Robot TurtleBot</strong>
+                    </div>
+                    <div id="robotStatusText">Desconectado</div>
+                </div>
+                <div class="status-card">
+                    <div><strong>Tópicos Activos</strong></div>
+                    <div class="status-value" id="topicCount">0</div>
+                </div>
+                <div class="status-card">
+                    <div><strong>Último Mensaje</strong></div>
+                    <div id="lastMessage">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Control -->
+        <div class="control-panel">
+            <!-- Controles de Movimiento -->
+            <div class="movement-controls">
+                <h3>Control de Movimiento</h3>
+                <div class="movement-grid">
+                    <div></div>
+                    <button class="movement-btn" id="moveForward">⬆</button>
+                    <div></div>
+                    <button class="movement-btn" id="turnLeft">⬅</button>
+                    <button class="movement-btn" id="stopRobot">STOP</button>
+                    <button class="movement-btn" id="turnRight">➡</button>
+                    <div></div>
+                    <button class="movement-btn" id="moveBackward">⬇</button>
+                    <div></div>
+                </div>
+                
+                <div class="velocity-display">
+                    <div class="velocity-item">
+                        <div>Vel. Linear</div>
+                        <div class="velocity-value" id="linearVel">0.0</div>
+                    </div>
+                    <div class="velocity-item">
+                        <div>Vel. Angular</div>
+                        <div class="velocity-value" id="angularVel">0.0</div>
+                    </div>
+                    <div class="velocity-item">
+                        <div>Velocidad</div>
+                        <div class="velocity-value" id="speedLevel">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datos de Sensores -->
+            <div class="sensor-data">
+                <h3>Datos de Sensores</h3>
+                <div>
+                    <strong>Posición (Odometría):</strong>
+                    <div id="positionData">
+                        X: -, Y: -, Z: -<br>
+                        Orientación: -
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <strong>Sensor Láser (LIDAR):</strong>
+                    <div id="laserData">
+                        Distancia mín: -, Distancia máx: -<br>
+                        Obstáculos detectados: -
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <strong>Estado de la Batería:</strong>
+                    <div id="batteryData">Nivel: -, Voltaje: -, Estado: -</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vista de Cámara -->
+        <div class="robot-section">
+            <h2>📷 Vista de la Cámara</h2>
+            <div style="display: grid; grid-template-columns: 1fr 300px; gap: 20px;">
+                <div>
+                    <div id="cameraView" style="background: #000; min-height: 300px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 20px;">📷</div>
+                            <div>Esperando imagen de la cámara...</div>
+                            <div style="font-size: 12px; margin-top: 10px;">Tópico: /camera/color/image_raw</div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h4>Información de la Cámara</h4>
+                    <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                        <div><strong>Estado:</strong> <span id="cameraStatus">Desconectada</span></div>
+                        <div style="margin-top: 10px;"><strong>Resolución:</strong> <span id="cameraResolution">-</span></div>
+                        <div style="margin-top: 10px;"><strong>Última actualización:</strong> <span id="cameraLastUpdate">-</span></div>
+                        <div style="margin-top: 10px;"><strong>FPS:</strong> <span id="cameraFPS">-</span></div>
+                        <button onclick="toggleCamera()" class="btn btn-secondary" style="margin-top: 15px; width: 100%;">
+                            <span id="cameraToggleText">Activar Cámara</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+0%
+        <div class="robot-section">
+            <h2>Tópicos ROS Disponibles</h2>
+            <div style="margin-bottom: 15px;">
+                <button onclick="getTopicList()" class="btn btn-secondary">🔄 Actualizar Tópicos</button>
+                <span style="margin-left: 15px; color: #666;">
+                    Total: <span id="topicCount">0</span> tópicos
+                </span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4>Tópicos de Publicación (Comandos)</h4>
+                    <div class="topic-list" id="publishTopics">
+                        Cargando tópicos...
+                    </div>
+                </div>
+                <div>
+                    <h4>Tópicos de Suscripción (Sensores)</h4>
+                    <div class="topic-list" id="subscribeTopics">
+                        Cargando tópicos...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log del Sistema -->
+        <div class="robot-section">
+            <h2>Log del Sistema</h2>
+            <div class="log-area" id="systemLog">
+                Sistema iniciado...<br>
+            </div>
+            <button onclick="clearLog()" class="btn btn-secondary" style="margin-top: 10px;">Limpiar Log</button>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales para ROS
+        let ros = null;
+        let cmdVelTopic = null;
+        let odomTopic = null;
+        let laserTopic = null;
+        let diagnosticTopic = null;
+        let cameraTopic = null;
+        let currentUser = null;
+        
+        // Estado del robot
+        let robotState = {
+            connected: false,
+            position: { x: 0, y: 0, z: 0, orientation: 0 },
+            velocity: { linear: 0, angular: 0 },
+            laser: { min: 0, max: 0, obstacles: 0 },
+            battery: { 
+                level: 0, 
+                voltage: 0, 
+                status: 'Unknown',
+                charge: 0,
+                capacity: 0,
+                source: 'Unknown',
+                chargingState: 'Unknown',
+                current: 0
+            },
+            camera: { lastUpdate: null, imageData: null }
+        };
+
+        // Inicializar cuando se carga la página
+        window.addEventListener('load', async () => {
+            await checkUserAccess();
+            initializeROS();
+        });
+
+        // Verificar acceso del usuario
+        async function checkUserAccess() {
+            try {
+                const response = await fetch('/api/user');
+                if (response.ok) {
+                    const userData = await response.json();
+                    currentUser = userData;
+                    document.getElementById('userName').textContent = userData.username;
+                } else {
+                    window.location.href = '/login';
+                }
+            } catch (error) {
+                window.location.href = '/login';
+            }
+        }
+
+        // Inicializar conexión ROS
+        function initializeROS() {
+            addLog('Conectando a ROS Bridge...');
+            
+            // Crear conexión ROS
+            ros = new ROSLIB.Ros({
+                url: 'ws://turtlebot-NUC.local:9090'
+            });
+
+            // Eventos de conexión
+            ros.on('connection', function() {
+                addLog('✅ Conectado a ROS Bridge');
+                updateConnectionStatus(true);
+                setupTopics();
+                getTopicList();
+            });
+
+            ros.on('error', function(error) {
+                addLog('❌ Error de ROS: ' + error);
+                updateConnectionStatus(false);
+            });
+
+            ros.on('close', function() {
+                addLog('🔌 Conexión ROS cerrada');
+                updateConnectionStatus(false);
+            });
+        }
+
+        // Configurar tópicos ROS
+        function setupTopics() {
+            // Tópico para enviar comandos de velocidad (TurtleBot específico)
+            cmdVelTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/mobile_base/commands/velocity',
+                messageType: 'geometry_msgs/Twist'
+            });
+
+            // Tópico para recibir odometría
+            odomTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/odom',
+                messageType: 'nav_msgs/Odometry'
+            });
+
+            odomTopic.subscribe(function(message) {
+                updateOdometry(message);
+            });
+
+            // Tópico para datos del láser - probar múltiples tópicos
+            laserTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/scan',  // TurtleBot normalmente usa /scan
+                messageType: 'sensor_msgs/LaserScan'
+            });
+
+            laserTopic.subscribe(function(message) {
+                updateLaserData(message);
+            });
+            
+            // Fallback: también suscribirse a /laser si existe
+            const laserTopicAlt = new ROSLIB.Topic({
+                ros: ros,
+                name: '/laser',
+                messageType: 'sensor_msgs/LaserScan'
+            });
+
+            laserTopicAlt.subscribe(function(message) {
+                updateLaserData(message);
+            });
+
+            // Tópico para diagnósticos (incluyendo batería)
+            diagnosticTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/diagnostics',
+                messageType: 'diagnostic_msgs/DiagnosticArray'
+            });
+
+            diagnosticTopic.subscribe(function(message) {
+                updateDiagnostics(message);
+            });
+
+            // Tópico para imagen de la cámara
+            cameraTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/camera/color/image_raw',
+                messageType: 'sensor_msgs/Image'
+            });
+
+            // Suscribirse a la cámara con throttle para no saturar
+            cameraTopic.subscribe(function(message) {
+                updateCameraImage(message);
+            });
+
+            addLog('📡 Tópicos TurtleBot configurados correctamente');
+            addLog('🔧 Usando /mobile_base/commands/velocity para movimiento');
+            addLog('� Suscrito a /scan y /laser para datos LIDAR');
+            addLog('�📷 Suscrito a /camera/color/image_raw');
+            
+            // Iniciar monitoreo de tópicos
+            startTopicMonitoring();
+        }
+        
+        // Variables para monitoreo de tópicos
+        let lastOdomTime = 0;
+        let lastLaserTime = 0;
+        let lastDiagnosticsTime = 0;
+        let lastCameraTime = 0;
+        
+        // Monitorear actividad de tópicos
+        function startTopicMonitoring() {
+            setInterval(() => {
+                const now = Date.now();
+                const timeout = 5000; // 5 segundos sin datos
+                
+                // Verificar si los tópicos están enviando datos
+                if (now - lastOdomTime > timeout && lastOdomTime > 0) {
+                    addLog('⚠️ Tópico /odom sin datos por más de 5 segundos');
+                }
+                
+                if (now - lastLaserTime > timeout && lastLaserTime > 0) {
+                    addLog('⚠️ Tópico /laser sin datos por más de 5 segundos');
+                }
+                
+                if (now - lastDiagnosticsTime > timeout && lastDiagnosticsTime > 0) {
+                    addLog('⚠️ Tópico /diagnostics sin datos por más de 5 segundos');
+                }
+                
+                if (cameraActive && now - lastCameraTime > timeout && lastCameraTime > 0) {
+                    addLog('⚠️ Tópico /camera/color/image_raw sin datos por más de 5 segundos');
+                }
+            }, 10000); // Verificar cada 10 segundos
+        }
+
+        // Obtener lista de tópicos disponibles
+        function getTopicList() {
+            // Primero intentar obtener desde ROS directamente
+            if (ros && ros.getTopics) {
+                ros.getTopics(function(result) {
+                    // Verificar si result es un array o tiene propiedad topics
+                    let topics = [];
+                    if (Array.isArray(result)) {
+                        topics = result;
+                    } else if (result && Array.isArray(result.topics)) {
+                        topics = result.topics;
+                    } else {
+                        addLog(`⚠️ Formato de tópicos inesperado desde ROS`);
+                        getTopicsFromAPI();
+                        return;
+                    }
+                    
+                    displayTopics(topics);
+                    document.getElementById('topicCount').textContent = topics.length;
+                    addLog(`📋 ${topics.length} tópicos encontrados directamente desde ROS`);
+                }, function(error) {
+                    addLog(`⚠️ Error obteniendo tópicos desde ROS: ${error}`);
+                    // Fallback: obtener desde API del servidor
+                    getTopicsFromAPI();
+                });
+            } else {
+                getTopicsFromAPI();
+            }
+        }
+
+        // Obtener tópicos desde la API del servidor
+        async function getTopicsFromAPI() {
+            try {
+                const response = await fetch('/api/robot/topics');
+                if (response.ok) {
+                    const data = await response.json();
+                    displayTopics(data.topics);
+                    document.getElementById('topicCount').textContent = data.topic_count;
+                    addLog(`📋 ${data.topic_count} tópicos obtenidos desde API`);
+                } else {
+                    addLog('⚠️ Error obteniendo tópicos desde API');
+                }
+            } catch (error) {
+                addLog(`❌ Error de conexión al obtener tópicos: ${error.message}`);
+            }
+        }
+
+        // Mostrar tópicos en la interfaz
+        function displayTopics(topics) {
+            // Verificar que topics es un array
+            if (!Array.isArray(topics)) {
+                addLog(`❌ Error: topics no es un array: ${typeof topics}`);
+                return;
+            }
+            
+            const publishDiv = document.getElementById('publishTopics');
+            const subscribeDiv = document.getElementById('subscribeTopics');
+            
+            // Tópicos de publicación (comandos que podemos enviar)
+            const publishTopics = topics.filter(topic => 
+                topic.includes('/mobile_base/commands/') || 
+                topic.includes('/cmd_vel') || 
+                topic.includes('/move_base/goal') ||
+                topic.includes('/initialpose')
+            );
+            
+            // Tópicos de suscripción (datos que recibimos)
+            const sensorTopics = topics.filter(topic => 
+                topic.includes('/odom') || 
+                topic.includes('/laser') || 
+                topic.includes('/camera/color/image_raw') || 
+                topic.includes('/diagnostics') ||
+                topic.includes('/imu') || 
+                topic.includes('/battery') ||
+                topic.includes('/mobile_base/sensors/')
+            );
+
+            publishDiv.innerHTML = publishTopics.length > 0 ? 
+                publishTopics.map(topic => `<div class="topic-item">${topic}</div>`).join('') :
+                '<div class="topic-item">No hay tópicos de publicación disponibles</div>';
+
+            subscribeDiv.innerHTML = sensorTopics.length > 0 ? 
+                sensorTopics.map(topic => `<div class="topic-item">${topic}</div>`).join('') :
+                '<div class="topic-item">No hay tópicos de sensores disponibles</div>';
+        }
+
+        // Actualizar estado de conexión
+        function updateConnectionStatus(connected) {
+            const rosStatus = document.getElementById('rosStatus');
+            const rosStatusText = document.getElementById('rosStatusText');
+            const robotStatus = document.getElementById('robotStatus');
+            const robotStatusText = document.getElementById('robotStatusText');
+            
+            if (connected) {
+                rosStatus.className = 'status-indicator status-connected';
+                rosStatusText.textContent = 'Conectado';
+                robotStatus.className = 'status-indicator status-connected';
+                robotStatusText.textContent = 'Operativo';
+                enableMovementControls(true);
+            } else {
+                rosStatus.className = 'status-indicator status-disconnected';
+                rosStatusText.textContent = 'Desconectado';
+                robotStatus.className = 'status-indicator status-disconnected';
+                robotStatusText.textContent = 'No disponible';
+                enableMovementControls(false);
+            }
+            
+            robotState.connected = connected;
+        }
+
+        // Habilitar/deshabilitar controles de movimiento
+        function enableMovementControls(enabled) {
+            const buttons = document.querySelectorAll('.movement-btn');
+            buttons.forEach(btn => btn.disabled = !enabled);
+        }
+
+        // Actualizar datos de odometría
+        function updateOdometry(message) {
+            try {
+                lastOdomTime = Date.now(); // Registrar actividad
+                
+                if (!message || !message.pose || !message.pose.pose) {
+                    addLog('⚠️ Datos de odometría inválidos recibidos');
+                    return;
+                }
+                
+                robotState.position.x = message.pose.pose.position.x.toFixed(2);
+                robotState.position.y = message.pose.pose.position.y.toFixed(2);
+                robotState.position.z = message.pose.pose.position.z.toFixed(2);
+                
+                // Calcular orientación desde quaternion
+                const q = message.pose.pose.orientation;
+                const yaw = Math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z));
+                robotState.position.orientation = (yaw * 180 / Math.PI).toFixed(1);
+
+                // Actualizar velocidades
+                if (message.twist && message.twist.twist) {
+                    robotState.velocity.linear = message.twist.twist.linear.x.toFixed(2);
+                    robotState.velocity.angular = message.twist.twist.angular.z.toFixed(2);
+                }
+
+                updatePositionDisplay();
+                document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
+            } catch (error) {
+                addLog(`❌ Error procesando odometría: ${error.message}`);
+            }
+        }
+
+        // Actualizar datos del láser
+        function updateLaserData(message) {
+            try {
+                lastLaserTime = Date.now(); // Registrar actividad
+                
+                if (!message || !message.ranges || !Array.isArray(message.ranges)) {
+                    addLog('⚠️ Datos de láser inválidos recibidos');
+                    return;
+                }
+                
+                const ranges = message.ranges;
+                const rangeMin = message.range_min || 0.12;
+                const rangeMax = message.range_max || 3.5;
+                
+                // Filtrar rangos válidos y no infinitos
+                const validRanges = ranges.filter(r => 
+                    !isNaN(r) && 
+                    isFinite(r) && 
+                    r > rangeMin && 
+                    r < rangeMax
+                );
+                
+                if (validRanges.length === 0) {
+                    robotState.laser.min = 0;
+                    robotState.laser.max = 0;
+                    robotState.laser.obstacles = 0;
+                    // Log menos frecuente
+                    if (Math.random() < 0.05) {
+                        addLog('⚠️ No hay datos válidos de láser');
+                    }
+                } else {
+                    robotState.laser.min = Math.min(...validRanges).toFixed(2);
+                    robotState.laser.max = Math.max(...validRanges).toFixed(2);
+                    robotState.laser.obstacles = validRanges.filter(r => r < 1.0).length;
+                }
+
+                updateLaserDisplay();
+                document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
+            } catch (error) {
+                addLog(`❌ Error procesando datos de láser: ${error.message}`);
+            }
+        }
+
+        // Actualizar visualización de posición
+        function updatePositionDisplay() {
+            document.getElementById('positionData').innerHTML = 
+                `X: ${robotState.position.x}m, Y: ${robotState.position.y}m, Z: ${robotState.position.z}m<br>` +
+                `Orientación: ${robotState.position.orientation}°`;
+            
+            document.getElementById('linearVel').textContent = robotState.velocity.linear;
+            document.getElementById('angularVel').textContent = robotState.velocity.angular;
+        }
+
+        // Actualizar visualización del láser
+        function updateLaserDisplay() {
+            document.getElementById('laserData').innerHTML = 
+                `Distancia mín: ${robotState.laser.min}m, Distancia máx: ${robotState.laser.max}m<br>` +
+                `Obstáculos detectados: ${robotState.laser.obstacles}`;
+        }
+
+        // Actualizar datos de diagnósticos (incluyendo batería)
+        function updateDiagnostics(message) {
+            try {
+                lastDiagnosticsTime = Date.now(); // Registrar actividad
+                
+                if (!message || !message.status || !Array.isArray(message.status)) {
+                    addLog('⚠️ Mensaje de diagnósticos inválido recibido');
+                    return;
+                }
+                
+                if (message.status.length === 0) {
+                    addLog('⚠️ No hay estados de diagnóstico en el mensaje');
+                    return;
+                }
+                
+                let batteryFound = false;
+                
+                message.status.forEach((status, index) => {
+                    // Buscar información de batería específica del TurtleBot (Kobuki)
+                    if (status.name && status.name.includes('Battery') && status.hardware_id === 'Kobuki') {
+                        batteryFound = true;
+                        
+                        // Obtener el mensaje de estado general
+                        robotState.battery.status = status.message || 'Unknown';
+                        
+                        // Procesar valores específicos
+                        if (status.values && Array.isArray(status.values) && status.values.length > 0) {
+                            status.values.forEach(value => {
+                                if (!value.key || !value.value) return;
+                                
+                                switch(value.key) {
+                                    case 'Voltage (V)':
+                                        robotState.battery.voltage = parseFloat(value.value).toFixed(2);
+                                        break;
+                                    case 'Percent':
+                                        robotState.battery.level = parseFloat(value.value).toFixed(1);
+                                        break;
+                                    case 'Charge (Ah)':
+                                        robotState.battery.charge = parseFloat(value.value).toFixed(2);
+                                        break;
+                                    case 'Capacity (Ah)':
+                                        robotState.battery.capacity = parseFloat(value.value).toFixed(2);
+                                        break;
+                                    case 'Source':
+                                        robotState.battery.source = value.value;
+                                        break;
+                                    case 'Charging State':
+                                        robotState.battery.chargingState = value.value;
+                                        break;
+                                    case 'Current (A)':
+                                        robotState.battery.current = parseFloat(value.value).toFixed(2);
+                                        break;
+                                }
+                            });
+                        }
+                        
+                        updateBatteryDisplay();
+                        
+                        // Log menos frecuente para la batería
+                        if (Math.random() < 0.1) { // Solo 10% de las veces
+                            addLog(`🔋 Batería Kobuki: ${robotState.battery.level}% - ${robotState.battery.status} (${robotState.battery.voltage}V)`);
+                        }
+                    }
+                });
+                
+                if (!batteryFound) {
+                    // Log ocasional cuando no se encuentra batería
+                    if (Math.random() < 0.05) { // Solo 5% de las veces
+                        addLog(`⚠️ No se encontró información de batería Kobuki en ${message.status.length} estados`);
+                    }
+                }
+                
+                document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
+                
+            } catch (error) {
+                addLog(`❌ Error procesando diagnósticos: ${error.message}`);
+            }
+        }
+
+        // Actualizar visualización de la batería
+        function updateBatteryDisplay() {
+            const batteryLevel = robotState.battery.level || 'N/A';
+            const batteryVoltage = robotState.battery.voltage || 'N/A';
+            const batteryStatus = robotState.battery.status || 'Unknown';
+            const chargingState = robotState.battery.chargingState || 'Unknown';
+            const source = robotState.battery.source || 'Unknown';
+            const current = robotState.battery.current || 'N/A';
+            
+            // Determinar color del nivel de batería
+            let levelColor = '#28a745'; // Verde
+            if (batteryLevel < 30) {
+                levelColor = '#dc3545'; // Rojo
+            } else if (batteryLevel < 50) {
+                levelColor = '#ffc107'; // Amarillo
+            }
+            
+            document.getElementById('batteryData').innerHTML = 
+                `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">` +
+                    `<div><strong>Nivel:</strong> <span style="color: ${levelColor}; font-weight: bold;">${batteryLevel}%</span></div>` +
+                    `<div><strong>Voltaje:</strong> ${batteryVoltage}V</div>` +
+                    `<div><strong>Estado:</strong> ${batteryStatus}</div>` +
+                    `<div><strong>Fuente:</strong> ${source}</div>` +
+                    `<div><strong>Carga:</strong> ${chargingState}</div>` +
+                    `<div><strong>Corriente:</strong> ${current}A</div>` +
+                `</div>`;
+        }
+
+        // Actualizar imagen de la cámara
+        function updateCameraImage(message) {
+            robotState.camera.lastUpdate = new Date();
+            
+            // Convertir imagen ROS a base64 para mostrar en HTML
+            // Nota: Esta es una implementación simplificada
+            // En producción, podrías usar ros3djs o similar para mejor rendimiento
+            
+            addLog(`📷 Imagen de cámara recibida (${message.width}x${message.height})`);
+            document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
+        }
+
+        // Enviar comando de velocidad
+        function sendVelocityCommand(linear, angular) {
+            if (!ros || !cmdVelTopic) {
+                addLog('❌ No hay conexión ROS disponible');
+                return;
+            }
+
+            const twist = new ROSLIB.Message({
+                linear: {
+                    x: linear,
+                    y: 0.0,
+                    z: 0.0
+                },
+                angular: {
+                    x: 0.0,
+                    y: 0.0,
+                    z: angular
+                }
+            });
+
+            cmdVelTopic.publish(twist);
+            addLog(`🎮 Comando enviado - Linear: ${linear}, Angular: ${angular}`);
+            
+            // Actualizar display de velocidad
+            document.getElementById('speedLevel').textContent = Math.abs(linear) > 0 || Math.abs(angular) > 0 ? '1' : '0';
+        }
+
+        // Controles de movimiento
+        document.getElementById('moveForward').addEventListener('click', () => {
+            sendVelocityCommand(0.2, 0.0);
+        });
+
+        document.getElementById('moveBackward').addEventListener('click', () => {
+            sendVelocityCommand(-0.2, 0.0);
+        });
+
+        document.getElementById('turnLeft').addEventListener('click', () => {
+            sendVelocityCommand(0.0, 0.5);
+        });
+
+        document.getElementById('turnRight').addEventListener('click', () => {
+            sendVelocityCommand(0.0, -0.5);
+        });
+
+        document.getElementById('stopRobot').addEventListener('click', () => {
+            sendVelocityCommand(0.0, 0.0);
+        });
+
+        // Control por teclado
+        document.addEventListener('keydown', (event) => {
+            if (!robotState.connected) return;
+            
+            switch(event.code) {
+                case 'ArrowUp':
+                case 'KeyW':
+                    event.preventDefault();
+                    sendVelocityCommand(0.2, 0.0);
+                    break;
+                case 'ArrowDown':
+                case 'KeyS':
+                    event.preventDefault();
+                    sendVelocityCommand(-0.2, 0.0);
+                    break;
+                case 'ArrowLeft':
+                case 'KeyA':
+                    event.preventDefault();
+                    sendVelocityCommand(0.0, 0.5);
+                    break;
+                case 'ArrowRight':
+                case 'KeyD':
+                    event.preventDefault();
+                    sendVelocityCommand(0.0, -0.5);
+                    break;
+                case 'Space':
+                    event.preventDefault();
+                    sendVelocityCommand(0.0, 0.0);
+                    break;
+            }
+        });
+
+        // Parar el robot al soltar teclas
+        document.addEventListener('keyup', (event) => {
+            if (!robotState.connected) return;
+            
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyS', 'KeyA', 'KeyD'].includes(event.code)) {
+                setTimeout(() => sendVelocityCommand(0.0, 0.0), 100);
+            }
+        });
+
+        // Funciones de utilidad
+        function addLog(message) {
+            const logArea = document.getElementById('systemLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logArea.innerHTML += `[${timestamp}] ${message}<br>`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('systemLog').innerHTML = 'Log limpiado...<br>';
+        }
+
+        // Variables para la cámara
+        let cameraActive = false;
+        let cameraFrameCount = 0;
+        let cameraStartTime = Date.now();
+
+        // Función para activar/desactivar cámara
+        function toggleCamera() {
+            cameraActive = !cameraActive;
+            const toggleButton = document.getElementById('cameraToggleText');
+            const statusElement = document.getElementById('cameraStatus');
+            
+            if (cameraActive) {
+                toggleButton.textContent = 'Desactivar Cámara';
+                statusElement.textContent = 'Activa';
+                statusElement.style.color = '#28a745';
+                addLog('📷 Cámara activada');
+            } else {
+                toggleButton.textContent = 'Activar Cámara';
+                statusElement.textContent = 'Inactiva';
+                statusElement.style.color = '#dc3545';
+                addLog('📷 Cámara desactivada');
+                
+                // Limpiar vista de cámara
+                document.getElementById('cameraView').innerHTML = `
+                    <div style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">📷</div>
+                        <div>Cámara desactivada</div>
+                        <div style="font-size: 12px; margin-top: 10px;">Haz clic en "Activar Cámara" para ver la imagen</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Actualizar imagen de la cámara mejorada
+        function updateCameraImage(message) {
+            try {
+                lastCameraTime = Date.now(); // Registrar actividad
+                
+                if (!cameraActive) {
+                    // Si la cámara no está activa, no procesar
+                    return;
+                }
+                
+                if (!message) {
+                    addLog('⚠️ Mensaje de cámara vacío recibido');
+                    return;
+                }
+                
+                robotState.camera.lastUpdate = new Date();
+                cameraFrameCount++;
+                
+                // Calcular FPS
+                const elapsed = (Date.now() - cameraStartTime) / 1000;
+                const fps = elapsed > 0 ? (cameraFrameCount / elapsed).toFixed(1) : '0.0';
+                
+                // Actualizar información de la cámara
+                const width = message.width || 'N/A';
+                const height = message.height || 'N/A';
+                const encoding = message.encoding || 'N/A';
+                
+                document.getElementById('cameraResolution').textContent = `${width}x${height}`;
+                document.getElementById('cameraLastUpdate').textContent = new Date().toLocaleTimeString();
+                document.getElementById('cameraFPS').textContent = fps;
+                
+                // Verificar si tenemos datos de imagen
+                const hasImageData = message.data && message.data.length > 0;
+                const dataSize = hasImageData ? message.data.length : 0;
+                
+                // Actualizar vista de cámara con información detallada
+                document.getElementById('cameraView').innerHTML = `
+                    <div style="text-align: center; color: white; padding: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">📹</div>
+                        <div style="font-size: 18px; margin-bottom: 15px;">Recibiendo datos de cámara</div>
+                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; display: inline-block; text-align: left;">
+                            <div><strong>Resolución:</strong> ${width}x${height}</div>
+                            <div><strong>Encoding:</strong> ${encoding}</div>
+                            <div><strong>FPS:</strong> ${fps}</div>
+                            <div><strong>Datos:</strong> ${dataSize} bytes</div>
+                            <div><strong>Timestamp:</strong> ${new Date().toLocaleTimeString()}</div>
+                            <div><strong>Frames:</strong> ${cameraFrameCount}</div>
+                        </div>
+                        <div style="font-size: 12px; margin-top: 15px; color: #ccc;">
+                            ${hasImageData ? '✅ Recibiendo datos de imagen' : '⚠️ Sin datos de imagen'}
+                        </div>
+                    </div>
+                `;
+                
+                // Log menos frecuente para no saturar
+                if (cameraFrameCount % 30 === 1) { // Solo cada 30 frames
+                    addLog(`📷 Cámara activa: ${fps} FPS, ${width}x${height}, ${encoding}`);
+                }
+                
+                document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
+                
+            } catch (error) {
+                addLog(`❌ Error procesando imagen de cámara: ${error.message}`);
+                document.getElementById('cameraView').innerHTML = `
+                    <div style="text-align: center; color: red; padding: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
+                        <div>Error procesando imagen</div>
+                        <div style="font-size: 12px; margin-top: 10px;">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+            }
+        });
+
+        // Limpiar conexiones al cerrar la página
+        window.addEventListener('beforeunload', () => {
+            if (ros) {
+                sendVelocityCommand(0.0, 0.0); // Parar el robot
+                ros.close();
+            }
+        });
+    </script>
+</body>
+</html>

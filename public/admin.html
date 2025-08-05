@@ -269,6 +269,51 @@
             </table>
         </div>
 
+        <!-- Control del Robot -->
+        <div class="admin-section">
+            <h2>🤖 Control del Robot TurtleBot</h2>
+            <div class="warning-banner">
+                <strong>Acceso Directo al Robot:</strong> Esta sección permite el acceso completo al robot TurtleBot. 
+                <a href="/robot" class="btn btn-primary" style="margin-left: 10px;">Abrir Panel de Control</a>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                <div class="stat-card">
+                    <div><strong>Estado ROS Bridge</strong></div>
+                    <div class="stat-value" id="robotConnectionStatus">🔴 Verificando...</div>
+                </div>
+                <div class="stat-card">
+                    <div><strong>Comandos Enviados Hoy</strong></div>
+                    <div class="stat-value" id="robotCommandsToday">-</div>
+                </div>
+                <div class="stat-card">
+                    <div><strong>Último Usuario Activo</strong></div>
+                    <div class="stat-value" id="robotLastUser">-</div>
+                </div>
+                <div class="stat-card">
+                    <div><strong>Tiempo de Actividad</strong></div>
+                    <div class="stat-value" id="robotUptime">-</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 30px;">Historial de Comandos Recientes</h3>
+            <table class="routes-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Parámetros</th>
+                    </tr>
+                </thead>
+                <tbody id="robotCommandsTable">
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 20px;">Cargando comandos...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <!-- Gestión de Rutas -->
         <div class="admin-section">
             <h2>Gestión de Rutas</h2>
@@ -319,6 +364,8 @@
             await loadStats();
             await loadRoutes();
             await loadUsers();
+            await loadRobotStatus();
+            await loadRobotCommands();
         });
 
         // Verificar que el usuario sea admin
@@ -485,9 +532,9 @@
                     <td>${new Date(user.created_at).toLocaleDateString()}</td>
                     <td>
                         <div class="user-actions">
-                            <button onclick="viewUserTours(${user.id}, '${user.username}')" class="btn-info" title="Ver tours">👁️</button>
-                            <button onclick="changeUserRole(${user.id}, '${user.role}')" class="btn-warning" title="Cambiar rol">👤</button>
-                            <button onclick="resetUserPassword(${user.id})" class="btn-warning" title="Reset contraseña">🔑</button>
+                            <button onclick="viewUserTours(${user.id}, '${user.username}')" class="btn-info" title="Ver tours">Tours</button>
+                            <button onclick="changeUserRole(${user.id}, '${user.role}')" class="btn-warning" title="Cambiar rol">Rol</button>
+                            <button onclick="resetUserPassword(${user.id})" class="btn-warning" title="Reset contraseña">Contraseña</button>
                             <button onclick="deleteUser(${user.id})" class="btn-danger" title="Eliminar">🗑️</button>
                         </div>
                     </td>
@@ -617,6 +664,80 @@
 
         // Botón de actualizar usuarios
         document.getElementById('refreshUsers').addEventListener('click', loadUsers);
+
+        // ===== GESTIÓN DEL ROBOT =====
+
+        // Cargar estado del robot
+        async function loadRobotStatus() {
+            try {
+                const response = await fetch('/api/robot/status');
+                if (response.ok) {
+                    const status = await response.json();
+                    updateRobotStatus(status);
+                }
+            } catch (error) {
+                console.error('Error al cargar estado del robot:', error);
+                document.getElementById('robotConnectionStatus').innerHTML = '🔴 Error de conexión';
+            }
+        }
+
+        // Actualizar estado del robot en la interfaz
+        function updateRobotStatus(status) {
+            const connectionElement = document.getElementById('robotConnectionStatus');
+            if (status.connected) {
+                connectionElement.innerHTML = '🟢 Conectado';
+            } else {
+                connectionElement.innerHTML = '🔴 Desconectado';
+            }
+            
+            // Calcular tiempo de actividad (simulado)
+            const uptime = Math.floor(Math.random() * 12) + 1;
+            document.getElementById('robotUptime').textContent = `${uptime}h`;
+        }
+
+        // Cargar comandos del robot
+        async function loadRobotCommands() {
+            try {
+                const response = await fetch('/api/admin/robot/commands');
+                if (response.ok) {
+                    const commands = await response.json();
+                    displayRobotCommands(commands);
+                    
+                    // Contar comandos de hoy
+                    const today = new Date().toDateString();
+                    const todayCommands = commands.filter(cmd => 
+                        new Date(cmd.timestamp).toDateString() === today
+                    );
+                    document.getElementById('robotCommandsToday').textContent = todayCommands.length;
+                    
+                    // Último usuario activo
+                    if (commands.length > 0) {
+                        document.getElementById('robotLastUser').textContent = commands[0].username;
+                    }
+                }
+            } catch (error) {
+                console.error('Error al cargar comandos del robot:', error);
+            }
+        }
+
+        // Mostrar comandos del robot
+        function displayRobotCommands(commands) {
+            const tbody = document.getElementById('robotCommandsTable');
+            
+            if (commands.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px;">No hay comandos registrados</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = commands.slice(0, 10).map(command => `
+                <tr>
+                    <td>${new Date(command.timestamp).toLocaleString()}</td>
+                    <td>${command.username}</td>
+                    <td><code>${command.action}</code></td>
+                    <td><small>${command.parameters ? JSON.parse(command.parameters).linear || 'N/A' : 'N/A'}</small></td>
+                </tr>
+            `).join('');
+        }
 
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', async () => {
