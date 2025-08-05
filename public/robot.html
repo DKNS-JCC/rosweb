@@ -555,7 +555,7 @@
                     
                     displayTopics(topics);
                     document.getElementById('topicCount').textContent = topics.length;
-                    addLog(`📋 ${topics.length} tópicos encontrados directamente desde ROS`);
+                    addLog(`${topics.length} tópicos encontrados directamente desde ROS`);
                 }, function(error) {
                     addLog(`⚠️ Error obteniendo tópicos desde ROS: ${error}`);
                     // Fallback: obtener desde API del servidor
@@ -574,7 +574,7 @@
                     const data = await response.json();
                     displayTopics(data.topics);
                     document.getElementById('topicCount').textContent = data.topic_count;
-                    addLog(`📋 ${data.topic_count} tópicos obtenidos desde API`);
+                    addLog(`${data.topic_count} tópicos obtenidos desde API`);
                 } else {
                     addLog('⚠️ Error obteniendo tópicos desde API');
                 }
@@ -859,7 +859,7 @@
             // Nota: Esta es una implementación simplificada
             // En producción, podrías usar ros3djs o similar para mejor rendimiento
             
-            addLog(`📷 Imagen de cámara recibida (${message.width}x${message.height})`);
+            addLog(`Imagen de cámara recibida (${message.width}x${message.height})`);
             document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
         }
 
@@ -884,8 +884,8 @@
             });
 
             cmdVelTopic.publish(twist);
-            addLog(`🎮 Comando enviado - Linear: ${linear}, Angular: ${angular}`);
-            
+            addLog(`Comando enviado - Linear: ${linear}, Angular: ${angular}`);
+
             // Actualizar display de velocidad
             document.getElementById('speedLevel').textContent = Math.abs(linear) > 0 || Math.abs(angular) > 0 ? '1' : '0';
         }
@@ -979,17 +979,17 @@
                 toggleButton.textContent = 'Desactivar Cámara';
                 statusElement.textContent = 'Activa';
                 statusElement.style.color = '#28a745';
-                addLog('📷 Cámara activada');
+                addLog('Cámara activada');
             } else {
                 toggleButton.textContent = 'Activar Cámara';
                 statusElement.textContent = 'Inactiva';
                 statusElement.style.color = '#dc3545';
-                addLog('📷 Cámara desactivada');
+                addLog('Cámara desactivada');
                 
                 // Limpiar vista de cámara
                 document.getElementById('cameraView').innerHTML = `
                     <div style="text-align: center;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">📷</div>
+                        <div style="font-size: 48px; margin-bottom: 20px;"></div>
                         <div>Cámara desactivada</div>
                         <div style="font-size: 12px; margin-top: 10px;">Haz clic en "Activar Cámara" para ver la imagen</div>
                     </div>
