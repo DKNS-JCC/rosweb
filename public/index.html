@@ -6,6 +6,7 @@
     <title>artTEC</title>
     <link rel="icon" type="image/x-icon" href="icon.ico">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
 </head>
 <body>
     <div class="index-container">
@@ -15,7 +16,7 @@
                 <div class="session-info">
                     <span class="welcome-text">Bienvenido, <span id="userName"></span></span>
                     <div class="session-buttons">
-                        <a href="/robot" class="btn btn-outline btn-small">Control Robot</a>
+                        <a href="/robot" class="btn btn-outline btn-small" style="display: none;">Control Robot</a>
                         <button id="adminBtn" class="btn btn-outline btn-small" style="display: none;">Admin</button>
                         <button id="logoutBtn" class="btn btn-secondary btn-small">Cerrar Sesión</button>
                     </div>
@@ -282,11 +283,21 @@
             
             // Mostrar botón de admin solo si es administrador
             const adminBtn = document.getElementById('adminBtn');
+            const controlRobotBtn = document.querySelector('a[href="/robot"]');
+            
             if (user.role === 'admin') {
                 adminBtn.style.display = 'inline-block';
                 adminBtn.onclick = () => window.location.href = '/admin';
+                // Mostrar botón de control de robot solo para administradores
+                if (controlRobotBtn) {
+                    controlRobotBtn.style.display = 'inline-block';
+                }
             } else {
                 adminBtn.style.display = 'none';
+                // Ocultar botón de control de robot para usuarios no administradores
+                if (controlRobotBtn) {
+                    controlRobotBtn.style.display = 'none';
+                }
             }
             
             // Ocultar botones de login/registro
@@ -300,6 +311,12 @@
             
             // Ocultar barra de sesión
             document.getElementById('sessionBar').style.display = 'none';
+            
+            // Ocultar botón de control de robot para usuarios no logueados
+            const controlRobotBtn = document.querySelector('a[href="/robot"]');
+            if (controlRobotBtn) {
+                controlRobotBtn.style.display = 'none';
+            }
             
             // Mostrar botones de login/registro
             document.getElementById('heroButtons').style.display = 'flex';

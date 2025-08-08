@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control de Robot - artTEC</title>
+    <title>Control Admin de Robot - artTEC</title>
     <link rel="icon" type="image/x-icon" href="icon.ico">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
@@ -187,6 +187,141 @@
             font-weight: bold;
             color: #4129ca;
         }
+        
+        .map-container {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+        
+        .map-canvas-container {
+            flex: 1;
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        #mapCanvas {
+            border: 2px solid #4129ca;
+            border-radius: 8px;
+            max-width: 100%;
+            background: #f8f9fa;
+        }
+        
+        .map-controls {
+            min-width: 250px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .map-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .map-info h4 {
+            margin: 0 0 10px 0;
+            color: #4129ca;
+        }
+        
+        .map-status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .map-status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .map-status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .map-status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        /* Controles de zoom con botones */
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 10;
+        }
+        
+        .zoom-btn {
+            width: 35px;
+            height: 35px;
+            border: 2px solid #4129ca;
+            background: white;
+            color: #4129ca;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .zoom-btn:hover {
+            background: #4129ca;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .zoom-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .map-canvas-wrapper {
+            position: relative;
+            display: inline-block;
+            border: 2px solid #4129ca;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8f9fa;
+        }
+        
+        .map-status-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+        }
+        
+        .robot-position {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
     </style>
 </head>
 <body>
@@ -194,7 +329,7 @@
         <div class="robot-header">
             <div class="robot-title">
                 <img src="icon.ico" alt="Logo" style="width: 40px; height: 40px;">
-                <h1>Control de ArtTEC-bot</h1>
+                <h1>Control Avanzado de ArtTEC-bot - Panel Admin</h1>
             </div>
             <div>
                 <span id="userName" style="margin-right: 10px;">Usuario</span>
@@ -290,38 +425,103 @@
             </div>
         </div>
 
-        <!-- Vista de Cámara -->
+        <!-- Log del Sistema -->
         <div class="robot-section">
-            <h2>📷 Vista de la Cámara</h2>
-            <div style="display: grid; grid-template-columns: 1fr 300px; gap: 20px;">
-                <div>
-                    <div id="cameraView" style="background: #000; min-height: 300px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white;">
-                        <div style="text-align: center;">
-                            <div style="font-size: 48px; margin-bottom: 20px;">📷</div>
-                            <div>Esperando imagen de la cámara...</div>
-                            <div style="font-size: 12px; margin-top: 10px;">Tópico: /camera/color/image_raw</div>
+            <h2>Log del Sistema</h2>
+            <div class="log-area" id="systemLog">
+                Sistema iniciado...<br>
+            </div>
+            <button onclick="clearLog()" class="btn btn-secondary" style="margin-top: 10px;">Limpiar Log</button>
+        </div>
+
+        <!-- Visualización del Mapa -->
+        <div class="robot-section">
+            <h2>Mapa y Navegación</h2>
+            <div class="map-container">
+                <div class="map-canvas-container">
+                    <!-- Mapa 2D con controles mejorados -->
+                    <div class="map-canvas-wrapper">
+                        <canvas id="mapCanvas" width="600" height="400"></canvas>
+                        
+                        <!-- Controles de zoom -->
+                        <div class="zoom-controls">
+                            <button class="zoom-btn" id="zoomIn" title="Zoom In">+</button>
+                            <button class="zoom-btn" id="zoomOut" title="Zoom Out">-</button>
+                            <button class="zoom-btn" id="resetZoom" title="Reset" style="font-size: 14px;">⌂</button>
+                        </div>
+                        
+                        <!-- Estado del zoom -->
+                        <div class="map-status-overlay" id="zoomStatus">
+                            Zoom: 100%
                         </div>
                     </div>
+                    
+                    <div style="margin-top: 10px; color: #666; font-size: 14px; text-align: center;">
+                        <strong>Controles:</strong> 
+                        <span style="margin-right: 15px;">🖱️ <strong>Arrastrar:</strong> Mover mapa</span>
+                        <span style="margin-right: 15px;">⚡ <strong>Botones:</strong> Zoom +/-</span>
+                        <span>🏠 <strong>Casa:</strong> Reset vista</span>
+                    </div>
+                    
+                    <div style="margin-top: 5px; color: #666; font-size: 12px; text-align: center;">
+                        <strong>Leyenda:</strong> 
+                        <span style="color: #000;">■ Obstáculos</span> | 
+                        <span style="color: #fff; background: #000; padding: 2px;">■ Espacio libre</span> | 
+                        <span style="color: #888;">■ Desconocido</span> |
+                        <span style="color: #ff0000;">● Robot</span>
+                    </div>
                 </div>
-                <div>
-                    <h4>Información de la Cámara</h4>
-                    <div style="background: white; padding: 15px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                        <div><strong>Estado:</strong> <span id="cameraStatus">Desconectada</span></div>
-                        <div style="margin-top: 10px;"><strong>Resolución:</strong> <span id="cameraResolution">-</span></div>
-                        <div style="margin-top: 10px;"><strong>Última actualización:</strong> <span id="cameraLastUpdate">-</span></div>
-                        <div style="margin-top: 10px;"><strong>FPS:</strong> <span id="cameraFPS">-</span></div>
-                        <button onclick="toggleCamera()" class="btn btn-secondary" style="margin-top: 15px; width: 100%;">
-                            <span id="cameraToggleText">Activar Cámara</span>
+                <div class="map-controls">
+                    <div class="map-status disconnected" id="mapStatus">
+                        Mapa Desconectado
+                    </div>
+                    
+                    <div class="map-info">
+                        <h4>Información del Mapa</h4>
+                        <div><strong>Resolución:</strong> <span id="mapResolution">-</span> m/celda</div>
+                        <div><strong>Tamaño:</strong> <span id="mapSize">-</span></div>
+                        <div><strong>Origen:</strong> <span id="mapOrigin">-</span></div>
+                        <div><strong>Último update:</strong> <span id="mapTimestamp">-</span></div>
+                        <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                            <div><strong>Msgs recibidos:</strong> <span id="mapMsgsReceived">0</span></div>
+                            <div><strong>Msgs procesados:</strong> <span id="mapMsgsProcessed">0</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="robot-position">
+                        <h4>Posición del Robot</h4>
+                        <div><strong>X:</strong> <span id="robotX">-</span> m</div>
+                        <div><strong>Y:</strong> <span id="robotY">-</span> m</div>
+                        <div><strong>Orientación:</strong> <span id="robotTheta">-</span>°</div>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <button onclick="subscribeToMap()" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">
+                            Conectar al Mapa
                         </button>
+                        <button onclick="clearMap()" class="btn btn-secondary" style="width: 100%; margin-bottom: 10px;">
+                            Limpiar Mapa
+                        </button>
+                        
+                        <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <label for="mapUpdateFreq" style="font-size: 12px; color: #666;">Actualización del mapa:</label>
+                            <select id="mapUpdateFreq" onchange="updateMapFrequency()" style="width: 100%; margin-top: 5px; padding: 5px;">
+                                <option value="1000">Muy frecuente (1s)</option>
+                                <option value="2000" selected>Normal (2s)</option>
+                                <option value="5000">Lenta (5s)</option>
+                                <option value="10000">Muy lenta (10s)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-0%
+
+        <!-- Topicos ROS Disponibles -->
         <div class="robot-section">
             <h2>Tópicos ROS Disponibles</h2>
             <div style="margin-bottom: 15px;">
-                <button onclick="getTopicList()" class="btn btn-secondary">🔄 Actualizar Tópicos</button>
+                <button onclick="getTopicList()" class="btn btn-secondary">Actualizar Tópicos</button>
                 <span style="margin-left: 15px; color: #666;">
                     Total: <span id="topicCount">0</span> tópicos
                 </span>
@@ -341,15 +541,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Log del Sistema -->
-        <div class="robot-section">
-            <h2>Log del Sistema</h2>
-            <div class="log-area" id="systemLog">
-                Sistema iniciado...<br>
-            </div>
-            <button onclick="clearLog()" class="btn btn-secondary" style="margin-top: 10px;">Limpiar Log</button>
-        </div>
     </div>
 
     <script>
@@ -359,8 +550,26 @@
         let odomTopic = null;
         let laserTopic = null;
         let diagnosticTopic = null;
-        let cameraTopic = null;
+        let mapTopic = null;
         let currentUser = null;
+        
+        // Variables para el mapa
+        let mapData = null;
+        let mapCanvas = null;
+        let mapContext = null;
+        let isMapSubscribed = false;
+        let lastMapUpdate = 0;
+        let mapUpdateThrottle = 2000; // Solo actualizar mapa cada 2 segundos
+        let lastRobotPosition = null;
+        let mapMessagesReceived = 0;
+        let mapMessagesProcessed = 0;
+        
+        // Variables para zoom y pan mejorados
+        let mapScale = 1.0;
+        let mapTranslatePos = { x: 0, y: 0 };
+        let isDragging = false;
+        let dragStartOffset = { x: 0, y: 0 };
+        let scaleMultiplier = 0.8;
         
         // Estado del robot
         let robotState = {
@@ -377,14 +586,14 @@
                 source: 'Unknown',
                 chargingState: 'Unknown',
                 current: 0
-            },
-            camera: { lastUpdate: null, imageData: null }
+            }
         };
 
         // Inicializar cuando se carga la página
         window.addEventListener('load', async () => {
             await checkUserAccess();
             initializeROS();
+            initializeMapCanvas();
         });
 
         // Verificar acceso del usuario
@@ -393,6 +602,13 @@
                 const response = await fetch('/api/user');
                 if (response.ok) {
                     const userData = await response.json();
+                    
+                    // Verificar que el usuario tenga rol de admin
+                    if (userData.role !== 'admin') {
+                        window.location.href = '/';
+                        return;
+                    }
+                    
                     currentUser = userData;
                     document.getElementById('userName').textContent = userData.username;
                 } else {
@@ -414,19 +630,19 @@
 
             // Eventos de conexión
             ros.on('connection', function() {
-                addLog('✅ Conectado a ROS Bridge');
+                addLog('Conectado a ROS Bridge');
                 updateConnectionStatus(true);
                 setupTopics();
                 getTopicList();
             });
 
             ros.on('error', function(error) {
-                addLog('❌ Error de ROS: ' + error);
+                addLog('Error de ROS: ' + error);
                 updateConnectionStatus(false);
             });
 
             ros.on('close', function() {
-                addLog('🔌 Conexión ROS cerrada');
+                addLog('Conexion ROS cerrada');
                 updateConnectionStatus(false);
             });
         }
@@ -484,20 +700,8 @@
                 updateDiagnostics(message);
             });
 
-            // Tópico para imagen de la cámara
-            cameraTopic = new ROSLIB.Topic({
-                ros: ros,
-                name: '/camera/color/image_raw',
-                messageType: 'sensor_msgs/Image'
-            });
-
-            // Suscribirse a la cámara con throttle para no saturar
-            cameraTopic.subscribe(function(message) {
-                updateCameraImage(message);
-            });
-
-            addLog('📡 Tópicos TurtleBot configurados correctamente');
-            addLog('🔧 Usando /mobile_base/commands/velocity para movimiento');
+            addLog('Topicos TurtleBot configurados correctamente');
+            addLog('Usando /mobile_base/commands/velocity para movimiento');
             addLog('� Suscrito a /scan y /laser para datos LIDAR');
             addLog('�📷 Suscrito a /camera/color/image_raw');
             
@@ -509,7 +713,6 @@
         let lastOdomTime = 0;
         let lastLaserTime = 0;
         let lastDiagnosticsTime = 0;
-        let lastCameraTime = 0;
         
         // Monitorear actividad de tópicos
         function startTopicMonitoring() {
@@ -519,19 +722,15 @@
                 
                 // Verificar si los tópicos están enviando datos
                 if (now - lastOdomTime > timeout && lastOdomTime > 0) {
-                    addLog('⚠️ Tópico /odom sin datos por más de 5 segundos');
+                    addLog('Topico /odom sin datos por mas de 5 segundos');
                 }
                 
                 if (now - lastLaserTime > timeout && lastLaserTime > 0) {
-                    addLog('⚠️ Tópico /laser sin datos por más de 5 segundos');
+                    addLog('Topico /laser sin datos por mas de 5 segundos');
                 }
                 
                 if (now - lastDiagnosticsTime > timeout && lastDiagnosticsTime > 0) {
-                    addLog('⚠️ Tópico /diagnostics sin datos por más de 5 segundos');
-                }
-                
-                if (cameraActive && now - lastCameraTime > timeout && lastCameraTime > 0) {
-                    addLog('⚠️ Tópico /camera/color/image_raw sin datos por más de 5 segundos');
+                    addLog('Topico /diagnostics sin datos por mas de 5 segundos');
                 }
             }, 10000); // Verificar cada 10 segundos
         }
@@ -548,16 +747,16 @@
                     } else if (result && Array.isArray(result.topics)) {
                         topics = result.topics;
                     } else {
-                        addLog(`⚠️ Formato de tópicos inesperado desde ROS`);
+                        addLog(`Formato de topicos inesperado desde ROS`);
                         getTopicsFromAPI();
                         return;
                     }
                     
                     displayTopics(topics);
                     document.getElementById('topicCount').textContent = topics.length;
-                    addLog(`${topics.length} tópicos encontrados directamente desde ROS`);
+                    addLog(`${topics.length} topicos encontrados directamente desde ROS`);
                 }, function(error) {
-                    addLog(`⚠️ Error obteniendo tópicos desde ROS: ${error}`);
+                    addLog(`Error obteniendo topicos desde ROS: ${error}`);
                     // Fallback: obtener desde API del servidor
                     getTopicsFromAPI();
                 });
@@ -574,12 +773,12 @@
                     const data = await response.json();
                     displayTopics(data.topics);
                     document.getElementById('topicCount').textContent = data.topic_count;
-                    addLog(`${data.topic_count} tópicos obtenidos desde API`);
+                    addLog(`${data.topic_count} topicos obtenidos desde API`);
                 } else {
-                    addLog('⚠️ Error obteniendo tópicos desde API');
+                    addLog('Error obteniendo topicos desde API');
                 }
             } catch (error) {
-                addLog(`❌ Error de conexión al obtener tópicos: ${error.message}`);
+                addLog(`Error de conexion al obtener topicos: ${error.message}`);
             }
         }
 
@@ -587,7 +786,7 @@
         function displayTopics(topics) {
             // Verificar que topics es un array
             if (!Array.isArray(topics)) {
-                addLog(`❌ Error: topics no es un array: ${typeof topics}`);
+                addLog(`Error: topics no es un array: ${typeof topics}`);
                 return;
             }
             
@@ -606,7 +805,6 @@
             const sensorTopics = topics.filter(topic => 
                 topic.includes('/odom') || 
                 topic.includes('/laser') || 
-                topic.includes('/camera/color/image_raw') || 
                 topic.includes('/diagnostics') ||
                 topic.includes('/imu') || 
                 topic.includes('/battery') ||
@@ -620,6 +818,7 @@
             subscribeDiv.innerHTML = sensorTopics.length > 0 ? 
                 sensorTopics.map(topic => `<div class="topic-item">${topic}</div>`).join('') :
                 '<div class="topic-item">No hay tópicos de sensores disponibles</div>';
+                
         }
 
         // Actualizar estado de conexión
@@ -658,7 +857,7 @@
                 lastOdomTime = Date.now(); // Registrar actividad
                 
                 if (!message || !message.pose || !message.pose.pose) {
-                    addLog('⚠️ Datos de odometría inválidos recibidos');
+                    addLog('Datos de odometria invalidos recibidos');
                     return;
                 }
                 
@@ -680,7 +879,7 @@
                 updatePositionDisplay();
                 document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
             } catch (error) {
-                addLog(`❌ Error procesando odometría: ${error.message}`);
+                addLog(`Error procesando odometria: ${error.message}`);
             }
         }
 
@@ -690,7 +889,7 @@
                 lastLaserTime = Date.now(); // Registrar actividad
                 
                 if (!message || !message.ranges || !Array.isArray(message.ranges)) {
-                    addLog('⚠️ Datos de láser inválidos recibidos');
+                    addLog('Datos de laser invalidos recibidos');
                     return;
                 }
                 
@@ -712,7 +911,7 @@
                     robotState.laser.obstacles = 0;
                     // Log menos frecuente
                     if (Math.random() < 0.05) {
-                        addLog('⚠️ No hay datos válidos de láser');
+                        addLog('No hay datos validos de laser');
                     }
                 } else {
                     robotState.laser.min = Math.min(...validRanges).toFixed(2);
@@ -723,7 +922,7 @@
                 updateLaserDisplay();
                 document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
             } catch (error) {
-                addLog(`❌ Error procesando datos de láser: ${error.message}`);
+                addLog(`Error procesando datos de laser: ${error.message}`);
             }
         }
 
@@ -750,12 +949,12 @@
                 lastDiagnosticsTime = Date.now(); // Registrar actividad
                 
                 if (!message || !message.status || !Array.isArray(message.status)) {
-                    addLog('⚠️ Mensaje de diagnósticos inválido recibido');
+                    addLog('Mensaje de diagnosticos invalido recibido');
                     return;
                 }
                 
                 if (message.status.length === 0) {
-                    addLog('⚠️ No hay estados de diagnóstico en el mensaje');
+                    addLog('No hay estados de diagnostico en el mensaje');
                     return;
                 }
                 
@@ -804,7 +1003,7 @@
                         
                         // Log menos frecuente para la batería
                         if (Math.random() < 0.1) { // Solo 10% de las veces
-                            addLog(`🔋 Batería Kobuki: ${robotState.battery.level}% - ${robotState.battery.status} (${robotState.battery.voltage}V)`);
+                            addLog(`Bateria Kobuki: ${robotState.battery.level}% - ${robotState.battery.status} (${robotState.battery.voltage}V)`);
                         }
                     }
                 });
@@ -812,14 +1011,14 @@
                 if (!batteryFound) {
                     // Log ocasional cuando no se encuentra batería
                     if (Math.random() < 0.05) { // Solo 5% de las veces
-                        addLog(`⚠️ No se encontró información de batería Kobuki en ${message.status.length} estados`);
+                        addLog(`No se encontro informacion de bateria Kobuki en ${message.status.length} estados`);
                     }
                 }
                 
                 document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
                 
             } catch (error) {
-                addLog(`❌ Error procesando diagnósticos: ${error.message}`);
+                addLog(`Error procesando diagnosticos: ${error.message}`);
             }
         }
 
@@ -851,22 +1050,10 @@
                 `</div>`;
         }
 
-        // Actualizar imagen de la cámara
-        function updateCameraImage(message) {
-            robotState.camera.lastUpdate = new Date();
-            
-            // Convertir imagen ROS a base64 para mostrar en HTML
-            // Nota: Esta es una implementación simplificada
-            // En producción, podrías usar ros3djs o similar para mejor rendimiento
-            
-            addLog(`Imagen de cámara recibida (${message.width}x${message.height})`);
-            document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
-        }
-
         // Enviar comando de velocidad
         function sendVelocityCommand(linear, angular) {
             if (!ros || !cmdVelTopic) {
-                addLog('❌ No hay conexión ROS disponible');
+                addLog('No hay conexion ROS disponible');
                 return;
             }
 
@@ -964,110 +1151,91 @@
             document.getElementById('systemLog').innerHTML = 'Log limpiado...<br>';
         }
 
-        // Variables para la cámara
-        let cameraActive = false;
-        let cameraFrameCount = 0;
-        let cameraStartTime = Date.now();
-
-        // Función para activar/desactivar cámara
-        function toggleCamera() {
-            cameraActive = !cameraActive;
-            const toggleButton = document.getElementById('cameraToggleText');
-            const statusElement = document.getElementById('cameraStatus');
+        // ===== FUNCIONES MEJORADAS PARA MAPA 2D =====
+        
+        // Inicializar controles de zoom con botones
+        function initializeZoomControls() {
+            // Configurar tamaño inicial del canvas
+            mapCanvas.width = 600;
+            mapCanvas.height = 400;
             
-            if (cameraActive) {
-                toggleButton.textContent = 'Desactivar Cámara';
-                statusElement.textContent = 'Activa';
-                statusElement.style.color = '#28a745';
-                addLog('Cámara activada');
-            } else {
-                toggleButton.textContent = 'Activar Cámara';
-                statusElement.textContent = 'Inactiva';
-                statusElement.style.color = '#dc3545';
-                addLog('Cámara desactivada');
-                
-                // Limpiar vista de cámara
-                document.getElementById('cameraView').innerHTML = `
-                    <div style="text-align: center;">
-                        <div style="font-size: 48px; margin-bottom: 20px;"></div>
-                        <div>Cámara desactivada</div>
-                        <div style="font-size: 12px; margin-top: 10px;">Haz clic en "Activar Cámara" para ver la imagen</div>
-                    </div>
-                `;
-            }
+            // Centrar la vista inicial
+            mapTranslatePos = {
+                x: mapCanvas.width / 2,
+                y: mapCanvas.height / 2
+            };
+            
+            // Botón zoom in
+            document.getElementById('zoomIn').addEventListener('click', function() {
+                mapScale /= scaleMultiplier;
+                updateZoomDisplay();
+                redrawMap();
+            });
+            
+            // Botón zoom out
+            document.getElementById('zoomOut').addEventListener('click', function() {
+                mapScale *= scaleMultiplier;
+                updateZoomDisplay();
+                redrawMap();
+            });
+            
+            // Botón reset
+            document.getElementById('resetZoom').addEventListener('click', function() {
+                mapScale = 1.0;
+                mapTranslatePos = {
+                    x: mapCanvas.width / 2,
+                    y: mapCanvas.height / 2
+                };
+                updateZoomDisplay();
+                redrawMap();
+                addLog('Vista del mapa reseteada');
+            });
+            
+            // Eventos de arrastre
+            mapCanvas.addEventListener('mousedown', function(evt) {
+                isDragging = true;
+                dragStartOffset.x = evt.clientX - mapTranslatePos.x;
+                dragStartOffset.y = evt.clientY - mapTranslatePos.y;
+                mapCanvas.style.cursor = 'grabbing';
+            });
+            
+            mapCanvas.addEventListener('mouseup', function(evt) {
+                isDragging = false;
+                mapCanvas.style.cursor = 'grab';
+            });
+            
+            mapCanvas.addEventListener('mouseleave', function(evt) {
+                isDragging = false;
+                mapCanvas.style.cursor = 'default';
+            });
+            
+            mapCanvas.addEventListener('mouseenter', function(evt) {
+                mapCanvas.style.cursor = 'grab';
+            });
+            
+            mapCanvas.addEventListener('mousemove', function(evt) {
+                if (isDragging) {
+                    mapTranslatePos.x = evt.clientX - dragStartOffset.x;
+                    mapTranslatePos.y = evt.clientY - dragStartOffset.y;
+                    redrawMap();
+                }
+            });
+            
+            updateZoomDisplay();
+            addLog('Controles de zoom inicializados');
         }
-
-        // Actualizar imagen de la cámara mejorada
-        function updateCameraImage(message) {
-            try {
-                lastCameraTime = Date.now(); // Registrar actividad
-                
-                if (!cameraActive) {
-                    // Si la cámara no está activa, no procesar
-                    return;
-                }
-                
-                if (!message) {
-                    addLog('⚠️ Mensaje de cámara vacío recibido');
-                    return;
-                }
-                
-                robotState.camera.lastUpdate = new Date();
-                cameraFrameCount++;
-                
-                // Calcular FPS
-                const elapsed = (Date.now() - cameraStartTime) / 1000;
-                const fps = elapsed > 0 ? (cameraFrameCount / elapsed).toFixed(1) : '0.0';
-                
-                // Actualizar información de la cámara
-                const width = message.width || 'N/A';
-                const height = message.height || 'N/A';
-                const encoding = message.encoding || 'N/A';
-                
-                document.getElementById('cameraResolution').textContent = `${width}x${height}`;
-                document.getElementById('cameraLastUpdate').textContent = new Date().toLocaleTimeString();
-                document.getElementById('cameraFPS').textContent = fps;
-                
-                // Verificar si tenemos datos de imagen
-                const hasImageData = message.data && message.data.length > 0;
-                const dataSize = hasImageData ? message.data.length : 0;
-                
-                // Actualizar vista de cámara con información detallada
-                document.getElementById('cameraView').innerHTML = `
-                    <div style="text-align: center; color: white; padding: 20px;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">📹</div>
-                        <div style="font-size: 18px; margin-bottom: 15px;">Recibiendo datos de cámara</div>
-                        <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; display: inline-block; text-align: left;">
-                            <div><strong>Resolución:</strong> ${width}x${height}</div>
-                            <div><strong>Encoding:</strong> ${encoding}</div>
-                            <div><strong>FPS:</strong> ${fps}</div>
-                            <div><strong>Datos:</strong> ${dataSize} bytes</div>
-                            <div><strong>Timestamp:</strong> ${new Date().toLocaleTimeString()}</div>
-                            <div><strong>Frames:</strong> ${cameraFrameCount}</div>
-                        </div>
-                        <div style="font-size: 12px; margin-top: 15px; color: #ccc;">
-                            ${hasImageData ? '✅ Recibiendo datos de imagen' : '⚠️ Sin datos de imagen'}
-                        </div>
-                    </div>
-                `;
-                
-                // Log menos frecuente para no saturar
-                if (cameraFrameCount % 30 === 1) { // Solo cada 30 frames
-                    addLog(`📷 Cámara activa: ${fps} FPS, ${width}x${height}, ${encoding}`);
-                }
-                
-                document.getElementById('lastMessage').textContent = new Date().toLocaleTimeString();
-                
-            } catch (error) {
-                addLog(`❌ Error procesando imagen de cámara: ${error.message}`);
-                document.getElementById('cameraView').innerHTML = `
-                    <div style="text-align: center; color: red; padding: 20px;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
-                        <div>Error procesando imagen</div>
-                        <div style="font-size: 12px; margin-top: 10px;">${error.message}</div>
-                    </div>
-                `;
-            }
+        
+        // Actualizar display del zoom
+        function updateZoomDisplay() {
+            const zoomPercentage = Math.round((1 / mapScale) * 100);
+            document.getElementById('zoomStatus').textContent = `Zoom: ${zoomPercentage}%`;
+        }
+        
+        // Redibujar mapa con transformaciones
+        function redrawMap() {
+            if (!mapData) return;
+            
+            drawMapWithTransform(mapData);
         }
 
         // Logout
@@ -1082,10 +1250,377 @@
             }
         });
 
+        // ===== FUNCIONES DEL MAPA =====
+        
+        // Inicializar canvas del mapa
+        function initializeMapCanvas() {
+            mapCanvas = document.getElementById('mapCanvas');
+            mapContext = mapCanvas.getContext('2d');
+            
+            // Inicializar controles de zoom
+            initializeZoomControls();
+            
+            // Limpiar canvas inicial
+            clearMap();
+            
+            addLog('Canvas del mapa con controles de zoom inicializado');
+        }
+        
+        // Suscribirse al tópico del mapa
+        function subscribeToMap() {
+            if (!ros || !ros.isConnected) {
+                addLog('Error: No hay conexión ROS activa');
+                return;
+            }
+            
+            if (isMapSubscribed) {
+                addLog('Ya está suscrito al mapa');
+                return;
+            }
+            
+            addLog('Conectando al tópico /map...');
+            
+            // Suscripción 2D
+            mapTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/map',
+                messageType: 'nav_msgs/OccupancyGrid'
+            });
+            
+            mapTopic.subscribe(function(message) {
+                mapMessagesReceived++;
+                const now = Date.now();
+                
+                // Solo procesar actualizaciones del mapa cada cierto tiempo
+                if (now - lastMapUpdate > mapUpdateThrottle) {
+                    mapMessagesProcessed++;
+                    addLog(`Mapa recibido (${mapMessagesReceived}/${mapMessagesProcessed}) - Procesando...`);
+                    drawMap(message);
+                    updateMapInfo(message);
+                    lastMapUpdate = now;
+                } else {
+                    // Solo guardar los datos del mapa sin procesar
+                    mapData = message;
+                }
+            });
+            
+            isMapSubscribed = true;
+            updateMapStatus(true);
+            addLog('Suscrito al tópico /map correctamente');
+        }
+        
+        // Dibujar el mapa en el canvas
+        function drawMap(message) {
+            if (!mapCanvas || !mapContext) {
+                addLog('Error: Canvas no inicializado');
+                return;
+            }
+            
+            // Guardar datos del mapa
+            mapData = message;
+            
+            // Dibujar con transformaciones
+            drawMapWithTransform(message);
+            
+            addLog(`Mapa recibido: ${message.info.width}x${message.info.height}, resolución: ${message.info.resolution.toFixed(3)}m/celda`);
+        }
+        
+        // Dibujar mapa con transformaciones de zoom y pan
+        function drawMapWithTransform(message) {
+            if (!mapCanvas || !mapContext || !message) return;
+            
+            const width = message.info.width;
+            const height = message.info.height;
+            
+            // Limpiar canvas
+            mapContext.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+            
+            // Aplicar transformaciones
+            mapContext.save();
+            mapContext.translate(mapTranslatePos.x, mapTranslatePos.y);
+            mapContext.scale(mapScale, mapScale);
+            
+            // Crear imagen del mapa escalada
+            const scaledWidth = Math.min(width, 400);
+            const scaledHeight = Math.min(height, 400);
+            const imageData = mapContext.createImageData(scaledWidth, scaledHeight);
+            
+            // Factores de escala para ajustar el mapa original al tamaño escalado
+            const scaleX = width / scaledWidth;
+            const scaleY = height / scaledHeight;
+            
+            // Centrar el mapa
+            const offsetX = -scaledWidth / 2;
+            const offsetY = -scaledHeight / 2;
+            
+            for (let y = 0; y < scaledHeight; y++) {
+                for (let x = 0; x < scaledWidth; x++) {
+                    const origX = Math.floor(x * scaleX);
+                    const origY = Math.floor(y * scaleY);
+                    const index = origY * width + origX;
+                    
+                    if (index < message.data.length) {
+                        const val = message.data[index];
+                        let color = 127; // Gris (desconocido)
+                        
+                        if (val === 100) {
+                            color = 0;     // Negro (ocupado)
+                        } else if (val === 0) {
+                            color = 255;   // Blanco (libre)
+                        }
+                        
+                        const pixelIndex = (y * scaledWidth + x) * 4;
+                        imageData.data[pixelIndex + 0] = color; // R
+                        imageData.data[pixelIndex + 1] = color; // G
+                        imageData.data[pixelIndex + 2] = color; // B
+                        imageData.data[pixelIndex + 3] = 255;   // A
+                    }
+                }
+            }
+            
+            // Dibujar imagen en posición centrada
+            mapContext.putImageData(imageData, offsetX, offsetY);
+            
+            // Dibujar robot
+            drawRobotPositionTransformed(message, scaledWidth, scaledHeight, offsetX, offsetY, scaleX, scaleY);
+            
+            mapContext.restore();
+        }
+        
+        // Dibujar posición del robot con transformaciones
+        function drawRobotPositionTransformed(message, scaledWidth, scaledHeight, offsetX, offsetY, scaleX, scaleY) {
+            if (!robotState.position) return;
+            
+            const mapInfo = message.info;
+            
+            // Convertir coordenadas del mundo a coordenadas del mapa escalado
+            const mapX = (robotState.position.x - mapInfo.origin.position.x) / mapInfo.resolution;
+            const mapY = (robotState.position.y - mapInfo.origin.position.y) / mapInfo.resolution;
+            
+            const canvasX = offsetX + (mapX / scaleX);
+            const canvasY = offsetY + (scaledHeight - (mapY / scaleY)); // Invertir Y
+            
+            // Tamaño del robot ajustado al zoom
+            const robotSize = Math.max(3, 8 / mapScale);
+            
+            // Dibujar robot como círculo rojo
+            mapContext.beginPath();
+            mapContext.arc(canvasX, canvasY, robotSize, 0, 2 * Math.PI);
+            mapContext.fillStyle = '#ff0000';
+            mapContext.fill();
+            mapContext.strokeStyle = '#ffffff';
+            mapContext.lineWidth = 2 / mapScale;
+            mapContext.stroke();
+            
+            // Dibujar dirección del robot
+            const theta = parseFloat(robotState.position.orientation) * Math.PI / 180;
+            const arrowLength = robotSize * 2;
+            const endX = canvasX + Math.cos(theta) * arrowLength;
+            const endY = canvasY - Math.sin(theta) * arrowLength;
+            
+            mapContext.beginPath();
+            mapContext.moveTo(canvasX, canvasY);
+            mapContext.lineTo(endX, endY);
+            mapContext.strokeStyle = '#ffff00';
+            mapContext.lineWidth = 3 / mapScale;
+            mapContext.stroke();
+        }
+        
+        // Redibujar solo la posición del robot (optimizado)
+        function redrawRobotPosition() {
+            if (!mapData || !mapCanvas || !mapContext || !robotState.position) {
+                return;
+            }
+            
+            // Solo redibujar si el mapa existe y tenemos una posición válida
+            drawMap(mapData);
+        }
+        
+        // Dibujar la posición del robot en el mapa
+        function drawRobotPosition() {
+            if (!robotState.position || !mapData) return;
+            
+            const mapInfo = mapData.info;
+            
+            // Convertir coordenadas del mundo a coordenadas del mapa
+            const mapX = (robotState.position.x - mapInfo.origin.position.x) / mapInfo.resolution;
+            const mapY = (robotState.position.y - mapInfo.origin.position.y) / mapInfo.resolution;
+            
+            // Ajustar para el canvas escalado
+            const canvasX = mapX * (mapCanvas.width / mapInfo.width);
+            const canvasY = mapCanvas.height - (mapY * (mapCanvas.height / mapInfo.height)); // Invertir Y
+            
+            // Verificar que las coordenadas estén dentro del canvas
+            if (canvasX < 0 || canvasX > mapCanvas.width || canvasY < 0 || canvasY > mapCanvas.height) {
+                return; // Robot fuera del área del mapa visible
+            }
+            
+            // Dibujar el robot como un círculo rojo
+            mapContext.beginPath();
+            mapContext.arc(canvasX, canvasY, 5, 0, 2 * Math.PI);
+            mapContext.fillStyle = '#ff0000';
+            mapContext.fill();
+            mapContext.strokeStyle = '#ffffff';
+            mapContext.lineWidth = 2;
+            mapContext.stroke();
+            
+            // Dibujar dirección del robot
+            const theta = parseFloat(robotState.position.orientation) * Math.PI / 180; // Convertir a radianes
+            const arrowLength = 10;
+            const endX = canvasX + Math.cos(theta) * arrowLength;
+            const endY = canvasY - Math.sin(theta) * arrowLength; // Invertir Y
+            
+            mapContext.beginPath();
+            mapContext.moveTo(canvasX, canvasY);
+            mapContext.lineTo(endX, endY);
+            mapContext.strokeStyle = '#ffff00';
+            mapContext.lineWidth = 3;
+            mapContext.stroke();
+        }
+        
+        // Actualizar información del mapa en la UI
+        function updateMapInfo(message) {
+            const info = message.info;
+            
+            document.getElementById('mapResolution').textContent = info.resolution.toFixed(3);
+            document.getElementById('mapSize').textContent = `${info.width} x ${info.height}`;
+            document.getElementById('mapOrigin').textContent = 
+                `(${info.origin.position.x.toFixed(2)}, ${info.origin.position.y.toFixed(2)})`;
+            document.getElementById('mapTimestamp').textContent = new Date().toLocaleTimeString();
+            
+            // Actualizar contadores de rendimiento
+            document.getElementById('mapMsgsReceived').textContent = mapMessagesReceived;
+            document.getElementById('mapMsgsProcessed').textContent = mapMessagesProcessed;
+            
+            // Actualizar posición del robot en la UI
+            if (robotState.position) {
+                document.getElementById('robotX').textContent = robotState.position.x.toFixed(2);
+                document.getElementById('robotY').textContent = robotState.position.y.toFixed(2);
+                document.getElementById('robotTheta').textContent = robotState.position.orientation.toFixed(1);
+            }
+        }
+        
+        // Actualizar estado del mapa en la UI
+        function updateMapStatus(connected) {
+            const statusElement = document.getElementById('mapStatus');
+            if (connected) {
+                statusElement.textContent = 'Mapa Conectado';
+                statusElement.className = 'map-status connected';
+            } else {
+                statusElement.textContent = 'Mapa Desconectado';
+                statusElement.className = 'map-status disconnected';
+            }
+        }
+        
+        // Limpiar el mapa
+        function clearMap() {
+            // Limpiar canvas
+            if (mapContext) {
+                mapContext.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+                
+                // Dibujar texto indicando que no hay mapa
+                mapContext.fillStyle = '#666';
+                mapContext.font = '16px Arial';
+                mapContext.textAlign = 'center';
+                mapContext.fillText('No hay datos del mapa', mapCanvas.width / 2, mapCanvas.height / 2);
+            }
+            
+            // Limpiar suscripción del tópico
+            if (mapTopic) {
+                try {
+                    mapTopic.unsubscribe();
+                } catch (e) {}
+                mapTopic = null;
+            }
+            
+            // Reset variables
+            mapData = null;
+            isMapSubscribed = false;
+            mapScale = 1.0;
+            mapTranslatePos = {
+                x: mapCanvas ? mapCanvas.width / 2 : 300,
+                y: mapCanvas ? mapCanvas.height / 2 : 200
+            };
+            
+            // Limpiar información del mapa
+            document.getElementById('mapResolution').textContent = '-';
+            document.getElementById('mapSize').textContent = '-';
+            document.getElementById('mapOrigin').textContent = '-';
+            document.getElementById('mapTimestamp').textContent = '-';
+            
+            updateZoomDisplay();
+            updateMapStatus(false);
+            addLog('Mapa limpiado');
+        }
+        
+        // Función para cambiar la frecuencia de actualización del mapa
+        function updateMapFrequency() {
+            const selectElement = document.getElementById('mapUpdateFreq');
+            mapUpdateThrottle = parseInt(selectElement.value);
+            addLog(`Frecuencia de actualización del mapa cambiada a ${mapUpdateThrottle/1000}s`);
+        }
+        
+        // Modificar la función updateOdometry para actualizar posición del robot en el mapa
+        const originalUpdateOdometry = updateOdometry;
+        updateOdometry = function(message) {
+            // Llamar a la función original
+            if (originalUpdateOdometry) {
+                originalUpdateOdometry(message);
+            }
+            
+            // Actualizar posición para el mapa
+            if (message && message.pose && message.pose.pose) {
+                const position = message.pose.pose.position;
+                const orientation = message.pose.pose.orientation;
+                
+                // Convertir cuaternión a ángulo
+                const theta = Math.atan2(
+                    2 * (orientation.w * orientation.z + orientation.x * orientation.y),
+                    1 - 2 * (orientation.y * orientation.y + orientation.z * orientation.z)
+                );
+                
+                const newPosition = {
+                    x: position.x,
+                    y: position.y,
+                    z: position.z,
+                    orientation: theta * 180 / Math.PI // Convertir a grados
+                };
+                
+                // Solo actualizar si la posición cambió significativamente
+                const positionChanged = !lastRobotPosition || 
+                    Math.abs(newPosition.x - lastRobotPosition.x) > 0.01 ||
+                    Math.abs(newPosition.y - lastRobotPosition.y) > 0.01 ||
+                    Math.abs(newPosition.orientation - lastRobotPosition.orientation) > 1;
+                
+                if (positionChanged) {
+                    robotState.position = newPosition;
+                    lastRobotPosition = { ...newPosition };
+                    
+                    // Actualizar información del robot en la UI del mapa
+                    if (document.getElementById('robotX')) {
+                        document.getElementById('robotX').textContent = newPosition.x.toFixed(2);
+                        document.getElementById('robotY').textContent = newPosition.y.toFixed(2);
+                        document.getElementById('robotTheta').textContent = newPosition.orientation.toFixed(1);
+                    }
+                    
+                    // Redibujar solo si hay mapa y está suscrito
+                    if (mapData && isMapSubscribed) {
+                        redrawRobotPosition();
+                    }
+                }
+            }
+        };
+
         // Limpiar conexiones al cerrar la página
         window.addEventListener('beforeunload', () => {
             if (ros) {
                 sendVelocityCommand(0.0, 0.0); // Parar el robot
+                
+                // Limpiar suscripción del mapa
+                if (mapTopic) {
+                    mapTopic.unsubscribe();
+                }
+                
                 ros.close();
             }
         });

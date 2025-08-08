@@ -376,8 +376,7 @@ app.post('/api/start-tour', requireAuth, (req, res) => {
         return res.status(400).json({ error: 'Tipo de tour requerido' });
     }
 
-    // Aquí se integraría con el sistema del robot
-    // Por ahora simulamos el inicio del tour
+    // Integración real con el sistema del robot requerida
     const tourId = Math.random().toString(36).substr(2, 9);
     const PIN = Math.floor(10000 + Math.random() * 90000); // Generar un PIN aleatorio de 5 dígitos
     
@@ -524,26 +523,10 @@ app.get('/robot', requireAuth, (req, res) => {
 // API para obtener estado del robot
 app.get('/api/robot/status', requireAuth, (req, res) => {
     const status = robotManager.getStatus();
-    const robotInfo = robotManager.getRobotInfo();
     
     res.json({
         ...status,
-        robot_info: robotInfo,
-        topics_available: [
-            '/mobile_base/commands/velocity',
-            '/odom',
-            '/laser',
-            '/camera/color/image_raw',
-            '/diagnostics',
-            '/imu/data',
-            '/mobile_base/sensors/bumper_pointcloud',
-            '/mobile_base/sensors/core',
-            '/tf',
-            '/map',
-            '/move_base/goal',
-            '/amcl_pose',
-            '/initialpose'
-        ]
+        topics_available: robotManager.topics
     });
 });
 
@@ -621,11 +604,9 @@ app.post('/api/robot/command', requireAuth, (req, res) => {
 
 // API para obtener información detallada del robot
 app.get('/api/robot/info', requireAuth, (req, res) => {
-    const robotInfo = robotManager.getRobotInfo();
     const status = robotManager.getStatus();
     
     res.json({
-        ...robotInfo,
         connection_status: status,
         available_actions: [
             'move_forward',
@@ -647,30 +628,22 @@ app.get('/api/robot/topics', requireAuth, (req, res) => {
         });
     }
 
-    // Simular obtención de tópicos (en una implementación real, 
-    // esto se obtendría directamente del robot via rosbridge)
-    const simulatedTopics = [
-        '/mobile_base/commands/velocity',
-        '/odom', 
-        '/laser',
-        '/camera/color/image_raw',
-        '/diagnostics',
-        '/imu/data',
-        '/mobile_base/sensors/bumper_pointcloud',
-        '/mobile_base/sensors/core',
-        '/tf',
-        '/tf_static',
-        '/clock',
-        '/rosout',
-        '/rosout_agg'
-    ];
-
-    res.json({
-        success: true,
-        topic_count: simulatedTopics.length,
-        topics: simulatedTopics,
-        timestamp: new Date().toISOString()
-    });
+    // Obtener tópicos reales del robot vía rosbridge
+    try {
+        // En una implementación real, esto obtendría los tópicos directamente del robot
+        // robotManager.getTopics() debería retornar una promesa con los tópicos reales
+        res.json({
+            success: true,
+            topic_count: robotManager.topics.length,
+            topics: robotManager.topics,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Error al obtener tópicos del robot',
+            message: error.message
+        });
+    }
 });
 
 // API para historial de comandos del robot (solo admin)

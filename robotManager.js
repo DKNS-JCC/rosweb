@@ -51,6 +51,12 @@ class RobotManager {
         } else if (message.op === 'set_level') {
             // Respuesta de configuración
             console.log('ROS configuración aplicada');
+        } else if (message.op === 'service_response' && message.service === '/rosapi/topics') {
+            // Respuesta de la lista de tópicos
+            if (message.values && message.values.topics) {
+                this.topics = message.values.topics;
+                console.log(`📋 ${this.topics.length} tópicos disponibles`);
+            }
         }
     }
 
@@ -171,19 +177,6 @@ class RobotManager {
             last_ping: this.lastPing,
             topics_count: this.topics.length,
             active_subscribers: this.subscribers.size
-        };
-    }
-
-    // Obtener información del robot (simulada)
-    getRobotInfo() {
-        return {
-            name: 'TurtleBot3',
-            model: 'Burger',
-            firmware_version: '2.2.0',
-            battery_level: Math.floor(Math.random() * 100) + '%',
-            uptime: Math.floor(Math.random() * 24) + 'h',
-            sensors: ['Camera', 'LIDAR', 'IMU', 'Odometry'],
-            capabilities: ['Navigation', 'SLAM', 'Object Detection']
         };
     }
 

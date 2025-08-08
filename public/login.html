@@ -57,13 +57,9 @@
                     
                     // Si es admin, redirigir al panel administrativo
                     if (data.isAdmin) {
-                        setTimeout(() => {
-                            window.location.href = data.redirectTo;
-                        }, 1000);
+                        window.location.href = '/admin';
                     } else {
-                        setTimeout(() => {
-                            window.location.href = '/';
-                        }, 1000);
+                        window.location.href = '/';
                     }
                 } else {
                     messageDiv.textContent = data.error || 'Error en el login';

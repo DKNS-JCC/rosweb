@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Waypoints Web 3D</title>
+    <script src="https://unpkg.com/roslib@1.3.0/build/roslib.min.js"></script>
+    <script src="https://unpkg.com/three@0.145.0/build/three.min.js"></script>
+    <style>
+        #map {
+            background: #f5f5f5;
+            cursor: crosshair;
+            position: relative;
+            overflow: hidden;
+        }
+        .map-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Mapa y Waypoints</h1>
+    <div style="margin-bottom: 10px;">
+        <button id="startBtn">Iniciar Ruta</button>
+        <button id="nextBtn" style="display:none;">Siguiente Objetivo</button>
+        <button id="clearBtn">Limpiar Waypoints</button>
+        <span id="waypointCount">Waypoints: 0</span>
+        <span id="routeStatus" style="margin-left: 20px; font-weight: bold;"></span>
+    </div>
+    <div id="map" style="width:800px; height:600px; border: 2px solid #ccc;">
+        <div class="map-info">
+            <strong>Mapa 3D Personalizado</strong><br>
+            Robot: <span id="robotPos">Desconocido</span><br>
+            Mapa: <span id="mapStatus">Inicializando...</span><br>
+            Waypoints: <span id="waypointCount">0</span>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function () {
+            // 1. Conexión con ROS
+            var ros = new ROSLIB.Ros({ url: 'ws://192.168.1.120:9090' });
+
+            ros.on('connection', function() { 
+                console.log('Conectado a rosbridge'); 
+                document.getElementById('mapStatus').textContent = 'Conectado a ROS';
+            });
+            ros.on('error', function(error) { 
+                console.error('Error de conexión:', error);
+                document.getElementById('mapStatus').textContent = 'Error de conexión';
+            });
+
+            // 2. Variables globales
+            var waypoints = [];
+            var scene, camera, renderer, controls;
+            var robotMarker = null;
+            var waypointMarkers = [];
+            var mapPlane = null;
+            var currentMapData = null;
+            var currentWaypointIndex = 0;
+            var routeActive = false;
+
+            // 3. Configuración del mapa
+            var mapConfig = {
+                width: 20,
+                height: 20,
+                resolution: 0.05,
+                originX: -10,
+                originY: -10
+            };
+
+            // 4. Inicializar visor 3D personalizado
+            function initCustom3D() {
+                var container = document.getElementById('map');
+                
+                // Escena
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0xf5f5f5);
+
+                // Cámara
+                camera = new THREE.PerspectiveCamera(75, 800/600, 0.1, 1000);
+                camera.position.set(0, 0, 15);
+                camera.lookAt(0, 0, 0);
+
+                // Renderer
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(800, 600);
+                container.appendChild(renderer.domElement);
+
+                // Luz
+                var ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                scene.add(ambientLight);
+                var directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(0, 0, 10);
+                scene.add(directionalLight);
+
+                // Plano de referencia (grid)
+                var gridHelper = new THREE.GridHelper(20, 20, 0x888888, 0xcccccc);
+                gridHelper.rotation.x = Math.PI / 2;
+                scene.add(gridHelper);
+
+                // Crear marcador del robot
+                createRobotMarker();
+
+                // Configurar interacción
+                setupMouseInteraction();
+
+                // Loop de renderizado
+                animate();
+
+                console.log('Visor 3D personalizado inicializado');
+                document.getElementById('mapStatus').textContent = 'Vista 3D lista';
+            }
+
+            // 5. Loop de animación
+            function animate() {
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+
+            // 6. Crear marcador del robot
+            function createRobotMarker() {
+                var geometry = new THREE.SphereGeometry(0.2, 16, 16);
+                var material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+                robotMarker = new THREE.Mesh(geometry, material);
+                robotMarker.position.z = 0.2;
+                scene.add(robotMarker);
+                console.log('Marcador del robot creado');
+            }
+
+            // 7. Crear marcador de waypoint
+            function createWaypointMarker(x, y, index) {
+                // Cilindro para el waypoint
+                var geometry = new THREE.CylinderGeometry(0.15, 0.15, 0.4, 8);
+                var material = new THREE.MeshLambertMaterial({ color: 0x0066cc });
+                var waypoint = new THREE.Mesh(geometry, material);
+                waypoint.position.set(x, y, 0.2);
+
+                // Crear texto simple con canvas
+                var canvas = document.createElement('canvas');
+                var context = canvas.getContext('2d');
+                canvas.width = 128;
+                canvas.height = 128;
+                
+                context.fillStyle = 'white';
+                context.fillRect(0, 0, 128, 128);
+                context.fillStyle = 'black';
+                context.font = 'Bold 60px Arial';
+                context.textAlign = 'center';
+                context.fillText((index + 1).toString(), 64, 80);
+
+                var texture = new THREE.CanvasTexture(canvas);
+                var spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                var sprite = new THREE.Sprite(spriteMaterial);
+                sprite.scale.set(1, 1, 1);
+                sprite.position.set(x, y, 0.8);
+
+                scene.add(waypoint);
+                scene.add(sprite);
+
+                waypointMarkers.push({ mesh: waypoint, sprite: sprite });
+                console.log('Waypoint', index + 1, 'creado en:', x.toFixed(2), y.toFixed(2));
+            }
+
+            // 8. Limpiar waypoints
+            function clearWaypoints() {
+                waypointMarkers.forEach(function(marker) {
+                    scene.remove(marker.mesh);
+                    scene.remove(marker.sprite);
+                });
+                waypointMarkers = [];
+                waypoints = [];
+                currentWaypointIndex = 0;
+                routeActive = false;
+                document.getElementById('startBtn').style.display = 'inline';
+                document.getElementById('nextBtn').style.display = 'none';
+                document.getElementById('routeStatus').textContent = '';
+                updateWaypointCount();
+            }
+
+            // 9. Configurar interacción con mouse
+            function setupMouseInteraction() {
+                var raycaster = new THREE.Raycaster();
+                var mouse = new THREE.Vector2();
+
+                renderer.domElement.addEventListener('click', function(event) {
+                    var rect = renderer.domElement.getBoundingClientRect();
+                    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                    raycaster.setFromCamera(mouse, camera);
+
+                    // Intersectar con plano Z=0
+                    var plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+                    var intersectPoint = new THREE.Vector3();
+
+                    if (raycaster.ray.intersectPlane(plane, intersectPoint)) {
+                        var worldX = intersectPoint.x;
+                        var worldY = intersectPoint.y;
+
+                        waypoints.push({ x: worldX, y: worldY, yaw: 0 });
+                        createWaypointMarker(worldX, worldY, waypoints.length - 1);
+                        updateWaypointCount();
+
+                        console.log('Waypoint añadido:', worldX.toFixed(2), worldY.toFixed(2));
+                    }
+                });
+            }
+
+            // 10. Actualizar contador de waypoints
+            function updateWaypointCount() {
+                document.getElementById('waypointCount').textContent = waypoints.length;
+            }
+
+            // 11. Enviar un waypoint individual
+            function sendCurrentWaypoint() {
+                if (currentWaypointIndex >= waypoints.length) {
+                    // Ruta completada
+                    routeActive = false;
+                    document.getElementById('startBtn').style.display = 'inline';
+                    document.getElementById('nextBtn').style.display = 'none';
+                    document.getElementById('routeStatus').textContent = 'Ruta completada!';
+                    console.log('Ruta completada!');
+                    return;
+                }
+
+                var wp = waypoints[currentWaypointIndex];
+                var goal = new ROSLIB.Message({
+                    header: {
+                        frame_id: 'map',
+                        stamp: {
+                            sec: 0,
+                            nsec: 0
+                        }
+                    },
+                    pose: {
+                        position: { x: wp.x, y: wp.y, z: 0 },
+                        orientation: {
+                            x: 0,
+                            y: 0,
+                            z: Math.sin(wp.yaw / 2),
+                            w: Math.cos(wp.yaw / 2)
+                        }
+                    }
+                });
+
+                goalTopic.publish(goal);
+                console.log('Enviado waypoint ' + (currentWaypointIndex + 1) + ' de ' + waypoints.length + ':', wp);
+                
+                document.getElementById('routeStatus').textContent = 
+                    'Objetivo ' + (currentWaypointIndex + 1) + ' de ' + waypoints.length + ' enviado';
+                
+                currentWaypointIndex++;
+                
+                if (currentWaypointIndex >= waypoints.length) {
+                    document.getElementById('nextBtn').textContent = 'Finalizar Ruta';
+                } else {
+                    document.getElementById('nextBtn').textContent = 'Siguiente Objetivo (' + (currentWaypointIndex + 1) + '/' + waypoints.length + ')';
+                }
+            }
+
+            // 12. Procesar mapa de ocupación
+            function processOccupancyGrid(message) {
+                console.log('Mapa recibido:', message.info.width + 'x' + message.info.height);
+                
+                // Actualizar configuración
+                mapConfig.resolution = message.info.resolution;
+                mapConfig.originX = message.info.origin.position.x;
+                mapConfig.originY = message.info.origin.position.y;
+                mapConfig.width = message.info.width * mapConfig.resolution;
+                mapConfig.height = message.info.height * mapConfig.resolution;
+
+                // Crear geometría del mapa
+                createMapGeometry(message);
+                
+                document.getElementById('mapStatus').textContent = 
+                    'Mapa: ' + message.info.width + 'x' + message.info.height;
+            }
+
+            // 13. Crear geometría del mapa
+            function createMapGeometry(mapData) {
+                // Remover mapa anterior si existe
+                if (mapPlane) {
+                    scene.remove(mapPlane);
+                }
+
+                // Crear textura del mapa
+                var canvas = document.createElement('canvas');
+                var context = canvas.getContext('2d');
+                canvas.width = mapData.info.width;
+                canvas.height = mapData.info.height;
+
+                var imageData = context.createImageData(canvas.width, canvas.height);
+                var data = imageData.data;
+
+                for (var i = 0; i < mapData.data.length; i++) {
+                    var value = mapData.data[i];
+                    var color = 128; // Gris por defecto
+                    
+                    if (value >= 0 && value <= 100) {
+                        color = 255 - Math.floor((value / 100) * 255);
+                    }
+                    
+                    var pixelIndex = i * 4;
+                    data[pixelIndex] = color;     // R
+                    data[pixelIndex + 1] = color; // G
+                    data[pixelIndex + 2] = color; // B
+                    data[pixelIndex + 3] = 255;   // A
+                }
+
+                context.putImageData(imageData, 0, 0);
+
+                // Crear plano con la textura del mapa
+                var texture = new THREE.CanvasTexture(canvas);
+                texture.flipY = false;
+                
+                var geometry = new THREE.PlaneGeometry(mapConfig.width, mapConfig.height);
+                var material = new THREE.MeshBasicMaterial({ map: texture });
+                mapPlane = new THREE.Mesh(geometry, material);
+                mapPlane.position.set(
+                    mapConfig.originX + mapConfig.width / 2,
+                    mapConfig.originY + mapConfig.height / 2,
+                    -0.01
+                );
+                
+                scene.add(mapPlane);
+                console.log('Geometría del mapa creada');
+            }
+
+            // 14. Inicializar todo
+            setTimeout(function() {
+                initCustom3D();
+            }, 500);
+
+            // 15. Suscripción al mapa
+            var mapListener = new ROSLIB.Topic({
+                ros: ros,
+                name: '/map',
+                messageType: 'nav_msgs/OccupancyGrid'
+            });
+
+            mapListener.subscribe(function(message) {
+                processOccupancyGrid(message);
+            });
+
+            // 16. Suscripción a pose del robot
+            var poseListener = new ROSLIB.Topic({
+                ros: ros,
+                name: '/amcl_pose',
+                messageType: 'geometry_msgs/PoseWithCovarianceStamped'
+            });
+
+            poseListener.subscribe(function(message) {
+                if (robotMarker) {
+                    var pos = message.pose.pose.position;
+                    var ori = message.pose.pose.orientation;
+
+                    robotMarker.position.set(pos.x, pos.y, 0.2);
+
+                    // Calcular yaw desde quaternion
+                    var q = ori;
+                    var siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+                    var cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+                    var yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+                    robotMarker.rotation.z = yaw;
+
+                    document.getElementById('robotPos').textContent = 
+                        'X: ' + pos.x.toFixed(2) + ', Y: ' + pos.y.toFixed(2);
+                }
+            });
+
+            // 17. Publicador de objetivos
+            var goalTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/move_base_simple/goal',
+                messageType: 'geometry_msgs/PoseStamped'
+            });
+
+            // 17. Publicador de objetivos
+            var goalTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/move_base_simple/goal',
+                messageType: 'geometry_msgs/PoseStamped'
+            });
+
+            // 18. Limpiar waypoints
+            document.getElementById('clearBtn').addEventListener('click', function () {
+                clearWaypoints();
+                console.log("Waypoints limpiados");
+            });
+
+            // 19. Iniciar ruta secuencial
+            document.getElementById("startBtn").addEventListener("click", function () {
+                if (waypoints.length === 0) {
+                    console.warn("No hay waypoints definidos.");
+                    return;
+                }
+
+                console.log("Iniciando ruta con", waypoints.length, "waypoints...");
+                routeActive = true;
+                currentWaypointIndex = 0;
+                
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('nextBtn').style.display = 'inline';
+                document.getElementById('nextBtn').textContent = 'Enviar Primer Objetivo (1/' + waypoints.length + ')';
+                document.getElementById('routeStatus').textContent = 'Ruta iniciada - Haz clic en "Siguiente Objetivo"';
+            });
+
+            // 20. Siguiente waypoint
+            document.getElementById("nextBtn").addEventListener("click", function () {
+                if (routeActive) {
+                    sendCurrentWaypoint();
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
