@@ -7,6 +7,7 @@
     <link rel="icon" type="image/x-icon" href="icon.ico">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
+    <script src="https://unpkg.com/three@0.145.0/build/three.min.js"></script>
     <style>
         .robot-container {
             min-width: 90%;
@@ -188,74 +189,6 @@
             color: #4129ca;
         }
         
-        .map-container {
-            display: flex;
-            gap: 20px;
-            align-items: flex-start;
-        }
-        
-        .map-canvas-container {
-            flex: 1;
-            text-align: center;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        #mapCanvas {
-            border: 2px solid #4129ca;
-            border-radius: 8px;
-            max-width: 100%;
-            background: #f8f9fa;
-        }
-        
-        .map-controls {
-            min-width: 250px;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .map-info {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-        
-        .map-info h4 {
-            margin: 0 0 10px 0;
-            color: #4129ca;
-        }
-        
-        .map-status {
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 10px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        .map-status.connected {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .map-status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .map-status.warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-        
         /* Controles de zoom con botones */
         .zoom-controls {
             position: absolute;
@@ -293,26 +226,6 @@
             transform: scale(0.95);
         }
         
-        .map-canvas-wrapper {
-            position: relative;
-            display: inline-block;
-            border: 2px solid #4129ca;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #f8f9fa;
-        }
-        
-        .map-status-overlay {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 10;
-        }
         
         .robot-position {
             background: #fff3cd;
@@ -321,6 +234,72 @@
             padding: 10px;
             border-radius: 5px;
             margin-top: 15px;
+        }
+        
+        /* Estilos para Waypoints 3D */
+        .waypoints-3d-container {
+            border: 2px solid #4129ca;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            background: #f5f5f5;
+        }
+        
+        .waypoints-controls {
+            background: #4129ca;
+            color: white;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .waypoints-controls button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            background: white;
+            color: #4129ca;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .waypoints-controls button:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+        
+        .waypoints-controls button:disabled {
+            background: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .waypoints-status {
+            color: #ffeb3b;
+            font-weight: bold;
+            margin-left: auto;
+        }
+        
+        .map-3d-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 100;
+            max-width: 200px;
+        }
+        
+        #map3D {
+            cursor: crosshair;
+            display: block;
         }
     </style>
 </head>
@@ -434,89 +413,6 @@
             <button onclick="clearLog()" class="btn btn-secondary" style="margin-top: 10px;">Limpiar Log</button>
         </div>
 
-        <!-- Visualización del Mapa -->
-        <div class="robot-section">
-            <h2>Mapa y Navegación</h2>
-            <div class="map-container">
-                <div class="map-canvas-container">
-                    <!-- Mapa 2D con controles mejorados -->
-                    <div class="map-canvas-wrapper">
-                        <canvas id="mapCanvas" width="600" height="400"></canvas>
-                        
-                        <!-- Controles de zoom -->
-                        <div class="zoom-controls">
-                            <button class="zoom-btn" id="zoomIn" title="Zoom In">+</button>
-                            <button class="zoom-btn" id="zoomOut" title="Zoom Out">-</button>
-                            <button class="zoom-btn" id="resetZoom" title="Reset" style="font-size: 14px;">⌂</button>
-                        </div>
-                        
-                        <!-- Estado del zoom -->
-                        <div class="map-status-overlay" id="zoomStatus">
-                            Zoom: 100%
-                        </div>
-                    </div>
-                    
-                    <div style="margin-top: 10px; color: #666; font-size: 14px; text-align: center;">
-                        <strong>Controles:</strong> 
-                        <span style="margin-right: 15px;">🖱️ <strong>Arrastrar:</strong> Mover mapa</span>
-                        <span style="margin-right: 15px;">⚡ <strong>Botones:</strong> Zoom +/-</span>
-                        <span>🏠 <strong>Casa:</strong> Reset vista</span>
-                    </div>
-                    
-                    <div style="margin-top: 5px; color: #666; font-size: 12px; text-align: center;">
-                        <strong>Leyenda:</strong> 
-                        <span style="color: #000;">■ Obstáculos</span> | 
-                        <span style="color: #fff; background: #000; padding: 2px;">■ Espacio libre</span> | 
-                        <span style="color: #888;">■ Desconocido</span> |
-                        <span style="color: #ff0000;">● Robot</span>
-                    </div>
-                </div>
-                <div class="map-controls">
-                    <div class="map-status disconnected" id="mapStatus">
-                        Mapa Desconectado
-                    </div>
-                    
-                    <div class="map-info">
-                        <h4>Información del Mapa</h4>
-                        <div><strong>Resolución:</strong> <span id="mapResolution">-</span> m/celda</div>
-                        <div><strong>Tamaño:</strong> <span id="mapSize">-</span></div>
-                        <div><strong>Origen:</strong> <span id="mapOrigin">-</span></div>
-                        <div><strong>Último update:</strong> <span id="mapTimestamp">-</span></div>
-                        <div style="margin-top: 10px; font-size: 12px; color: #666;">
-                            <div><strong>Msgs recibidos:</strong> <span id="mapMsgsReceived">0</span></div>
-                            <div><strong>Msgs procesados:</strong> <span id="mapMsgsProcessed">0</span></div>
-                        </div>
-                    </div>
-                    
-                    <div class="robot-position">
-                        <h4>Posición del Robot</h4>
-                        <div><strong>X:</strong> <span id="robotX">-</span> m</div>
-                        <div><strong>Y:</strong> <span id="robotY">-</span> m</div>
-                        <div><strong>Orientación:</strong> <span id="robotTheta">-</span>°</div>
-                    </div>
-                    
-                    <div style="margin-top: 20px;">
-                        <button onclick="subscribeToMap()" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">
-                            Conectar al Mapa
-                        </button>
-                        <button onclick="clearMap()" class="btn btn-secondary" style="width: 100%; margin-bottom: 10px;">
-                            Limpiar Mapa
-                        </button>
-                        
-                        <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <label for="mapUpdateFreq" style="font-size: 12px; color: #666;">Actualización del mapa:</label>
-                            <select id="mapUpdateFreq" onchange="updateMapFrequency()" style="width: 100%; margin-top: 5px; padding: 5px;">
-                                <option value="1000">Muy frecuente (1s)</option>
-                                <option value="2000" selected>Normal (2s)</option>
-                                <option value="5000">Lenta (5s)</option>
-                                <option value="10000">Muy lenta (10s)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Topicos ROS Disponibles -->
         <div class="robot-section">
             <h2>Tópicos ROS Disponibles</h2>
@@ -541,6 +437,29 @@
                 </div>
             </div>
         </div>
+
+        <!-- Mapa y Navegación por Waypoints 3D -->
+        <div class="robot-section">
+            <h2>Navegación por Waypoints 3D</h2>
+            <div class="waypoints-3d-container">
+                <div class="waypoints-controls">
+                    <button id="startRoute3D">Iniciar Ruta</button>
+                    <button id="nextWaypoint3D" style="display:none;">Siguiente Objetivo</button>
+                    <button id="clearWaypoints3D">Limpiar Waypoints</button>
+                    <span>Waypoints: <span id="waypointCount3D">0</span></span>
+                    <div class="waypoints-status" id="routeStatus3D"></div>
+                </div>
+                <div id="map3D" style="width:100%; height:600px; position: relative;">
+                    <div class="map-3d-info">
+                        <strong>Mapa 3D Waypoints</strong><br>
+                        Robot: <span id="robotPos3D">Desconocido</span><br>
+                        Mapa: <span id="mapStatus3D">Inicializando...</span><br>
+                        Waypoints: <span id="waypointDisplay3D">0</span><br>
+                        <small>Clic para añadir waypoints</small>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -553,23 +472,25 @@
         let mapTopic = null;
         let currentUser = null;
         
-        // Variables para el mapa
-        let mapData = null;
-        let mapCanvas = null;
-        let mapContext = null;
-        let isMapSubscribed = false;
-        let lastMapUpdate = 0;
-        let mapUpdateThrottle = 2000; // Solo actualizar mapa cada 2 segundos
-        let lastRobotPosition = null;
-        let mapMessagesReceived = 0;
-        let mapMessagesProcessed = 0;
+        // Variables del sistema de waypoints 3D
+        let scene3D, camera3D, renderer3D;
+        let waypoints3D = [];
+        let robotMarker3D = null;
+        let waypointMarkers3D = [];
+        let mapPlane3D = null;
+        let currentMapData3D = null;
+        let currentWaypointIndex3D = 0;
+        let routeActive3D = false;
+        let goalTopic3D = null;
         
-        // Variables para zoom y pan mejorados
-        let mapScale = 1.0;
-        let mapTranslatePos = { x: 0, y: 0 };
-        let isDragging = false;
-        let dragStartOffset = { x: 0, y: 0 };
-        let scaleMultiplier = 0.8;
+        // Configuración del mapa 3D
+        let mapConfig3D = {
+            width: 20,
+            height: 20,
+            resolution: 0.05,
+            originX: -10,
+            originY: -10
+        };
         
         // Estado del robot
         let robotState = {
@@ -593,8 +514,20 @@
         window.addEventListener('load', async () => {
             await checkUserAccess();
             initializeROS();
-            initializeMapCanvas();
+            setTimeout(() => {
+                initialize3DWaypoints();
+            }, 1000);
         });
+
+        // Verificar que Three.js está disponible
+        function checkThreeJS() {
+            if (typeof THREE === 'undefined') {
+                addLog('ERROR: Three.js no se ha cargado correctamente');
+                return false;
+            }
+            addLog('Three.js cargado correctamente, versión: ' + THREE.REVISION);
+            return true;
+        }
 
         // Verificar acceso del usuario
         async function checkUserAccess() {
@@ -698,6 +631,13 @@
 
             diagnosticTopic.subscribe(function(message) {
                 updateDiagnostics(message);
+            });
+
+            // Tópico para enviar objetivos de navegación (waypoints)
+            goalTopic3D = new ROSLIB.Topic({
+                ros: ros,
+                name: '/move_base_simple/goal',
+                messageType: 'geometry_msgs/PoseStamped'
             });
 
             addLog('Topicos TurtleBot configurados correctamente');
@@ -1071,7 +1011,6 @@
             });
 
             cmdVelTopic.publish(twist);
-            addLog(`Comando enviado - Linear: ${linear}, Angular: ${angular}`);
 
             // Actualizar display de velocidad
             document.getElementById('speedLevel').textContent = Math.abs(linear) > 0 || Math.abs(angular) > 0 ? '1' : '0';
@@ -1151,93 +1090,6 @@
             document.getElementById('systemLog').innerHTML = 'Log limpiado...<br>';
         }
 
-        // ===== FUNCIONES MEJORADAS PARA MAPA 2D =====
-        
-        // Inicializar controles de zoom con botones
-        function initializeZoomControls() {
-            // Configurar tamaño inicial del canvas
-            mapCanvas.width = 600;
-            mapCanvas.height = 400;
-            
-            // Centrar la vista inicial
-            mapTranslatePos = {
-                x: mapCanvas.width / 2,
-                y: mapCanvas.height / 2
-            };
-            
-            // Botón zoom in
-            document.getElementById('zoomIn').addEventListener('click', function() {
-                mapScale /= scaleMultiplier;
-                updateZoomDisplay();
-                redrawMap();
-            });
-            
-            // Botón zoom out
-            document.getElementById('zoomOut').addEventListener('click', function() {
-                mapScale *= scaleMultiplier;
-                updateZoomDisplay();
-                redrawMap();
-            });
-            
-            // Botón reset
-            document.getElementById('resetZoom').addEventListener('click', function() {
-                mapScale = 1.0;
-                mapTranslatePos = {
-                    x: mapCanvas.width / 2,
-                    y: mapCanvas.height / 2
-                };
-                updateZoomDisplay();
-                redrawMap();
-                addLog('Vista del mapa reseteada');
-            });
-            
-            // Eventos de arrastre
-            mapCanvas.addEventListener('mousedown', function(evt) {
-                isDragging = true;
-                dragStartOffset.x = evt.clientX - mapTranslatePos.x;
-                dragStartOffset.y = evt.clientY - mapTranslatePos.y;
-                mapCanvas.style.cursor = 'grabbing';
-            });
-            
-            mapCanvas.addEventListener('mouseup', function(evt) {
-                isDragging = false;
-                mapCanvas.style.cursor = 'grab';
-            });
-            
-            mapCanvas.addEventListener('mouseleave', function(evt) {
-                isDragging = false;
-                mapCanvas.style.cursor = 'default';
-            });
-            
-            mapCanvas.addEventListener('mouseenter', function(evt) {
-                mapCanvas.style.cursor = 'grab';
-            });
-            
-            mapCanvas.addEventListener('mousemove', function(evt) {
-                if (isDragging) {
-                    mapTranslatePos.x = evt.clientX - dragStartOffset.x;
-                    mapTranslatePos.y = evt.clientY - dragStartOffset.y;
-                    redrawMap();
-                }
-            });
-            
-            updateZoomDisplay();
-            addLog('Controles de zoom inicializados');
-        }
-        
-        // Actualizar display del zoom
-        function updateZoomDisplay() {
-            const zoomPercentage = Math.round((1 / mapScale) * 100);
-            document.getElementById('zoomStatus').textContent = `Zoom: ${zoomPercentage}%`;
-        }
-        
-        // Redibujar mapa con transformaciones
-        function redrawMap() {
-            if (!mapData) return;
-            
-            drawMapWithTransform(mapData);
-        }
-
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', async () => {
             try {
@@ -1250,366 +1102,466 @@
             }
         });
 
-        // ===== FUNCIONES DEL MAPA =====
+        // ===== SISTEMA DE WAYPOINTS 3D =====
         
-        // Inicializar canvas del mapa
-        function initializeMapCanvas() {
-            mapCanvas = document.getElementById('mapCanvas');
-            mapContext = mapCanvas.getContext('2d');
-            
-            // Inicializar controles de zoom
-            initializeZoomControls();
-            
-            // Limpiar canvas inicial
-            clearMap();
-            
-            addLog('Canvas del mapa con controles de zoom inicializado');
+        // Configuración del mapa 3D
+        function initialize3DWaypoints() {
+            try {
+                // Verificar que Three.js está disponible
+                if (!checkThreeJS()) {
+                    setTimeout(initialize3DWaypoints, 2000);
+                    return;
+                }
+                
+                const container = document.getElementById('map3D');
+                if (!container) {
+                    addLog('Error: No se encontró el contenedor map3D');
+                    return;
+                }
+                
+                // Limpiar contenedor si ya tiene contenido
+                while (container.children.length > 1) {
+                    container.removeChild(container.lastChild);
+                }
+                
+                addLog('Inicializando sistema de waypoints 3D...');
+
+                // Escena
+                scene3D = new THREE.Scene();
+                scene3D.background = new THREE.Color(0xf5f5f5);
+
+                // Cámara con proporciones correctas
+                const containerWidth = container.offsetWidth || 800;
+                const containerHeight = 600;
+                camera3D = new THREE.PerspectiveCamera(75, containerWidth / containerHeight, 0.1, 1000);
+                camera3D.position.set(0, 0, 15);
+                camera3D.lookAt(0, 0, 0);
+
+                // Renderer
+                renderer3D = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer3D.setSize(containerWidth, containerHeight);
+                renderer3D.setClearColor(0xf5f5f5, 1);
+                container.appendChild(renderer3D.domElement);
+
+                // Luz ambiente más intensa
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+                scene3D.add(ambientLight);
+                
+                // Luz direccional
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                directionalLight.position.set(10, 10, 5);
+                scene3D.add(directionalLight);
+
+                // Plano de referencia (grid) más visible
+                const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x888888);
+                gridHelper.rotation.x = Math.PI / 2;
+                scene3D.add(gridHelper);
+
+                // Crear marcador del robot
+                createRobotMarker3D();
+
+                // Configurar interacción
+                setupMouseInteraction3D();
+
+                // Configurar eventos de botones
+                setupWaypointControls3D();
+
+                // Loop de renderizado
+                animate3D();
+
+                // Configurar suscripciones ROS (con delay para asegurar conexión)
+                setTimeout(setupROS3DSubscriptions, 2000);
+
+                addLog('Sistema de waypoints 3D inicializado correctamente');
+                document.getElementById('mapStatus3D').textContent = 'Vista 3D lista';
+                
+                // Agregar plano base visible
+                const planeGeometry = new THREE.PlaneGeometry(20, 20);
+                const planeMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0xcccccc, 
+                    transparent: true, 
+                    opacity: 0.3 
+                });
+                const basePlane = new THREE.Mesh(planeGeometry, planeMaterial);
+                basePlane.rotation.x = -Math.PI / 2;
+                basePlane.position.z = -0.1;
+                scene3D.add(basePlane);
+                
+            } catch (error) {
+                addLog(`Error inicializando 3D: ${error.message}`);
+                console.error('Error 3D:', error);
+            }
         }
-        
-        // Suscribirse al tópico del mapa
-        function subscribeToMap() {
+
+        // Loop de animación 3D
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            renderer3D.render(scene3D, camera3D);
+        }
+
+        // Crear marcador del robot en 3D
+        function createRobotMarker3D() {
+            try {
+                // Geometría del robot (esfera más grande y visible)
+                const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+                const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+                robotMarker3D = new THREE.Mesh(geometry, material);
+                robotMarker3D.position.set(0, 0, 0.3);
+                scene3D.add(robotMarker3D);
+                
+                // Agregar una flecha para mostrar la orientación
+                const arrowGeometry = new THREE.ConeGeometry(0.1, 0.4, 8);
+                const arrowMaterial = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+                const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+                arrow.position.set(0.4, 0, 0.3);
+                arrow.rotation.z = -Math.PI / 2;
+                robotMarker3D.add(arrow);
+                
+                addLog('Marcador 3D del robot creado (esfera roja con flecha amarilla)');
+            } catch (error) {
+                addLog(`Error creando marcador del robot: ${error.message}`);
+            }
+        }
+
+        // Crear marcador de waypoint en 3D
+        function createWaypointMarker3D(x, y, index) {
+            // Cilindro para el waypoint
+            const geometry = new THREE.CylinderGeometry(0.15, 0.15, 0.4, 8);
+            const material = new THREE.MeshLambertMaterial({ color: 0x0066cc });
+            const waypoint = new THREE.Mesh(geometry, material);
+            waypoint.position.set(x, y, 0.2);
+
+            // Crear texto simple con canvas
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 128;
+            canvas.height = 128;
+            
+            context.fillStyle = 'white';
+            context.fillRect(0, 0, 128, 128);
+            context.fillStyle = 'black';
+            context.font = 'Bold 60px Arial';
+            context.textAlign = 'center';
+            context.fillText((index + 1).toString(), 64, 80);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(1, 1, 1);
+            sprite.position.set(x, y, 0.8);
+
+            scene3D.add(waypoint);
+            scene3D.add(sprite);
+
+            waypointMarkers3D.push({ mesh: waypoint, sprite: sprite });
+            addLog(`Waypoint ${index + 1} creado en: ${x.toFixed(2)}, ${y.toFixed(2)}`);
+        }
+
+        // Configurar interacción con mouse en 3D
+        function setupMouseInteraction3D() {
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+
+            renderer3D.domElement.addEventListener('click', function(event) {
+                const rect = renderer3D.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera3D);
+
+                // Intersectar con plano Z=0
+                const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+                const intersectPoint = new THREE.Vector3();
+
+                if (raycaster.ray.intersectPlane(plane, intersectPoint)) {
+                    const worldX = intersectPoint.x;
+                    const worldY = intersectPoint.y;
+
+                    waypoints3D.push({ x: worldX, y: worldY, yaw: 0 });
+                    createWaypointMarker3D(worldX, worldY, waypoints3D.length - 1);
+                    updateWaypointCount3D();
+
+                    addLog(`Waypoint añadido: ${worldX.toFixed(2)}, ${worldY.toFixed(2)}`);
+                }
+            });
+        }
+
+        // Configurar controles de waypoints
+        function setupWaypointControls3D() {
+            // Limpiar waypoints
+            document.getElementById('clearWaypoints3D').addEventListener('click', function() {
+                clearWaypoints3D();
+                addLog("Waypoints 3D limpiados");
+            });
+
+            // Iniciar ruta secuencial
+            document.getElementById("startRoute3D").addEventListener("click", function() {
+                if (waypoints3D.length === 0) {
+                    addLog("No hay waypoints definidos.");
+                    return;
+                }
+
+                addLog(`Iniciando ruta 3D con ${waypoints3D.length} waypoints...`);
+                routeActive3D = true;
+                currentWaypointIndex3D = 0;
+                
+                document.getElementById('startRoute3D').style.display = 'none';
+                document.getElementById('nextWaypoint3D').style.display = 'inline';
+                document.getElementById('nextWaypoint3D').textContent = `Enviar Primer Objetivo (1/${waypoints3D.length})`;
+                document.getElementById('routeStatus3D').textContent = 'Ruta iniciada - Haz clic en "Siguiente Objetivo"';
+            });
+
+            // Siguiente waypoint
+            document.getElementById("nextWaypoint3D").addEventListener("click", function() {
+                if (routeActive3D) {
+                    sendCurrentWaypoint3D();
+                }
+            });
+        }
+
+        // Configurar suscripciones ROS para waypoints 3D
+        function setupROS3DSubscriptions() {
             if (!ros || !ros.isConnected) {
-                addLog('Error: No hay conexión ROS activa');
+                addLog('Esperando conexión ROS para configurar suscripciones 3D...');
+                setTimeout(setupROS3DSubscriptions, 2000);
                 return;
             }
-            
-            if (isMapSubscribed) {
-                addLog('Ya está suscrito al mapa');
-                return;
-            }
-            
-            addLog('Conectando al tópico /map...');
-            
-            // Suscripción 2D
-            mapTopic = new ROSLIB.Topic({
+
+            // Suscripción al mapa
+            const mapListener3D = new ROSLIB.Topic({
                 ros: ros,
                 name: '/map',
                 messageType: 'nav_msgs/OccupancyGrid'
             });
-            
-            mapTopic.subscribe(function(message) {
-                mapMessagesReceived++;
-                const now = Date.now();
+
+            mapListener3D.subscribe(function(message) {
+                processOccupancyGrid3D(message);
+            });
+
+            // Suscripción a pose del robot - intentar múltiples tópicos
+            const poseListener3D = new ROSLIB.Topic({
+                ros: ros,
+                name: '/amcl_pose',
+                messageType: 'geometry_msgs/PoseWithCovarianceStamped'
+            });
+
+            poseListener3D.subscribe(function(message) {
+                updateRobotPosition3D(message);
+            });
+
+            // Fallback: también intentar con /robot_pose_ekf/odom_combined
+            const poseListenerAlt = new ROSLIB.Topic({
+                ros: ros,
+                name: '/robot_pose_ekf/odom_combined',
+                messageType: 'geometry_msgs/PoseWithCovarianceStamped'
+            });
+
+            poseListenerAlt.subscribe(function(message) {
+                updateRobotPosition3D(message);
+            });
+
+            // También usar datos de odometría para actualizar posición del robot en 3D
+            if (odomTopic) {
+                const originalCallback = odomTopic._callbacks['/odom'] || [];
+                odomTopic.subscribe(function(message) {
+                    // Actualizar también en el mapa 3D
+                    updateRobotPositionFromOdom3D(message);
+                });
+            }
+
+            addLog('Suscripciones 3D configuradas correctamente');
+        }
+
+        // Actualizar posición del robot en 3D
+        function updateRobotPosition3D(message) {
+            if (robotMarker3D && message.pose && message.pose.pose) {
+                const pos = message.pose.pose.position;
+                const ori = message.pose.pose.orientation;
+
+                robotMarker3D.position.set(pos.x, pos.y, 0.2);
+
+                // Calcular yaw desde quaternion
+                const q = ori;
+                const siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+                const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+                const yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+                robotMarker3D.rotation.z = yaw;
+
+                document.getElementById('robotPos3D').textContent = 
+                    `X: ${pos.x.toFixed(2)}, Y: ${pos.y.toFixed(2)}`;
+            }
+        }
+
+        // Actualizar posición del robot desde odometría
+        function updateRobotPositionFromOdom3D(message) {
+            if (robotMarker3D && message.pose && message.pose.pose) {
+                const pos = message.pose.pose.position;
+                const ori = message.pose.pose.orientation;
+
+                robotMarker3D.position.set(pos.x, pos.y, 0.2);
+
+                // Calcular yaw desde quaternion
+                const q = ori;
+                const siny_cosp = 2 * (q.w * q.z + q.x * q.y);
+                const cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
+                const yaw = Math.atan2(siny_cosp, cosy_cosp);
+
+                robotMarker3D.rotation.z = yaw;
+
+                document.getElementById('robotPos3D').textContent = 
+                    `X: ${pos.x.toFixed(2)}, Y: ${pos.y.toFixed(2)}`;
+            }
+        }
+
+        // Procesar mapa de ocupación en 3D
+        function processOccupancyGrid3D(message) {
+            try {
+                if (!message || !message.info) {
+                    addLog('Mensaje de mapa 3D inválido recibido');
+                    return;
+                }
                 
-                // Solo procesar actualizaciones del mapa cada cierto tiempo
-                if (now - lastMapUpdate > mapUpdateThrottle) {
-                    mapMessagesProcessed++;
-                    addLog(`Mapa recibido (${mapMessagesReceived}/${mapMessagesProcessed}) - Procesando...`);
-                    drawMap(message);
-                    updateMapInfo(message);
-                    lastMapUpdate = now;
-                } else {
-                    // Solo guardar los datos del mapa sin procesar
-                    mapData = message;
+                addLog(`Mapa 3D recibido: ${message.info.width}x${message.info.height} (resolución: ${message.info.resolution}m/px)`);
+                
+                // Actualizar configuración
+                mapConfig3D.resolution = message.info.resolution;
+                mapConfig3D.originX = message.info.origin.position.x;
+                mapConfig3D.originY = message.info.origin.position.y;
+                mapConfig3D.width = message.info.width * mapConfig3D.resolution;
+                mapConfig3D.height = message.info.height * mapConfig3D.resolution;
+
+                // Crear geometría del mapa
+                createMapGeometry3D(message);
+                
+                document.getElementById('mapStatus3D').textContent = 
+                    `Mapa: ${message.info.width}x${message.info.height} (${mapConfig3D.resolution.toFixed(3)}m/px)`;
+                    
+            } catch (error) {
+                addLog(`Error procesando mapa 3D: ${error.message}`);
+                console.error('Error procesando mapa 3D:', error);
+            }
+        }
+
+        // Crear geometría del mapa en 3D
+        function createMapGeometry3D(mapData) {
+            // Remover mapa anterior si existe
+            if (mapPlane3D) {
+                scene3D.remove(mapPlane3D);
+            }
+
+            // Crear textura del mapa
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = mapData.info.width;
+            canvas.height = mapData.info.height;
+
+            const imageData = context.createImageData(canvas.width, canvas.height);
+            const data = imageData.data;
+
+            for (let i = 0; i < mapData.data.length; i++) {
+                const value = mapData.data[i];
+                let color = 128; // Gris por defecto
+                
+                if (value >= 0 && value <= 100) {
+                    color = 255 - Math.floor((value / 100) * 255);
+                }
+                
+                const pixelIndex = i * 4;
+                data[pixelIndex] = color;     // R
+                data[pixelIndex + 1] = color; // G
+                data[pixelIndex + 2] = color; // B
+                data[pixelIndex + 3] = 255;   // A
+            }
+
+            context.putImageData(imageData, 0, 0);
+
+            // Crear plano con la textura del mapa
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.flipY = false;
+            
+            const geometry = new THREE.PlaneGeometry(mapConfig3D.width, mapConfig3D.height);
+            const material = new THREE.MeshBasicMaterial({ map: texture });
+            mapPlane3D = new THREE.Mesh(geometry, material);
+            mapPlane3D.position.set(
+                mapConfig3D.originX + mapConfig3D.width / 2,
+                mapConfig3D.originY + mapConfig3D.height / 2,
+                -0.01
+            );
+            
+            scene3D.add(mapPlane3D);
+            addLog('Geometría del mapa 3D creada');
+        }
+
+        // Enviar waypoint actual
+        function sendCurrentWaypoint3D() {
+            if (currentWaypointIndex3D >= waypoints3D.length) {
+                // Ruta completada
+                routeActive3D = false;
+                document.getElementById('startRoute3D').style.display = 'inline';
+                document.getElementById('nextWaypoint3D').style.display = 'none';
+                document.getElementById('routeStatus3D').textContent = 'Ruta completada!';
+                addLog('Ruta 3D completada!');
+                return;
+            }
+
+            const wp = waypoints3D[currentWaypointIndex3D];
+            const goal = new ROSLIB.Message({
+                header: {
+                    frame_id: 'map',
+                    stamp: {
+                        sec: 0,
+                        nsec: 0
+                    }
+                },
+                pose: {
+                    position: { x: wp.x, y: wp.y, z: 0 },
+                    orientation: {
+                        x: 0,
+                        y: 0,
+                        z: Math.sin(wp.yaw / 2),
+                        w: Math.cos(wp.yaw / 2)
+                    }
                 }
             });
+
+            goalTopic3D.publish(goal);
+            addLog(`Enviado waypoint 3D ${currentWaypointIndex3D + 1} de ${waypoints3D.length}: (${wp.x.toFixed(2)}, ${wp.y.toFixed(2)})`);
             
-            isMapSubscribed = true;
-            updateMapStatus(true);
-            addLog('Suscrito al tópico /map correctamente');
-        }
-        
-        // Dibujar el mapa en el canvas
-        function drawMap(message) {
-            if (!mapCanvas || !mapContext) {
-                addLog('Error: Canvas no inicializado');
-                return;
-            }
+            document.getElementById('routeStatus3D').textContent = 
+                `Objetivo ${currentWaypointIndex3D + 1} de ${waypoints3D.length} enviado`;
             
-            // Guardar datos del mapa
-            mapData = message;
+            currentWaypointIndex3D++;
             
-            // Dibujar con transformaciones
-            drawMapWithTransform(message);
-            
-            addLog(`Mapa recibido: ${message.info.width}x${message.info.height}, resolución: ${message.info.resolution.toFixed(3)}m/celda`);
-        }
-        
-        // Dibujar mapa con transformaciones de zoom y pan
-        function drawMapWithTransform(message) {
-            if (!mapCanvas || !mapContext || !message) return;
-            
-            const width = message.info.width;
-            const height = message.info.height;
-            
-            // Limpiar canvas
-            mapContext.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-            
-            // Aplicar transformaciones
-            mapContext.save();
-            mapContext.translate(mapTranslatePos.x, mapTranslatePos.y);
-            mapContext.scale(mapScale, mapScale);
-            
-            // Crear imagen del mapa escalada
-            const scaledWidth = Math.min(width, 400);
-            const scaledHeight = Math.min(height, 400);
-            const imageData = mapContext.createImageData(scaledWidth, scaledHeight);
-            
-            // Factores de escala para ajustar el mapa original al tamaño escalado
-            const scaleX = width / scaledWidth;
-            const scaleY = height / scaledHeight;
-            
-            // Centrar el mapa
-            const offsetX = -scaledWidth / 2;
-            const offsetY = -scaledHeight / 2;
-            
-            for (let y = 0; y < scaledHeight; y++) {
-                for (let x = 0; x < scaledWidth; x++) {
-                    const origX = Math.floor(x * scaleX);
-                    const origY = Math.floor(y * scaleY);
-                    const index = origY * width + origX;
-                    
-                    if (index < message.data.length) {
-                        const val = message.data[index];
-                        let color = 127; // Gris (desconocido)
-                        
-                        if (val === 100) {
-                            color = 0;     // Negro (ocupado)
-                        } else if (val === 0) {
-                            color = 255;   // Blanco (libre)
-                        }
-                        
-                        const pixelIndex = (y * scaledWidth + x) * 4;
-                        imageData.data[pixelIndex + 0] = color; // R
-                        imageData.data[pixelIndex + 1] = color; // G
-                        imageData.data[pixelIndex + 2] = color; // B
-                        imageData.data[pixelIndex + 3] = 255;   // A
-                    }
-                }
-            }
-            
-            // Dibujar imagen en posición centrada
-            mapContext.putImageData(imageData, offsetX, offsetY);
-            
-            // Dibujar robot
-            drawRobotPositionTransformed(message, scaledWidth, scaledHeight, offsetX, offsetY, scaleX, scaleY);
-            
-            mapContext.restore();
-        }
-        
-        // Dibujar posición del robot con transformaciones
-        function drawRobotPositionTransformed(message, scaledWidth, scaledHeight, offsetX, offsetY, scaleX, scaleY) {
-            if (!robotState.position) return;
-            
-            const mapInfo = message.info;
-            
-            // Convertir coordenadas del mundo a coordenadas del mapa escalado
-            const mapX = (robotState.position.x - mapInfo.origin.position.x) / mapInfo.resolution;
-            const mapY = (robotState.position.y - mapInfo.origin.position.y) / mapInfo.resolution;
-            
-            const canvasX = offsetX + (mapX / scaleX);
-            const canvasY = offsetY + (scaledHeight - (mapY / scaleY)); // Invertir Y
-            
-            // Tamaño del robot ajustado al zoom
-            const robotSize = Math.max(3, 8 / mapScale);
-            
-            // Dibujar robot como círculo rojo
-            mapContext.beginPath();
-            mapContext.arc(canvasX, canvasY, robotSize, 0, 2 * Math.PI);
-            mapContext.fillStyle = '#ff0000';
-            mapContext.fill();
-            mapContext.strokeStyle = '#ffffff';
-            mapContext.lineWidth = 2 / mapScale;
-            mapContext.stroke();
-            
-            // Dibujar dirección del robot
-            const theta = parseFloat(robotState.position.orientation) * Math.PI / 180;
-            const arrowLength = robotSize * 2;
-            const endX = canvasX + Math.cos(theta) * arrowLength;
-            const endY = canvasY - Math.sin(theta) * arrowLength;
-            
-            mapContext.beginPath();
-            mapContext.moveTo(canvasX, canvasY);
-            mapContext.lineTo(endX, endY);
-            mapContext.strokeStyle = '#ffff00';
-            mapContext.lineWidth = 3 / mapScale;
-            mapContext.stroke();
-        }
-        
-        // Redibujar solo la posición del robot (optimizado)
-        function redrawRobotPosition() {
-            if (!mapData || !mapCanvas || !mapContext || !robotState.position) {
-                return;
-            }
-            
-            // Solo redibujar si el mapa existe y tenemos una posición válida
-            drawMap(mapData);
-        }
-        
-        // Dibujar la posición del robot en el mapa
-        function drawRobotPosition() {
-            if (!robotState.position || !mapData) return;
-            
-            const mapInfo = mapData.info;
-            
-            // Convertir coordenadas del mundo a coordenadas del mapa
-            const mapX = (robotState.position.x - mapInfo.origin.position.x) / mapInfo.resolution;
-            const mapY = (robotState.position.y - mapInfo.origin.position.y) / mapInfo.resolution;
-            
-            // Ajustar para el canvas escalado
-            const canvasX = mapX * (mapCanvas.width / mapInfo.width);
-            const canvasY = mapCanvas.height - (mapY * (mapCanvas.height / mapInfo.height)); // Invertir Y
-            
-            // Verificar que las coordenadas estén dentro del canvas
-            if (canvasX < 0 || canvasX > mapCanvas.width || canvasY < 0 || canvasY > mapCanvas.height) {
-                return; // Robot fuera del área del mapa visible
-            }
-            
-            // Dibujar el robot como un círculo rojo
-            mapContext.beginPath();
-            mapContext.arc(canvasX, canvasY, 5, 0, 2 * Math.PI);
-            mapContext.fillStyle = '#ff0000';
-            mapContext.fill();
-            mapContext.strokeStyle = '#ffffff';
-            mapContext.lineWidth = 2;
-            mapContext.stroke();
-            
-            // Dibujar dirección del robot
-            const theta = parseFloat(robotState.position.orientation) * Math.PI / 180; // Convertir a radianes
-            const arrowLength = 10;
-            const endX = canvasX + Math.cos(theta) * arrowLength;
-            const endY = canvasY - Math.sin(theta) * arrowLength; // Invertir Y
-            
-            mapContext.beginPath();
-            mapContext.moveTo(canvasX, canvasY);
-            mapContext.lineTo(endX, endY);
-            mapContext.strokeStyle = '#ffff00';
-            mapContext.lineWidth = 3;
-            mapContext.stroke();
-        }
-        
-        // Actualizar información del mapa en la UI
-        function updateMapInfo(message) {
-            const info = message.info;
-            
-            document.getElementById('mapResolution').textContent = info.resolution.toFixed(3);
-            document.getElementById('mapSize').textContent = `${info.width} x ${info.height}`;
-            document.getElementById('mapOrigin').textContent = 
-                `(${info.origin.position.x.toFixed(2)}, ${info.origin.position.y.toFixed(2)})`;
-            document.getElementById('mapTimestamp').textContent = new Date().toLocaleTimeString();
-            
-            // Actualizar contadores de rendimiento
-            document.getElementById('mapMsgsReceived').textContent = mapMessagesReceived;
-            document.getElementById('mapMsgsProcessed').textContent = mapMessagesProcessed;
-            
-            // Actualizar posición del robot en la UI
-            if (robotState.position) {
-                document.getElementById('robotX').textContent = robotState.position.x.toFixed(2);
-                document.getElementById('robotY').textContent = robotState.position.y.toFixed(2);
-                document.getElementById('robotTheta').textContent = robotState.position.orientation.toFixed(1);
-            }
-        }
-        
-        // Actualizar estado del mapa en la UI
-        function updateMapStatus(connected) {
-            const statusElement = document.getElementById('mapStatus');
-            if (connected) {
-                statusElement.textContent = 'Mapa Conectado';
-                statusElement.className = 'map-status connected';
+            if (currentWaypointIndex3D >= waypoints3D.length) {
+                document.getElementById('nextWaypoint3D').textContent = 'Finalizar Ruta';
             } else {
-                statusElement.textContent = 'Mapa Desconectado';
-                statusElement.className = 'map-status disconnected';
+                document.getElementById('nextWaypoint3D').textContent = `Siguiente Objetivo (${currentWaypointIndex3D + 1}/${waypoints3D.length})`;
             }
         }
-        
-        // Limpiar el mapa
-        function clearMap() {
-            // Limpiar canvas
-            if (mapContext) {
-                mapContext.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-                
-                // Dibujar texto indicando que no hay mapa
-                mapContext.fillStyle = '#666';
-                mapContext.font = '16px Arial';
-                mapContext.textAlign = 'center';
-                mapContext.fillText('No hay datos del mapa', mapCanvas.width / 2, mapCanvas.height / 2);
-            }
-            
-            // Limpiar suscripción del tópico
-            if (mapTopic) {
-                try {
-                    mapTopic.unsubscribe();
-                } catch (e) {}
-                mapTopic = null;
-            }
-            
-            // Reset variables
-            mapData = null;
-            isMapSubscribed = false;
-            mapScale = 1.0;
-            mapTranslatePos = {
-                x: mapCanvas ? mapCanvas.width / 2 : 300,
-                y: mapCanvas ? mapCanvas.height / 2 : 200
-            };
-            
-            // Limpiar información del mapa
-            document.getElementById('mapResolution').textContent = '-';
-            document.getElementById('mapSize').textContent = '-';
-            document.getElementById('mapOrigin').textContent = '-';
-            document.getElementById('mapTimestamp').textContent = '-';
-            
-            updateZoomDisplay();
-            updateMapStatus(false);
-            addLog('Mapa limpiado');
+
+        // Limpiar waypoints 3D
+        function clearWaypoints3D() {
+            waypointMarkers3D.forEach(function(marker) {
+                scene3D.remove(marker.mesh);
+                scene3D.remove(marker.sprite);
+            });
+            waypointMarkers3D = [];
+            waypoints3D = [];
+            currentWaypointIndex3D = 0;
+            routeActive3D = false;
+            document.getElementById('startRoute3D').style.display = 'inline';
+            document.getElementById('nextWaypoint3D').style.display = 'none';
+            document.getElementById('routeStatus3D').textContent = '';
+            updateWaypointCount3D();
         }
-        
-        // Función para cambiar la frecuencia de actualización del mapa
-        function updateMapFrequency() {
-            const selectElement = document.getElementById('mapUpdateFreq');
-            mapUpdateThrottle = parseInt(selectElement.value);
-            addLog(`Frecuencia de actualización del mapa cambiada a ${mapUpdateThrottle/1000}s`);
+
+        // Actualizar contador de waypoints 3D
+        function updateWaypointCount3D() {
+            const count = waypoints3D.length;
+            document.getElementById('waypointCount3D').textContent = count;
+            document.getElementById('waypointDisplay3D').textContent = count;
         }
-        
-        // Modificar la función updateOdometry para actualizar posición del robot en el mapa
-        const originalUpdateOdometry = updateOdometry;
-        updateOdometry = function(message) {
-            // Llamar a la función original
-            if (originalUpdateOdometry) {
-                originalUpdateOdometry(message);
-            }
-            
-            // Actualizar posición para el mapa
-            if (message && message.pose && message.pose.pose) {
-                const position = message.pose.pose.position;
-                const orientation = message.pose.pose.orientation;
-                
-                // Convertir cuaternión a ángulo
-                const theta = Math.atan2(
-                    2 * (orientation.w * orientation.z + orientation.x * orientation.y),
-                    1 - 2 * (orientation.y * orientation.y + orientation.z * orientation.z)
-                );
-                
-                const newPosition = {
-                    x: position.x,
-                    y: position.y,
-                    z: position.z,
-                    orientation: theta * 180 / Math.PI // Convertir a grados
-                };
-                
-                // Solo actualizar si la posición cambió significativamente
-                const positionChanged = !lastRobotPosition || 
-                    Math.abs(newPosition.x - lastRobotPosition.x) > 0.01 ||
-                    Math.abs(newPosition.y - lastRobotPosition.y) > 0.01 ||
-                    Math.abs(newPosition.orientation - lastRobotPosition.orientation) > 1;
-                
-                if (positionChanged) {
-                    robotState.position = newPosition;
-                    lastRobotPosition = { ...newPosition };
-                    
-                    // Actualizar información del robot en la UI del mapa
-                    if (document.getElementById('robotX')) {
-                        document.getElementById('robotX').textContent = newPosition.x.toFixed(2);
-                        document.getElementById('robotY').textContent = newPosition.y.toFixed(2);
-                        document.getElementById('robotTheta').textContent = newPosition.orientation.toFixed(1);
-                    }
-                    
-                    // Redibujar solo si hay mapa y está suscrito
-                    if (mapData && isMapSubscribed) {
-                        redrawRobotPosition();
-                    }
-                }
-            }
-        };
 
         // Limpiar conexiones al cerrar la página
         window.addEventListener('beforeunload', () => {
