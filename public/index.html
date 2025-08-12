@@ -334,9 +334,11 @@
             isLoggedIn = true;
             currentUser = user;
             
-            // Mostrar barra de sesión
-            document.getElementById('sessionBar').style.display = 'block';
-            document.getElementById('userName').textContent = user.username;
+            // Mostrar barra de sesión (si existe)
+            const sessionBar = document.getElementById('sessionBar');
+            const userName = document.getElementById('userName');
+            if (sessionBar) sessionBar.style.display = 'block';
+            if (userName) userName.textContent = user.username;
             
             // Actualizar navegación universal
             const navAuthMenu = document.getElementById('navAuthMenu');
@@ -354,8 +356,10 @@
             const navAdmin = document.getElementById('navAdmin');
             
             if (user.role === 'admin') {
-                adminBtn.style.display = 'inline-block';
-                adminBtn.onclick = () => window.location.href = '/admin';
+                if (adminBtn) {
+                    adminBtn.style.display = 'inline-block';
+                    adminBtn.onclick = () => window.location.href = '/admin';
+                }
                 // Mostrar botón de control de robot solo para administradores
                 if (controlRobotBtn) {
                     controlRobotBtn.style.display = 'inline-block';
@@ -368,7 +372,7 @@
                     navAdmin.style.display = 'block';
                 }
             } else {
-                adminBtn.style.display = 'none';
+                if (adminBtn) adminBtn.style.display = 'none';
                 // Ocultar botón de control de robot para usuarios no administradores
                 if (controlRobotBtn) {
                     controlRobotBtn.style.display = 'none';
@@ -382,8 +386,9 @@
                 }
             }
             
-            // Ocultar botones de login/registro
-            document.getElementById('heroButtons').style.display = 'none';
+            // Ocultar botones de login/registro (si existen)
+            const heroButtons = document.getElementById('heroButtons');
+            if (heroButtons) heroButtons.style.display = 'none';
         }
 
         // Mostrar estado cuando el usuario no está logueado
@@ -391,8 +396,9 @@
             isLoggedIn = false;
             currentUser = null;
             
-            // Ocultar barra de sesión
-            document.getElementById('sessionBar').style.display = 'none';
+            // Ocultar barra de sesión (si existe)
+            const sessionBar = document.getElementById('sessionBar');
+            if (sessionBar) sessionBar.style.display = 'none';
             
             // Actualizar navegación universal
             const navAuthMenu = document.getElementById('navAuthMenu');
@@ -418,26 +424,30 @@
                 navAdmin.style.display = 'none';
             }
             
-            // Mostrar botones de login/registro
-            document.getElementById('heroButtons').style.display = 'flex';
+            // Mostrar botones de login/registro (si existen)
+            const heroButtons = document.getElementById('heroButtons');
+            if (heroButtons) heroButtons.style.display = 'flex';
         }
 
-        // Manejar logout
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST'
-                });
+        // Manejar logout (si existe el botón)
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST'
+                    });
 
-                if (response.ok) {
-                    showLoggedOutState();
-                    // Mostrar mensaje de éxito
-                    showMessage('Sesión cerrada exitosamente', 'success');
+                    if (response.ok) {
+                        showLoggedOutState();
+                        // Mostrar mensaje de éxito
+                        showMessage('Sesión cerrada exitosamente', 'success');
+                    }
+                } catch (error) {
+                    showMessage('Error al cerrar sesión', 'error');
                 }
-            } catch (error) {
-                showMessage('Error al cerrar sesión', 'error');
-            }
-        });
+            });
+        }
 
         // Manejar inicio de tours
         document.querySelectorAll('.tour-btn').forEach(btn => {

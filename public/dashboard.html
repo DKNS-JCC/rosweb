@@ -7,6 +7,112 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #4129ca;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 4px solid #4129ca;
+        }
+
+        .header-user {
+            display: flex;
+            align-items: center;
+        }
+
+        .user-dropdown {
+            position: relative;
+        }
+
+        .user-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .user-toggle:hover {
+            background: rgba(65, 41, 202, 0.1);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .user-name {
+            font-weight: 500;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .dropdown-arrow {
+            color: #666;
+            transition: transform 0.3s ease;
+        }
+
+        .user-toggle:hover .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            min-width: 180px;
+            padding: 8px 0;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .dropdown-open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            color: #333;
+            text-decoration: none;
+            background: none;
+            border: none;
+            width: 100%;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(65, 41, 202, 0.1);
+            color: #4129ca;
+        }
+
+        .dropdown-item svg {
+            flex-shrink: 0;
+        }
+    </style>
 </head>
 <body>
     <!-- Barra de navegación fija -->
@@ -36,12 +142,6 @@
             
             <!-- Sección de usuario -->
             <div class="nav-user-section">
-                <!-- Menú para usuarios no autenticados -->
-                <div class="nav-auth-menu" id="navAuthMenu">
-                    <a href="/login" class="nav-btn nav-btn-outline">Iniciar Sesión</a>
-                    <a href="/register" class="nav-btn nav-btn-primary">Registrarse</a>
-                </div>
-                
                 <!-- Menú para usuarios autenticados -->
                 <div class="nav-user-menu" id="navUserMenu" style="display: none;">
                     <div class="nav-user-info">
@@ -85,9 +185,8 @@
             <div class="header">
                 <div class="header-left">
                     <img src="/favicon.ico" alt="Logo" class="header-logo">
-                    <h1>Dashboard</h1>
+                    <h1>Perfil de usuario</h1>
                 </div>
-                <button id="logoutBtn" class="btn btn-secondary">Cerrar Sesión</button>
             </div>
             
             <div class="user-info">
@@ -99,26 +198,15 @@
 
             <div class="content">
                 <h3>Bienvenido a tu Dashboard</h3>
-                <p>Esta es un área protegida que solo pueden ver los usuarios autenticados.</p>
-                
-                <!-- Acceso al Robot -->
-                <div class="robot-access" style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid #4129ca;">
-                    <h4>Control de Robot</h4>
-                    <p>Accede al panel de control para gestionar el robot TurtleBot a través de ROS WebSocket.</p>
-                    <div style="margin-top: 15px;">
-                        <a href="/robot" class="btn btn-primary">Abrir Panel de Control</a>
-                        <span style="margin-left: 15px; color: #666; font-size: 14px;">Estado: 🟢 Disponible</span>
-                    </div>
-                </div>
-                
+                <p>Esta es tu área personal.</p>
                 <div class="stats">
                     <div class="stat-card">
-                        <h4>Total de Usuarios</h4>
-                        <p id="totalUsers">-</p>
+                        <h4>Tours realizados</h4>
+                        <p id="totalTours">-</p>
                     </div>
                     <div class="stat-card">
-                        <h4>Tu ID de Usuario</h4>
-                        <p id="userId">-</p>
+                        <h4>Ultimo tour</h4>
+                        <p id="lastTour">-</p>
                     </div>
                     <div class="stat-card">
                         <h4>Fecha de Registro</h4>
@@ -171,7 +259,6 @@
                         <p><strong>Usuario:</strong> ${userData.username}</p>
                         <p><strong>Email:</strong> ${userData.email}</p>
                     `;
-                    document.getElementById('userId').textContent = userData.id;
                     document.getElementById('userDate').textContent = new Date(userData.created_at).toLocaleDateString();
                     
                     // Actualizar navegación universal
@@ -188,12 +275,14 @@
             const navAuthMenu = document.getElementById('navAuthMenu');
             const navUserMenu = document.getElementById('navUserMenu');
             const navUsername = document.getElementById('navUsername');
+            const headerUsername = document.getElementById('headerUsername');
             const navRobotControl = document.getElementById('navRobotControl');
             const navAdmin = document.getElementById('navAdmin');
             
             if (navAuthMenu) navAuthMenu.style.display = 'none';
             if (navUserMenu) navUserMenu.style.display = 'flex';
             if (navUsername) navUsername.textContent = user.username;
+            if (headerUsername) headerUsername.textContent = user.username;
             
             // Mostrar enlaces de admin si es administrador
             if (user.role === 'admin') {
@@ -207,31 +296,34 @@
             await checkAuth();
         }, 30000);
 
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            const messageDiv = document.getElementById('message');
-            
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST'
-                });
+        // Logout (botón principal si existe)
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                const messageDiv = document.getElementById('message');
+                
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST'
+                    });
 
-                const data = await response.json();
+                    const data = await response.json();
 
-                if (data.success) {
-                    messageDiv.textContent = 'Sesión cerrada. Redirigiendo...';
-                    messageDiv.className = 'message success';
-                    // Forzar recarga completa para limpiar cualquier estado
-                    window.location.replace('/login');
-                } else {
-                    messageDiv.textContent = 'Error al cerrar sesión';
+                    if (data.success) {
+                        messageDiv.textContent = 'Sesión cerrada. Redirigiendo...';
+                        messageDiv.className = 'message success';
+                        // Forzar recarga completa para limpiar cualquier estado
+                        window.location.replace('/login');
+                    } else {
+                        messageDiv.textContent = 'Error al cerrar sesión';
+                        messageDiv.className = 'message error';
+                    }
+                } catch (error) {
+                    messageDiv.textContent = 'Error de conexión';
                     messageDiv.className = 'message error';
                 }
-            } catch (error) {
-                messageDiv.textContent = 'Error de conexión';
-                messageDiv.className = 'message error';
-            }
-        });
+            });
+        }
 
         // Manejar navegación móvil
         const navToggle = document.getElementById('navToggle');
@@ -285,6 +377,50 @@
                     if (response.ok) {
                         // Cerrar dropdown
                         if (navDropdownMenu) navDropdownMenu.classList.remove('nav-dropdown-open');
+                        // Redirigir a login
+                        window.location.replace('/login');
+                    }
+                } catch (error) {
+                    console.error('Error al cerrar sesión:', error);
+                }
+            });
+        }
+
+        // Manejar dropdown de usuario en el header
+        const userToggle = document.getElementById('userToggle');
+        const userDropdownMenu = document.getElementById('userDropdownMenu');
+
+        if (userToggle && userDropdownMenu) {
+            userToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userDropdownMenu.classList.toggle('dropdown-open');
+            });
+
+            // Cerrar dropdown al hacer clic fuera
+            document.addEventListener('click', (event) => {
+                if (!userToggle.contains(event.target)) {
+                    userDropdownMenu.classList.remove('dropdown-open');
+                }
+            });
+
+            // Prevenir que el dropdown se cierre al hacer clic dentro
+            userDropdownMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // Manejar logout desde header
+        const headerLogoutBtn = document.getElementById('headerLogoutBtn');
+        if (headerLogoutBtn) {
+            headerLogoutBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST'
+                    });
+
+                    if (response.ok) {
+                        // Cerrar dropdown
+                        if (userDropdownMenu) userDropdownMenu.classList.remove('dropdown-open');
                         // Redirigir a login
                         window.location.replace('/login');
                     }

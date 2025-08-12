@@ -280,8 +280,7 @@ body {
 
 /* Ajustes para otras páginas */
 .robot-container,
-.admin-container,
-.dashboard {
+.admin-container{
     padding-top: 90px !important;
 }
 
