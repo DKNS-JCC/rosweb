@@ -39,6 +39,7 @@ yarn.lock
 # Base de datos SQLite (mantener estructura, ignorar datos)
 database.db
 *.db-journal
+uploads/
 
 # Respaldos de base de datos
 *.backup

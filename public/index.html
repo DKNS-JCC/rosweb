@@ -310,6 +310,14 @@
             await checkSession();
         });
 
+        // Inicialización del DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            setupMobileNavigation();
+            setupScrollIndicator();
+            setupTourButtons();
+            setupSmoothScrolling();
+        });
+
         // Verificar si hay una sesión activa
         async function checkSession() {
             try {
@@ -334,7 +342,7 @@
             isLoggedIn = true;
             currentUser = user;
             
-            // Mostrar barra de sesión (si existe)
+            // Mostrar barra de sesión
             const sessionBar = document.getElementById('sessionBar');
             const userName = document.getElementById('userName');
             if (sessionBar) sessionBar.style.display = 'block';
@@ -344,16 +352,30 @@
             const navAuthMenu = document.getElementById('navAuthMenu');
             const navUserMenu = document.getElementById('navUserMenu');
             const navUsername = document.getElementById('navUsername');
+            const navRobotControl = document.getElementById('navRobotControl');
+            const navAdmin = document.getElementById('navAdmin');
             
             if (navAuthMenu) navAuthMenu.style.display = 'none';
             if (navUserMenu) navUserMenu.style.display = 'flex';
             if (navUsername) navUsername.textContent = user.username;
             
-            // Mostrar botón de admin solo si es administrador
+            // Actualizar foto de perfil en navegación
+            const navUserAvatar = document.querySelector('.nav-user-avatar');
+            if (navUserAvatar) {
+                navUserAvatar.src = user.profile_picture || '/favicon.ico';
+            }
+            
+            // Mostrar enlaces de admin si es administrador
+            if (user.role === 'admin') {
+                if (navRobotControl) navRobotControl.style.display = 'block';
+                if (navAdmin) navAdmin.style.display = 'block';
+            }
+            
+            console.log('Usuario logueado:', user.username, 'Rol:', user.role);
+            
+            // Manejar botones específicos de la página
             const adminBtn = document.getElementById('adminBtn');
             const controlRobotBtn = document.querySelector('a[href="/robot"]');
-            const navRobotControl = document.getElementById('navRobotControl');
-            const navAdmin = document.getElementById('navAdmin');
             
             if (user.role === 'admin') {
                 if (adminBtn) {
@@ -364,31 +386,20 @@
                 if (controlRobotBtn) {
                     controlRobotBtn.style.display = 'inline-block';
                 }
-                // Mostrar enlaces de navegación para admin
-                if (navRobotControl) {
-                    navRobotControl.style.display = 'block';
-                }
-                if (navAdmin) {
-                    navAdmin.style.display = 'block';
-                }
             } else {
                 if (adminBtn) adminBtn.style.display = 'none';
                 // Ocultar botón de control de robot para usuarios no administradores
                 if (controlRobotBtn) {
                     controlRobotBtn.style.display = 'none';
                 }
-                // Ocultar enlaces de navegación para no admin
-                if (navRobotControl) {
-                    navRobotControl.style.display = 'none';
-                }
-                if (navAdmin) {
-                    navAdmin.style.display = 'none';
-                }
             }
             
-            // Ocultar botones de login/registro (si existen)
+            // Ocultar botones de login/registro cuando esté logueado
             const heroButtons = document.getElementById('heroButtons');
             if (heroButtons) heroButtons.style.display = 'none';
+            
+            // Configurar dropdown de usuario
+            setupUserDropdown();
         }
 
         // Mostrar estado cuando el usuario no está logueado
@@ -396,40 +407,37 @@
             isLoggedIn = false;
             currentUser = null;
             
-            // Ocultar barra de sesión (si existe)
+            // Ocultar barra de sesión
             const sessionBar = document.getElementById('sessionBar');
             if (sessionBar) sessionBar.style.display = 'none';
             
             // Actualizar navegación universal
             const navAuthMenu = document.getElementById('navAuthMenu');
             const navUserMenu = document.getElementById('navUserMenu');
-            
-            if (navAuthMenu) navAuthMenu.style.display = 'flex';
-            if (navUserMenu) navUserMenu.style.display = 'none';
-            
-            // Ocultar botón de control de robot para usuarios no logueados
-            const controlRobotBtn = document.querySelector('a[href="/robot"]');
             const navRobotControl = document.getElementById('navRobotControl');
             const navAdmin = document.getElementById('navAdmin');
             
+            if (navAuthMenu) navAuthMenu.style.display = 'flex';
+            if (navUserMenu) navUserMenu.style.display = 'none';
+            if (navRobotControl) navRobotControl.style.display = 'none';
+            if (navAdmin) navAdmin.style.display = 'none';
+            
+            // Mostrar botones de login/registro
+            const heroButtons = document.getElementById('heroButtons');
+            if (heroButtons) heroButtons.style.display = 'block';
+            
+            // Ocultar botón de control de robot para usuarios no logueados
+            const controlRobotBtn = document.querySelector('a[href="/robot"]');
             if (controlRobotBtn) {
                 controlRobotBtn.style.display = 'none';
             }
             
-            // Ocultar enlaces de navegación para usuarios no logueados
-            if (navRobotControl) {
-                navRobotControl.style.display = 'none';
-            }
-            if (navAdmin) {
-                navAdmin.style.display = 'none';
-            }
-            
-            // Mostrar botones de login/registro (si existen)
-            const heroButtons = document.getElementById('heroButtons');
-            if (heroButtons) heroButtons.style.display = 'flex';
+            // Ocultar botón admin
+            const adminBtn = document.getElementById('adminBtn');
+            if (adminBtn) adminBtn.style.display = 'none';
         }
 
-        // Manejar logout (si existe el botón)
+        // Manejar logout (solo si el elemento existe)
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', async () => {
@@ -449,26 +457,79 @@
             });
         }
 
-        // Manejar inicio de tours
-        document.querySelectorAll('.tour-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const tourType = e.target.getAttribute('data-tour');
-                const tourName = e.target.closest('.tour-card').querySelector('h3').textContent;
-                
-                // Si no está logueado, redirigir al login
-                if (!isLoggedIn) {
-                    showMessage('Debes iniciar sesión para reservar un tour', 'info');
-                    setTimeout(() => {
-                        window.location.href = '/login';
-                    }, 1500);
-                    return;
-                }
-                
-                if (confirm(`¿Deseas iniciar el tour "${tourName}"?\n\nTu guía robótico te estará esperando en la sala principal.`)) {
-                    await startTour(tourType, tourName);
-                }
+        // Configurar navegación móvil
+        function setupMobileNavigation() {
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', () => {
+                    navMenu.classList.toggle('nav-menu-active');
+                    navToggle.classList.toggle('toggle-active');
+                });
+
+                // Cerrar menú móvil al hacer clic en un enlace
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.addEventListener('click', () => {
+                        navMenu.classList.remove('nav-menu-active');
+                        navToggle.classList.remove('toggle-active');
+                    });
+                });
+            }
+        }
+
+        // Configurar indicador de scroll
+        function setupScrollIndicator() {
+            const scrollIndicator = document.querySelector('.scroll-indicator');
+            if (scrollIndicator) {
+                scrollIndicator.addEventListener('click', () => {
+                    document.querySelector('#tours').scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                });
+            }
+        }
+
+        // Configurar botones de tours
+        function setupTourButtons() {
+            document.querySelectorAll('.tour-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const tourType = e.target.getAttribute('data-tour');
+                    const tourName = e.target.closest('.tour-card').querySelector('h3').textContent;
+                    
+                    // Si no está logueado, redirigir al login
+                    if (!isLoggedIn) {
+                        showMessage('Debes iniciar sesión para reservar un tour', 'info');
+                        setTimeout(() => {
+                            window.location.href = '/login';
+                        }, 1500);
+                        return;
+                    }
+                    
+                    if (confirm(`¿Deseas iniciar el tour "${tourName}"?\n\nTu guía robótico te estará esperando en la sala principal.`)) {
+                        await startTour(tourType, tourName);
+                    }
+                });
             });
-        });
+        }
+
+        // Configurar smooth scrolling
+        function setupSmoothScrolling() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        const offsetTop = target.offsetTop - 80; // Ajustar por la altura de la navbar
+                        window.scrollTo({
+                            top: offsetTop,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        }
 
         // Iniciar tour
         async function startTour(tourType, tourName) {
@@ -557,62 +618,52 @@
         });
 
         // Manejar dropdown de usuario en navegación
-        const navUserToggle = document.getElementById('navUserToggle');
-        const navDropdownMenu = document.getElementById('navDropdownMenu');
+        function setupUserDropdown() {
+            const navUserToggle = document.getElementById('navUserToggle');
+            const navDropdownMenu = document.getElementById('navDropdownMenu');
 
-        if (navUserToggle && navDropdownMenu) {
-            navUserToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                navDropdownMenu.classList.toggle('nav-dropdown-open');
-            });
+            if (navUserToggle && navDropdownMenu) {
+                // Remover event listeners existentes
+                navUserToggle.replaceWith(navUserToggle.cloneNode(true));
+                const newNavUserToggle = document.getElementById('navUserToggle');
+                
+                newNavUserToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    navDropdownMenu.classList.toggle('nav-dropdown-open');
+                });
 
-            // Cerrar dropdown al hacer clic fuera
-            document.addEventListener('click', () => {
-                navDropdownMenu.classList.remove('nav-dropdown-open');
-            });
+                // Cerrar dropdown al hacer clic fuera
+                document.addEventListener('click', () => {
+                    navDropdownMenu.classList.remove('nav-dropdown-open');
+                });
 
-            // Prevenir que el dropdown se cierre al hacer clic dentro
-            navDropdownMenu.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        }
+                // Prevenir que el dropdown se cierre al hacer clic dentro
+                navDropdownMenu.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
 
-        // Manejar logout desde navegación
-        const navLogoutBtn = document.getElementById('navLogoutBtn');
-        if (navLogoutBtn) {
-            navLogoutBtn.addEventListener('click', async () => {
-                try {
-                    const response = await fetch('/api/logout', {
-                        method: 'POST'
-                    });
+                // Configurar logout desde navegación
+                const navLogoutBtn = document.getElementById('navLogoutBtn');
+                if (navLogoutBtn) {
+                    navLogoutBtn.addEventListener('click', async () => {
+                        try {
+                            const response = await fetch('/api/logout', {
+                                method: 'POST'
+                            });
 
-                    if (response.ok) {
-                        showLoggedOutState();
-                        // Mostrar mensaje de éxito
-                        showMessage('Sesión cerrada exitosamente', 'success');
-                        // Cerrar dropdown
-                        navDropdownMenu.classList.remove('nav-dropdown-open');
-                    }
-                } catch (error) {
-                    showMessage('Error al cerrar sesión', 'error');
-                }
-            });
-        }
-
-        // Smooth scrolling para enlaces internos
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    const offsetTop = target.offsetTop - 80; // Ajustar por la altura de la navbar
-                    window.scrollTo({
-                        top: offsetTop,
-                        behavior: 'smooth'
+                            if (response.ok) {
+                                showLoggedOutState();
+                                showMessage('Sesión cerrada exitosamente', 'success');
+                                navDropdownMenu.classList.remove('nav-dropdown-open');
+                            }
+                        } catch (error) {
+                            showMessage('Error al cerrar sesión', 'error');
+                        }
                     });
                 }
-            });
-        });
+            }
+        }
+
     </script>
 </body>
 </html>

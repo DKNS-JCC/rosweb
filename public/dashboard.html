@@ -122,160 +122,371 @@
             color: #4129ca;
             margin-bottom: 20px;
             font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .tours-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 25px;
             margin-top: 20px;
         }
 
         .tour-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            border-left: 4px solid #4129ca;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(65, 41, 202, 0.1);
+            border: 1px solid rgba(65, 41, 202, 0.1);
+            border-left: 5px solid #4129ca;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .tour-card.fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes fadeInCard {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tour-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, rgba(65, 41, 202, 0.1) 0%, transparent 70%);
+            border-radius: 0 0 0 100px;
         }
 
         .tour-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border-color: #4CAF50;
         }
 
-        .tour-header {
+        .tour-card:hover .tour-status {
+            transform: scale(1.05);
+        }
+
+        .tour-card:hover .tour-title {
+            color: #4CAF50;
+        }        .tour-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
         }
 
         .tour-info h4 {
             color: #4129ca;
-            margin: 0 0 5px 0;
-            font-size: 1.2rem;
+            margin: 0 0 8px 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            line-height: 1.3;
         }
 
         .tour-date {
-            color: #666;
+            color: #6c757d;
             font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 5px;
+        }
+
+        .tour-date::before {
+            content: '📅';
+            font-size: 0.8rem;
+        }
+
+        .tour-duration {
+            color: #6c757d;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tour-duration::before {
+            content: '⏱️';
+            font-size: 0.8rem;
         }
 
         .tour-status {
-            padding: 4px 12px;
-            border-radius: 20px;
+            padding: 8px 16px;
+            border-radius: 25px;
             font-size: 0.8rem;
-            font-weight: 500;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         .status-completed {
-            background: #d4edda;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             color: #155724;
+            border: 1px solid #c3e6cb;
         }
 
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .tour-details {
-            margin: 15px 0;
-        }
-
-        .tour-details p {
-            margin: 5px 0;
-            color: #555;
+        .status-completed::before {
+            content: '✅';
             font-size: 0.9rem;
         }
 
+        .status-pending {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            animation: pulse 2s infinite;
+        }
+
+        .status-pending::before {
+            content: '🔄';
+            font-size: 0.9rem;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .tour-details {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(65, 41, 202, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(65, 41, 202, 0.1);
+        }
+
+        .tour-details p {
+            margin: 8px 0;
+            color: #495057;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         .tour-pin {
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-            font-family: monospace;
+            background: linear-gradient(135deg, #4129ca 0%, #5a3fd4 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin: 15px 0;
             text-align: center;
-            border: 1px solid #dee2e6;
+            box-shadow: 0 6px 20px rgba(65, 41, 202, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tour-pin::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .tour-pin-label {
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.9;
+        }
+
+        .tour-pin-value {
+            font-size: 1.8rem;
+            font-weight: 900;
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
 
         .rating-section {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid #eee;
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 2px solid rgba(65, 41, 202, 0.1);
+            text-align: center;
         }
 
         .rating-display {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .rating-display strong {
+            color: #4129ca;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .rating-display strong::before {
+            content: '⭐';
+            font-size: 1.1rem;
         }
 
         .stars {
             display: flex;
-            gap: 2px;
+            gap: 6px;
+            justify-content: center;
+            padding: 10px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 50px;
         }
 
         .star {
-            font-size: 18px;
-            color: #ddd;
+            font-size: 28px;
+            color: #e0e0e0;
             cursor: pointer;
-            transition: color 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
 
         .star.filled {
             color: #ffd700;
+            text-shadow: 2px 2px 6px rgba(255, 215, 0, 0.4);
+            filter: drop-shadow(0 3px 6px rgba(255, 215, 0, 0.3));
         }
 
         .star:hover,
         .star.hover {
             color: #ffd700;
+            transform: scale(1.2) rotate(5deg);
+            text-shadow: 2px 2px 8px rgba(255, 215, 0, 0.6);
+            filter: drop-shadow(0 4px 8px rgba(255, 215, 0, 0.4));
+        }
+
+        .rating-value {
+            font-size: 1.2rem;
+            color: #495057;
+            font-weight: 600;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: rgba(65, 41, 202, 0.1);
+            border-radius: 20px;
+            display: inline-block;
         }
 
         .rating-form {
-            margin-top: 15px;
+            margin-top: 20px;
+        }
+
+        .rating-form strong {
+            display: block;
+            color: #4129ca;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
         }
 
         .rating-form textarea {
             width: 100%;
-            min-height: 80px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            min-height: 90px;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
             resize: vertical;
             font-family: inherit;
             font-size: 14px;
+            transition: border-color 0.3s ease;
+            margin-top: 15px;
+        }
+
+        .rating-form textarea:focus {
+            outline: none;
+            border-color: #4129ca;
+            box-shadow: 0 0 0 3px rgba(65, 41, 202, 0.1);
         }
 
         .rating-form button {
-            background: #4129ca;
+            background: linear-gradient(135deg, #4129ca 0%, #5a3fd4 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            padding: 12px 24px;
+            border-radius: 25px;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 15px;
             font-size: 14px;
-            transition: background 0.3s ease;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(65, 41, 202, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .rating-form button:hover {
-            background: #3520a0;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(65, 41, 202, 0.4);
+        }
+
+        .rating-form button:active {
+            transform: translateY(0);
         }
 
         .review-display {
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 10px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 18px;
+            border-radius: 12px;
+            margin-top: 15px;
+            border-left: 4px solid #ffd700;
+            position: relative;
+        }
+
+        .review-display::before {
+            content: '"';
+            position: absolute;
+            top: -10px;
+            left: 15px;
+            font-size: 3rem;
+            color: rgba(65, 41, 202, 0.3);
+            font-family: serif;
         }
 
         .review-display p {
             margin: 0;
-            color: #555;
+            color: #495057;
             font-style: italic;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            padding-left: 20px;
         }
 
         .no-tours {
@@ -286,7 +497,255 @@
             background: #f8f9fa;
             border-radius: 10px;
         }
-    </style>
+
+        /* Estilos para botón de depuración */
+        .progress-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-copy-pin {
+            background: linear-gradient(135deg, #28a745 0%, #34ce57 100%);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(40, 167, 69, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-copy-pin:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-debug {
+            background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(220, 53, 69, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-debug:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .btn-debug:active {
+            transform: translateY(0) scale(0.95);
+        }
+
+        .progress-info {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 193, 7, 0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        /* Indicador de carga */
+        .loading-tours {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 60px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 16px;
+            margin: 20px 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e9ecef;
+            border-top: 4px solid #4129ca;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Estilos para foto de perfil */
+        .profile-picture-section {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(65, 41, 202, 0.1);
+            border: 1px solid rgba(65, 41, 202, 0.1);
+            border-left: 5px solid #4129ca;
+            text-align: center;
+        }
+
+        .profile-picture-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .profile-picture {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #4129ca;
+            box-shadow: 0 8px 24px rgba(65, 41, 202, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .profile-picture:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(65, 41, 202, 0.3);
+        }
+
+        .profile-picture-placeholder {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4129ca 0%, #5a3fd4 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            border: 4px solid #4129ca;
+            box-shadow: 0 8px 24px rgba(65, 41, 202, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .profile-picture-placeholder:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(65, 41, 202, 0.3);
+        }
+
+        .profile-upload-controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .btn-upload {
+            background: linear-gradient(135deg, #4129ca 0%, #5a3fd4 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(65, 41, 202, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(65, 41, 202, 0.4);
+        }
+
+        .btn-remove {
+            background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-remove:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+        }
+
+        .upload-status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .upload-status.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .upload-status.error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .upload-status.loading {
+            background: linear-gradient(135deg, #cce7ff 0%, #b8daff 100%);
+            color: #004085;
+            border: 1px solid #b8daff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .upload-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid #004085;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        </style>
 </head>
 <body>
     <!-- Barra de navegación fija -->
@@ -356,14 +815,35 @@
 
     <div class="container">
         <div class="dashboard">
-            <div class="header">
+            <div class="header" style="border-radius: 0%;">
                 <div class="header-left">
-                    <img src="/favicon.ico" alt="Logo" class="header-logo">
                     <h1>Perfil de usuario</h1>
                 </div>
             </div>
             
             <div class="user-info">
+                <!-- Sección de foto de perfil -->
+                <div class="profile-picture-section">
+                    <h3>Foto</h3>
+                    <div class="profile-picture-container">
+                        <div id="profilePictureDisplay">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                    <div class="profile-upload-controls">
+                        <div class="file-input-wrapper">
+                            <input type="file" id="profilePictureInput" accept="image/*">
+                            <label for="profilePictureInput" class="btn-upload">
+                                Cambiar Foto
+                            </label>
+                        </div>
+                        <button id="removeProfilePicture" class="btn-remove" style="display: none;">
+                            Eliminar
+                        </button>
+                    </div>
+                    <div id="uploadStatus" class="upload-status"></div>
+                </div>
+
                 <h3>Información del Usuario</h3>
                 <div id="userDetails" class="user-details">
                     <p>Cargando...</p>
@@ -390,9 +870,12 @@
 
                 <!-- Sección de Tours Realizados -->
                 <div class="tours-history">
-                    <h3>Mis Tours Realizados</h3>
+                    <h3>🎭 Mis Tours Realizados</h3>
                     <div id="toursContainer" class="tours-grid">
-                        <p>Cargando tours...</p>
+                        <div class="loading-tours">
+                            <div class="loading-spinner"></div>
+                            <span>Cargando tours...</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -443,6 +926,9 @@
                     `;
                     document.getElementById('userDate').textContent = new Date(userData.created_at).toLocaleDateString();
                     
+                    // Actualizar foto de perfil
+                    updateProfilePicture(userData);
+                    
                     // Actualizar navegación universal
                     updateNavForLoggedInUser(userData);
                     
@@ -469,10 +955,170 @@
             if (navUsername) navUsername.textContent = user.username;
             if (headerUsername) headerUsername.textContent = user.username;
             
+            // Actualizar foto de perfil en navegación
+            updateNavProfilePicture(user.profile_picture || '/favicon.ico');
+            
             // Mostrar enlaces de admin si es administrador
             if (user.role === 'admin') {
                 if (navRobotControl) navRobotControl.style.display = 'block';
                 if (navAdmin) navAdmin.style.display = 'block';
+            }
+        }
+
+        // Función para actualizar foto de perfil
+        function updateProfilePicture(user) {
+            const profilePictureDisplay = document.getElementById('profilePictureDisplay');
+            const removeButton = document.getElementById('removeProfilePicture');
+            
+            if (user.profile_picture) {
+                profilePictureDisplay.innerHTML = `
+                    <img src="${user.profile_picture}" alt="Foto de perfil" class="profile-picture">
+                `;
+                removeButton.style.display = 'flex';
+            } else {
+                // Mostrar inicial del nombre de usuario
+                const initial = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+                profilePictureDisplay.innerHTML = `
+                    <div class="profile-picture-placeholder">${initial}</div>
+                `;
+                removeButton.style.display = 'none';
+            }
+            
+            // También actualizar navegación con la foto
+            updateNavProfilePicture(user.profile_picture || '/favicon.ico');
+        }
+
+        // Función para actualizar foto en navegación
+        function updateNavProfilePicture(imageSrc) {
+            const navUserAvatar = document.querySelector('.nav-user-avatar');
+            if (navUserAvatar) {
+                navUserAvatar.src = imageSrc;
+            }
+        }
+
+        // Manejar subida de archivo
+        document.addEventListener('DOMContentLoaded', function() {
+            const profilePictureInput = document.getElementById('profilePictureInput');
+            const removeProfilePicture = document.getElementById('removeProfilePicture');
+            
+            if (profilePictureInput) {
+                profilePictureInput.addEventListener('change', handleFileUpload);
+            }
+            
+            if (removeProfilePicture) {
+                removeProfilePicture.addEventListener('click', removeProfilePictureHandler);
+            }
+        });
+
+        // Manejar subida de archivo
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validar tipo de archivo
+            if (!file.type.startsWith('image/')) {
+                showUploadStatus('Solo se permiten archivos de imagen', 'error');
+                return;
+            }
+
+            // Validar tamaño (5MB máximo)
+            if (file.size > 5 * 1024 * 1024) {
+                showUploadStatus('El archivo es demasiado grande. Máximo 5MB', 'error');
+                return;
+            }
+
+            showUploadStatus('Subiendo imagen...', 'loading');
+
+            const formData = new FormData();
+            formData.append('profilePicture', file);
+
+            try {
+                const response = await fetch('/api/user/profile-picture', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showUploadStatus('✅ Foto actualizada correctamente', 'success');
+                    
+                    // Actualizar display de la imagen
+                    const profilePictureDisplay = document.getElementById('profilePictureDisplay');
+                    const removeButton = document.getElementById('removeProfilePicture');
+                    
+                    profilePictureDisplay.innerHTML = `
+                        <img src="${result.profilePicture}?t=${Date.now()}" alt="Foto de perfil" class="profile-picture">
+                    `;
+                    removeButton.style.display = 'flex';
+                    
+                    // Actualizar navegación
+                    updateNavProfilePicture(result.profilePicture + '?t=' + Date.now());
+                    
+                    // Limpiar input
+                    event.target.value = '';
+                } else {
+                    throw new Error(result.error || 'Error al subir la imagen');
+                }
+            } catch (error) {
+                console.error('Error subiendo imagen:', error);
+                showUploadStatus('❌ Error al subir la imagen: ' + error.message, 'error');
+            }
+        }
+
+        // Manejar eliminación de foto de perfil
+        async function removeProfilePictureHandler() {
+            if (!confirm('¿Estás seguro de que quieres eliminar tu foto de perfil?')) {
+                return;
+            }
+
+            showUploadStatus('Eliminando imagen...', 'loading');
+
+            try {
+                const response = await fetch('/api/user/profile-picture', {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showUploadStatus('✅ Foto eliminada correctamente', 'success');
+                    
+                    // Recargar datos del usuario para actualizar display
+                    const userResponse = await fetch('/api/user');
+                    const userData = await userResponse.json();
+                    updateProfilePicture(userData);
+                } else {
+                    throw new Error(result.error || 'Error al eliminar la imagen');
+                }
+            } catch (error) {
+                console.error('Error eliminando imagen:', error);
+                showUploadStatus('❌ Error al eliminar la imagen: ' + error.message, 'error');
+            }
+        }
+
+        // Mostrar estado de subida
+        function showUploadStatus(message, type) {
+            const uploadStatus = document.getElementById('uploadStatus');
+            uploadStatus.textContent = '';
+            uploadStatus.className = `upload-status ${type}`;
+            
+            if (type === 'loading') {
+                uploadStatus.innerHTML = `
+                    <div class="upload-spinner"></div>
+                    <span>${message}</span>
+                `;
+            } else {
+                uploadStatus.textContent = message;
+            }
+            
+            uploadStatus.style.display = 'flex';
+
+            // Auto ocultar después de 5 segundos (excepto loading)
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    uploadStatus.style.display = 'none';
+                }, 5000);
             }
         }
 
@@ -507,43 +1153,83 @@
             container.innerHTML = tours.map(tour => {
                 // Manejar diferentes formatos de fecha
                 let tourDate;
+                let tourDuration;
                 try {
-                    // Si es una cadena de fecha ISO o formato YYYY-MM-DD HH:MM:SS
-                    tourDate = new Date(tour.started_at).toLocaleDateString('es-ES', {
+                    const startDate = new Date(tour.started_at);
+                    tourDate = startDate.toLocaleDateString('es-ES', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit'
                     });
+                    
+                    // Calcular duración estimada basada en el tipo de tour
+                    const durations = {
+                        'da-vinci': '45 min',
+                        'renacimiento': '60 min',
+                        'impresionismo': '50 min',
+                        'contemporaneo': '40 min',
+                        'arte-espanol': '55 min',
+                        'familiar': '35 min',
+                        'moderno': '45 min'
+                    };
+                    tourDuration = durations[tour.tour_type] || '45 min';
                 } catch (error) {
                     tourDate = tour.started_at || 'Fecha no disponible';
+                    tourDuration = '45 min';
                 }
 
                 const statusClass = tour.completed ? 'status-completed' : 'status-pending';
                 const statusText = tour.completed ? 'Completado' : 'En progreso';
 
+                // Obtener emoji del tour
+                const tourEmojis = {
+                    'da-vinci': '🎨',
+                    'renacimiento': '🏛️',
+                    'impresionismo': '🖼️',
+                    'contemporaneo': '🎭',
+                    'arte-espanol': '👑',
+                    'familiar': '🌟',
+                    'moderno': '🎨'
+                };
+                const tourEmoji = tourEmojis[tour.tour_type] || '🎨';
+
                 return `
-                    <div class="tour-card">
+                    <div class="tour-card" data-tour-id="${tour.id}">
                         <div class="tour-header">
                             <div class="tour-info">
-                                <h4>${tour.tour_name}</h4>
+                                <h4>${tourEmoji} ${tour.tour_name}</h4>
                                 <p class="tour-date">${tourDate}</p>
+                                <p class="tour-duration">${tourDuration}</p>
                             </div>
                             <span class="tour-status ${statusClass}">${statusText}</span>
                         </div>
                         
+                        ${!tour.completed ? `
                         <div class="tour-details">
-                            <p><strong>ID del Tour:</strong> ${tour.tour_id}</p>
                             <div class="tour-pin">
-                                <strong>PIN utilizado:</strong> ${tour.pin}
+                                <div class="tour-pin-label">PIN para continuar</div>
+                                <div class="tour-pin-value">${tour.pin}</div>
                             </div>
+                            <p><strong>💡 Tip:</strong> Dirígete al punto de encuentro y proporciona este PIN al robot guía</p>
                         </div>
+                        ` : ''}
 
-                        ${tour.completed ? createRatingSection(tour) : ''}
+                        ${tour.completed ? createRatingSection(tour) : createInProgressSection(tour.id)}
                     </div>
                 `;
             }).join('');
+
+            // Animar tarjetas después de crearlas
+            setTimeout(() => {
+                const cards = container.querySelectorAll('.tour-card');
+                cards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('fade-in');
+                    }, index * 100); // Retraso escalonado de 100ms entre tarjetas
+                });
+            }, 50);
 
             // Agregar event listeners después de crear el HTML
             tours.forEach(tour => {
@@ -560,11 +1246,11 @@
                 return `
                     <div class="rating-section">
                         <div class="rating-display">
-                            <strong>Tu valoración:</strong>
+                            <strong>Tu valoración</strong>
                             <div class="stars">
                                 ${createStarsDisplay(tour.rating, false)}
                             </div>
-                            <span>(${tour.rating}/5)</span>
+                            <div class="rating-value">${tour.rating}/5 estrellas</div>
                         </div>
                         ${tour.feedback ? `
                             <div class="review-display">
@@ -577,8 +1263,8 @@
                 // Mostrar formulario de rating
                 return `
                     <div class="rating-section">
-                        <strong>Deja tu valoración:</strong>
                         <div class="rating-form">
+                            <strong>¿Cómo fue tu experiencia?</strong>
                             <div class="stars" data-tour-id="${tour.id}">
                                 ${createStarsDisplay(0, true)}
                             </div>
@@ -591,6 +1277,38 @@
                     </div>
                 `;
             }
+        }
+
+        // Crear sección para tours en progreso
+        function createInProgressSection(tourId) {
+            return `
+                <div class="rating-section">
+                    <div class="rating-display">
+                        <strong>🔄 Tour en progreso</strong>
+                        <div class="progress-info">
+                            <p style="color: #856404; font-style: italic; margin: 15px 0;">
+                                📍 Ve al punto de encuentro y usa tu PIN para continuar
+                            </p>
+                            <div class="progress-actions">
+                                <button 
+                                    onclick="copyPinToClipboard(this)" 
+                                    class="btn-copy-pin"
+                                    title="Copiar PIN al portapapeles"
+                                >
+                                    📋 Copiar PIN
+                                </button>
+                                <button 
+                                    onclick="markTourAsCompleted(${tourId})" 
+                                    class="btn-debug"
+                                    title="Solo para depuración"
+                                >
+                                    🔧 Completar (DEBUG)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // Crear estrellas para mostrar o seleccionar rating
@@ -722,6 +1440,174 @@
             } else {
                 document.getElementById('lastTour').textContent = 'Ninguno';
             }
+        }
+
+        // Función para marcar tour como completado (depuración)
+        async function markTourAsCompleted(tourId) {
+            if (!confirm('¿Marcar este tour como completado?\n\nEsta acción es solo para depuración.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/tours/${tourId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showNotification('✅ ' + result.message, 'success');
+                    // Recargar la página para mostrar los cambios
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    throw new Error(result.error || 'Error al completar tour');
+                }
+            } catch (error) {
+                console.error('Error completando tour:', error);
+                showNotification('❌ Error al completar el tour: ' + error.message, 'error');
+            }
+        }
+
+        // Función para copiar PIN al portapapeles
+        async function copyPinToClipboard(button) {
+            const tourCard = button.closest('.tour-card');
+            const pinElement = tourCard.querySelector('.tour-pin-value');
+            
+            if (!pinElement) {
+                showNotification('❌ No se pudo encontrar el PIN', 'error');
+                return;
+            }
+
+            const pin = pinElement.textContent.trim();
+
+            try {
+                await navigator.clipboard.writeText(pin);
+                
+                // Cambiar temporalmente el texto del botón
+                const originalText = button.textContent;
+                button.textContent = '✅ Copiado!';
+                button.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+
+                showNotification(`📋 PIN ${pin} copiado al portapapeles`, 'success');
+            } catch (error) {
+                // Fallback para navegadores que no soportan clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = pin;
+                document.body.appendChild(textArea);
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    showNotification(`📋 PIN ${pin} copiado al portapapeles`, 'success');
+                } catch (fallbackError) {
+                    showNotification('❌ No se pudo copiar el PIN', 'error');
+                }
+                
+                document.body.removeChild(textArea);
+            }
+        }
+
+        // Función para mostrar notificaciones mejoradas
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <span class="notification-message">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="notification-close">×</button>
+                </div>
+            `;
+            
+            // Agregar estilos si no existen
+            if (!document.getElementById('notification-styles')) {
+                const styles = document.createElement('style');
+                styles.id = 'notification-styles';
+                styles.textContent = `
+                    .notification {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        z-index: 10000;
+                        max-width: 400px;
+                        padding: 0;
+                        border-radius: 12px;
+                        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+                        animation: slideInRight 0.3s ease-out;
+                        overflow: hidden;
+                    }
+                    
+                    .notification.success {
+                        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+                        border-left: 5px solid #28a745;
+                    }
+                    
+                    .notification.error {
+                        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+                        border-left: 5px solid #dc3545;
+                    }
+                    
+                    .notification.info {
+                        background: linear-gradient(135deg, #cce7ff 0%, #b8daff 100%);
+                        border-left: 5px solid #007bff;
+                    }
+                    
+                    .notification-content {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 15px 20px;
+                    }
+                    
+                    .notification-message {
+                        font-weight: 500;
+                        color: #333;
+                        flex: 1;
+                    }
+                    
+                    .notification-close {
+                        background: none;
+                        border: none;
+                        font-size: 18px;
+                        color: #666;
+                        cursor: pointer;
+                        margin-left: 15px;
+                        padding: 0;
+                        width: 20px;
+                        height: 20px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    
+                    @keyframes slideInRight {
+                        from {
+                            transform: translateX(100%);
+                            opacity: 0;
+                        }
+                        to {
+                            transform: translateX(0);
+                            opacity: 1;
+                        }
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.style.animation = 'slideInRight 0.3s ease-in reverse';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
         }
 
         // Función centralizada para logout

@@ -5,6 +5,8 @@ const bcrypt = require('bcrypt');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const path = require('path');
+const multer = require('multer');
+const fs = require('fs');
 const robotManager = require('./robotManager');
 
 const app = express();
@@ -15,6 +17,43 @@ const PORT = 3000;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Servir archivos de uploads estáticamente
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Configuración de multer para subida de archivos
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, 'uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        // Generar nombre único: timestamp + id_usuario + extensión original
+        const ext = path.extname(file.originalname);
+        const fileName = `profile_${req.session.userId}_${Date.now()}${ext}`;
+        cb(null, fileName);
+    }
+});
+
+// Filtro para solo permitir imágenes
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+    } else {
+        cb(new Error('Solo se permiten archivos de imagen'), false);
+    }
+};
+
+const upload = multer({ 
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB máximo
+    }
+});
 
 // Configuración de sesiones
 app.use(session({
@@ -47,6 +86,13 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
 db.run(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
         console.error('Error al añadir columna role:', err.message);
+    }
+});
+
+// Añadir columna profile_picture a usuarios existentes (si no existe)
+db.run(`ALTER TABLE users ADD COLUMN profile_picture TEXT`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error al añadir columna profile_picture:', err.message);
     }
 });
 
@@ -108,15 +154,6 @@ db.run(`CREATE TABLE IF NOT EXISTS tour_history (
     FOREIGN KEY (user_id) REFERENCES users (id),
     FOREIGN KEY (tour_route_id) REFERENCES tour_routes (id)
 )`);
-
-// Insertar datos de prueba de tours (solo si no existen)
-db.get('SELECT COUNT(*) as count FROM tour_history', (err, result) => {
-    if (err) {
-        console.error('Error al verificar tours existentes:', err);
-        return;
-    }
-    
-});
 
 // Middleware para verificar autenticación
 function requireAuth(req, res, next) {
@@ -503,12 +540,90 @@ app.post('/api/register', async (req, res) => {
 
 // API para obtener info del usuario
 app.get('/api/user', requireAuth, (req, res) => {
-    db.get('SELECT id, username, email, role, created_at FROM users WHERE id = ?', 
+    db.get('SELECT id, username, email, role, profile_picture, created_at FROM users WHERE id = ?', 
         [req.session.userId], (err, user) => {
         if (err) {
             return res.status(500).json({ error: 'Error en la base de datos' });
         }
         res.json(user);
+    });
+});
+
+// API para subir foto de perfil
+app.post('/api/user/profile-picture', requireAuth, upload.single('profilePicture'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No se ha subido ninguna imagen' });
+    }
+
+    const userId = req.session.userId;
+    const filePath = `/uploads/${req.file.filename}`;
+
+    // Obtener la imagen anterior para eliminarla
+    db.get('SELECT profile_picture FROM users WHERE id = ?', [userId], (err, user) => {
+        if (err) {
+            console.error('Error al obtener imagen anterior:', err);
+        } else if (user && user.profile_picture) {
+            // Eliminar imagen anterior si existe
+            const oldImagePath = path.join(__dirname, 'public', user.profile_picture);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlink(oldImagePath, (unlinkErr) => {
+                    if (unlinkErr) console.error('Error al eliminar imagen anterior:', unlinkErr);
+                });
+            }
+            // También intentar eliminar del directorio uploads
+            const oldUploadsPath = path.join(__dirname, user.profile_picture.replace('/uploads/', 'uploads/'));
+            if (fs.existsSync(oldUploadsPath)) {
+                fs.unlink(oldUploadsPath, (unlinkErr) => {
+                    if (unlinkErr) console.error('Error al eliminar imagen anterior:', unlinkErr);
+                });
+            }
+        }
+
+        // Actualizar la base de datos con la nueva imagen
+        db.run('UPDATE users SET profile_picture = ? WHERE id = ?', [filePath, userId], function(updateErr) {
+            if (updateErr) {
+                console.error('Error al actualizar base de datos:', updateErr);
+                return res.status(500).json({ error: 'Error al guardar la imagen en la base de datos' });
+            }
+
+            res.json({
+                message: 'Foto de perfil actualizada correctamente',
+                profilePicture: filePath
+            });
+        });
+    });
+});
+
+// API para eliminar foto de perfil
+app.delete('/api/user/profile-picture', requireAuth, (req, res) => {
+    const userId = req.session.userId;
+
+    // Obtener la imagen actual para eliminarla
+    db.get('SELECT profile_picture FROM users WHERE id = ?', [userId], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
+
+        if (user && user.profile_picture) {
+            // Eliminar archivo de imagen
+            const imagePath = path.join(__dirname, user.profile_picture.replace('/uploads/', 'uploads/'));
+            if (fs.existsSync(imagePath)) {
+                fs.unlink(imagePath, (unlinkErr) => {
+                    if (unlinkErr) console.error('Error al eliminar imagen:', unlinkErr);
+                });
+            }
+
+            // Actualizar base de datos
+            db.run('UPDATE users SET profile_picture = NULL WHERE id = ?', [userId], function(updateErr) {
+                if (updateErr) {
+                    return res.status(500).json({ error: 'Error al actualizar la base de datos' });
+                }
+
+                res.json({ message: 'Foto de perfil eliminada correctamente' });
+            });
+        } else {
+            res.json({ message: 'No hay foto de perfil para eliminar' });
+        }
     });
 });
 
@@ -599,6 +714,54 @@ app.post('/api/tours/:tourId/rating', requireAuth, (req, res) => {
                 tourId,
                 rating,
                 feedback
+            });
+        });
+    });
+});
+
+// API para completar un tour (depuración)
+app.post('/api/tours/:tourId/complete', requireAuth, (req, res) => {
+    const { tourId } = req.params;
+    const userId = req.session.userId;
+    
+    // Verificar que el tour pertenece al usuario
+    db.get(`
+        SELECT id, completed 
+        FROM tour_history 
+        WHERE id = ? AND user_id = ?
+    `, [tourId, userId], (err, tour) => {
+        if (err) {
+            console.error('Error al verificar tour:', err);
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
+        
+        if (!tour) {
+            return res.status(404).json({ error: 'Tour no encontrado' });
+        }
+        
+        if (tour.completed) {
+            return res.status(400).json({ error: 'El tour ya está completado' });
+        }
+        
+        // Marcar tour como completado
+        db.run(`
+            UPDATE tour_history 
+            SET completed = 1 
+            WHERE id = ? AND user_id = ?
+        `, [tourId, userId], function(err) {
+            if (err) {
+                console.error('Error al completar tour:', err);
+                return res.status(500).json({ error: 'Error al completar el tour' });
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Tour no encontrado' });
+            }
+            
+            res.json({ 
+                success: true, 
+                message: 'Tour marcado como completado',
+                tourId
             });
         });
     });
