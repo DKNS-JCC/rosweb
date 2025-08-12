@@ -112,6 +112,180 @@
         .dropdown-item svg {
             flex-shrink: 0;
         }
+
+        /* Estilos para tours realizados */
+        .tours-history {
+            margin-top: 40px;
+        }
+
+        .tours-history h3 {
+            color: #4129ca;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .tours-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .tour-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #4129ca;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .tour-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .tour-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .tour-info h4 {
+            color: #4129ca;
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+        }
+
+        .tour-date {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .tour-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .tour-details {
+            margin: 15px 0;
+        }
+
+        .tour-details p {
+            margin: 5px 0;
+            color: #555;
+            font-size: 0.9rem;
+        }
+
+        .tour-pin {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+
+        .rating-section {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+        .rating-display {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .stars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .star {
+            font-size: 18px;
+            color: #ddd;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .star.filled {
+            color: #ffd700;
+        }
+
+        .star:hover,
+        .star.hover {
+            color: #ffd700;
+        }
+
+        .rating-form {
+            margin-top: 15px;
+        }
+
+        .rating-form textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .rating-form button {
+            background: #4129ca;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 14px;
+            transition: background 0.3s ease;
+        }
+
+        .rating-form button:hover {
+            background: #3520a0;
+        }
+
+        .review-display {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .review-display p {
+            margin: 0;
+            color: #555;
+            font-style: italic;
+        }
+
+        .no-tours {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 40px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
@@ -205,12 +379,20 @@
                         <p id="totalTours">-</p>
                     </div>
                     <div class="stat-card">
-                        <h4>Ultimo tour</h4>
+                        <h4>Último tour</h4>
                         <p id="lastTour">-</p>
                     </div>
                     <div class="stat-card">
                         <h4>Fecha de Registro</h4>
                         <p id="userDate">-</p>
+                    </div>
+                </div>
+
+                <!-- Sección de Tours Realizados -->
+                <div class="tours-history">
+                    <h3>Mis Tours Realizados</h3>
+                    <div id="toursContainer" class="tours-grid">
+                        <p>Cargando tours...</p>
                     </div>
                 </div>
             </div>
@@ -263,6 +445,9 @@
                     
                     // Actualizar navegación universal
                     updateNavForLoggedInUser(userData);
+                    
+                    // Cargar tours realizados
+                    await loadUserTours(userData.id);
                 }
             } catch (error) {
                 console.error('Error cargando datos del usuario:', error);
@@ -291,6 +476,280 @@
             }
         }
 
+        // Cargar tours realizados por el usuario
+        async function loadUserTours(userId) {
+            try {
+                const response = await fetch('/api/user/tours');
+                
+                if (!response.ok) {
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+                
+                const tours = await response.json();
+                displayTours(tours);
+                updateStats(tours);
+            } catch (error) {
+                console.error('Error cargando tours:', error);
+                document.getElementById('toursContainer').innerHTML = 
+                    '<p class="no-tours">Error al cargar los tours realizados</p>';
+            }
+        }
+
+        // Mostrar tours en el dashboard
+        function displayTours(tours) {
+            const container = document.getElementById('toursContainer');
+            
+            if (tours.length === 0) {
+                container.innerHTML = '<p class="no-tours">Aún no has realizado ningún tour</p>';
+                return;
+            }
+
+            container.innerHTML = tours.map(tour => {
+                // Manejar diferentes formatos de fecha
+                let tourDate;
+                try {
+                    // Si es una cadena de fecha ISO o formato YYYY-MM-DD HH:MM:SS
+                    tourDate = new Date(tour.started_at).toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                } catch (error) {
+                    tourDate = tour.started_at || 'Fecha no disponible';
+                }
+
+                const statusClass = tour.completed ? 'status-completed' : 'status-pending';
+                const statusText = tour.completed ? 'Completado' : 'En progreso';
+
+                return `
+                    <div class="tour-card">
+                        <div class="tour-header">
+                            <div class="tour-info">
+                                <h4>${tour.tour_name}</h4>
+                                <p class="tour-date">${tourDate}</p>
+                            </div>
+                            <span class="tour-status ${statusClass}">${statusText}</span>
+                        </div>
+                        
+                        <div class="tour-details">
+                            <p><strong>ID del Tour:</strong> ${tour.tour_id}</p>
+                            <div class="tour-pin">
+                                <strong>PIN utilizado:</strong> ${tour.pin}
+                            </div>
+                        </div>
+
+                        ${tour.completed ? createRatingSection(tour) : ''}
+                    </div>
+                `;
+            }).join('');
+
+            // Agregar event listeners después de crear el HTML
+            tours.forEach(tour => {
+                if (tour.completed) {
+                    setupRatingHandlers(tour.id);
+                }
+            });
+        }
+
+        // Crear sección de rating y reseñas
+        function createRatingSection(tour) {
+            if (tour.rating) {
+                // Mostrar rating existente
+                return `
+                    <div class="rating-section">
+                        <div class="rating-display">
+                            <strong>Tu valoración:</strong>
+                            <div class="stars">
+                                ${createStarsDisplay(tour.rating, false)}
+                            </div>
+                            <span>(${tour.rating}/5)</span>
+                        </div>
+                        ${tour.feedback ? `
+                            <div class="review-display">
+                                <p>"${tour.feedback}"</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                // Mostrar formulario de rating
+                return `
+                    <div class="rating-section">
+                        <strong>Deja tu valoración:</strong>
+                        <div class="rating-form">
+                            <div class="stars" data-tour-id="${tour.id}">
+                                ${createStarsDisplay(0, true)}
+                            </div>
+                            <textarea 
+                                id="feedback-${tour.id}" 
+                                placeholder="Cuéntanos sobre tu experiencia (opcional)..."
+                            ></textarea>
+                            <button onclick="submitRating(${tour.id})">Enviar Valoración</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Crear estrellas para mostrar o seleccionar rating
+        function createStarsDisplay(rating, interactive) {
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                const filled = i <= rating ? 'filled' : '';
+                // Removemos los handlers inline, se agregan en setupRatingHandlers
+                stars += `<span class="star ${filled}">★</span>`;
+            }
+            return stars;
+        }
+
+        // Variables para manejar el rating temporal por tour
+        let currentRatings = {};
+        let activeTourId = null;
+
+        // Configurar event handlers para las estrellas
+        function setupRatingHandlers(tourId) {
+            const starsContainer = document.querySelector(`[data-tour-id="${tourId}"]`);
+            if (starsContainer) {
+                // Inicializar rating para este tour
+                currentRatings[tourId] = 0;
+                
+                // Agregar event listeners a cada estrella
+                const stars = starsContainer.querySelectorAll('.star');
+                stars.forEach((star, index) => {
+                    const rating = index + 1;
+                    
+                    star.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        setRating(tourId, rating);
+                    });
+                    
+                    star.addEventListener('mouseover', () => {
+                        hoverRating(tourId, rating);
+                    });
+                    
+                    star.addEventListener('mouseout', () => {
+                        resetHover(tourId);
+                    });
+                });
+
+                starsContainer.addEventListener('mouseleave', () => {
+                    updateStarsDisplay(starsContainer, currentRatings[tourId] || 0);
+                });
+            }
+        }
+
+        // Establecer rating al hacer clic
+        function setRating(tourId, rating) {
+            currentRatings[tourId] = rating;
+            activeTourId = tourId;
+            const starsContainer = document.querySelector(`[data-tour-id="${tourId}"]`);
+            if (starsContainer) {
+                updateStarsDisplay(starsContainer, rating);
+            }
+        }
+
+        // Mostrar preview al hacer hover
+        function hoverRating(tourId, rating) {
+            const starsContainer = document.querySelector(`[data-tour-id="${tourId}"]`);
+            if (starsContainer) {
+                updateStarsDisplay(starsContainer, rating);
+            }
+        }
+
+        // Resetear hover
+        function resetHover(tourId) {
+            const starsContainer = document.querySelector(`[data-tour-id="${tourId}"]`);
+            if (starsContainer) {
+                updateStarsDisplay(starsContainer, currentRatings[tourId] || 0);
+            }
+        }
+
+        // Actualizar display de estrellas
+        function updateStarsDisplay(container, rating) {
+            const stars = container.querySelectorAll('.star');
+            stars.forEach((star, index) => {
+                star.classList.toggle('filled', index < rating);
+            });
+        }
+
+        // Enviar valoración
+        async function submitRating(tourId) {
+            const currentRating = currentRatings[tourId] || 0;
+            
+            if (currentRating === 0) {
+                alert('Por favor, selecciona una valoración');
+                return;
+            }
+
+            const feedback = document.getElementById(`feedback-${tourId}`).value;
+
+            try {
+                const response = await fetch(`/api/tours/${tourId}/rating`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rating: currentRating, feedback })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('¡Valoración enviada correctamente!');
+                    // Recargar la página para mostrar la nueva valoración
+                    location.reload();
+                } else {
+                    throw new Error(result.error || 'Error al enviar valoración');
+                }
+            } catch (error) {
+                console.error('Error enviando valoración:', error);
+                alert('Error al enviar la valoración: ' + error.message);
+            }
+        }
+
+        // Actualizar estadísticas
+        function updateStats(tours) {
+            const completedTours = tours.filter(tour => tour.completed);
+            const totalTours = completedTours.length;
+            
+            document.getElementById('totalTours').textContent = totalTours;
+            
+            if (completedTours.length > 0) {
+                const lastTour = completedTours.sort((a, b) => 
+                    new Date(b.started_at) - new Date(a.started_at)
+                )[0];
+                document.getElementById('lastTour').textContent = lastTour.tour_name;
+            } else {
+                document.getElementById('lastTour').textContent = 'Ninguno';
+            }
+        }
+
+        // Función centralizada para logout
+        async function performLogout() {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    // Cerrar todos los dropdowns
+                    const navDropdown = document.getElementById('navDropdownMenu');
+                    const userDropdown = document.getElementById('userDropdownMenu');
+                    
+                    if (navDropdown) navDropdown.classList.remove('nav-dropdown-open');
+                    if (userDropdown) userDropdown.classList.remove('dropdown-open');
+                    
+                    // Redirigir a login
+                    window.location.replace('/login');
+                } else {
+                    throw new Error('Error en logout');
+                }
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+                alert('Error al cerrar sesión. Inténtalo de nuevo.');
+            }
+        }
+
         // Verificación periódica de sesión (cada 30 segundos)
         setInterval(async () => {
             await checkAuth();
@@ -299,30 +758,7 @@
         // Logout (botón principal si existe)
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
-            logoutBtn.addEventListener('click', async () => {
-                const messageDiv = document.getElementById('message');
-                
-                try {
-                    const response = await fetch('/api/logout', {
-                        method: 'POST'
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        messageDiv.textContent = 'Sesión cerrada. Redirigiendo...';
-                        messageDiv.className = 'message success';
-                        // Forzar recarga completa para limpiar cualquier estado
-                        window.location.replace('/login');
-                    } else {
-                        messageDiv.textContent = 'Error al cerrar sesión';
-                        messageDiv.className = 'message error';
-                    }
-                } catch (error) {
-                    messageDiv.textContent = 'Error de conexión';
-                    messageDiv.className = 'message error';
-                }
-            });
+            logoutBtn.addEventListener('click', performLogout);
         }
 
         // Manejar navegación móvil
@@ -344,90 +780,47 @@
             });
         }
 
-        // Manejar dropdown de usuario en navegación
-        const navUserToggle = document.getElementById('navUserToggle');
-        const navDropdownMenu = document.getElementById('navDropdownMenu');
+        // Función para manejar dropdowns genérica
+        function setupDropdown(toggleId, menuId, openClass = 'dropdown-open') {
+            const toggle = document.getElementById(toggleId);
+            const menu = document.getElementById(menuId);
 
-        if (navUserToggle && navDropdownMenu) {
-            navUserToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                navDropdownMenu.classList.toggle('nav-dropdown-open');
-            });
+            if (toggle && menu) {
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    menu.classList.toggle(openClass);
+                });
 
-            // Cerrar dropdown al hacer clic fuera
-            document.addEventListener('click', () => {
-                navDropdownMenu.classList.remove('nav-dropdown-open');
-            });
+                // Cerrar dropdown al hacer clic fuera
+                document.addEventListener('click', (event) => {
+                    if (!toggle.contains(event.target) && !menu.contains(event.target)) {
+                        menu.classList.remove(openClass);
+                    }
+                });
 
-            // Prevenir que el dropdown se cierre al hacer clic dentro
-            navDropdownMenu.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
+                // Prevenir que el dropdown se cierre al hacer clic dentro
+                menu.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            }
         }
+
+        // Configurar dropdowns
+        setupDropdown('navUserToggle', 'navDropdownMenu', 'nav-dropdown-open');
+        setupDropdown('userToggle', 'userDropdownMenu', 'dropdown-open');
 
         // Manejar logout desde navegación
         const navLogoutBtn = document.getElementById('navLogoutBtn');
         if (navLogoutBtn) {
-            navLogoutBtn.addEventListener('click', async () => {
-                try {
-                    const response = await fetch('/api/logout', {
-                        method: 'POST'
-                    });
-
-                    if (response.ok) {
-                        // Cerrar dropdown
-                        if (navDropdownMenu) navDropdownMenu.classList.remove('nav-dropdown-open');
-                        // Redirigir a login
-                        window.location.replace('/login');
-                    }
-                } catch (error) {
-                    console.error('Error al cerrar sesión:', error);
-                }
-            });
+            navLogoutBtn.addEventListener('click', performLogout);
         }
 
-        // Manejar dropdown de usuario en el header
-        const userToggle = document.getElementById('userToggle');
-        const userDropdownMenu = document.getElementById('userDropdownMenu');
 
-        if (userToggle && userDropdownMenu) {
-            userToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                userDropdownMenu.classList.toggle('dropdown-open');
-            });
-
-            // Cerrar dropdown al hacer clic fuera
-            document.addEventListener('click', (event) => {
-                if (!userToggle.contains(event.target)) {
-                    userDropdownMenu.classList.remove('dropdown-open');
-                }
-            });
-
-            // Prevenir que el dropdown se cierre al hacer clic dentro
-            userDropdownMenu.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        }
 
         // Manejar logout desde header
         const headerLogoutBtn = document.getElementById('headerLogoutBtn');
         if (headerLogoutBtn) {
-            headerLogoutBtn.addEventListener('click', async () => {
-                try {
-                    const response = await fetch('/api/logout', {
-                        method: 'POST'
-                    });
-
-                    if (response.ok) {
-                        // Cerrar dropdown
-                        if (userDropdownMenu) userDropdownMenu.classList.remove('dropdown-open');
-                        // Redirigir a login
-                        window.location.replace('/login');
-                    }
-                } catch (error) {
-                    console.error('Error al cerrar sesión:', error);
-                }
-            });
+            headerLogoutBtn.addEventListener('click', performLogout);
         }
     </script>
 </body>

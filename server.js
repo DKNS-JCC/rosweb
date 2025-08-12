@@ -109,6 +109,15 @@ db.run(`CREATE TABLE IF NOT EXISTS tour_history (
     FOREIGN KEY (tour_route_id) REFERENCES tour_routes (id)
 )`);
 
+// Insertar datos de prueba de tours (solo si no existen)
+db.get('SELECT COUNT(*) as count FROM tour_history', (err, result) => {
+    if (err) {
+        console.error('Error al verificar tours existentes:', err);
+        return;
+    }
+    
+});
+
 // Middleware para verificar autenticación
 function requireAuth(req, res, next) {
     if (req.session.userId) {
@@ -500,6 +509,98 @@ app.get('/api/user', requireAuth, (req, res) => {
             return res.status(500).json({ error: 'Error en la base de datos' });
         }
         res.json(user);
+    });
+});
+
+// API para obtener tours realizados por el usuario
+app.get('/api/user/tours', requireAuth, (req, res) => {
+    const userId = req.session.userId;
+    
+    db.all(`
+        SELECT 
+            id,
+            tour_name,
+            tour_type,
+            tour_id,
+            pin,
+            started_at,
+            completed,
+            rating,
+            feedback
+        FROM tour_history 
+        WHERE user_id = ? 
+        ORDER BY started_at DESC
+    `, [userId], (err, tours) => {
+        if (err) {
+            console.error('Error al obtener tours:', err);
+            return res.status(500).json({ error: 'Error al obtener tours' });
+        }
+        
+        // Formatear las fechas y estados
+        const formattedTours = tours.map(tour => ({
+            ...tour,
+            completed: Boolean(tour.completed),
+            started_at: tour.started_at,
+            status: tour.completed ? 'Completado' : 'En progreso'
+        }));
+        
+        res.json(formattedTours);
+    });
+});
+
+// API para enviar rating y feedback de un tour
+app.post('/api/tours/:tourId/rating', requireAuth, (req, res) => {
+    const { tourId } = req.params;
+    const { rating, feedback } = req.body;
+    const userId = req.session.userId;
+    
+    // Validar rating
+    if (!rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ error: 'Rating debe ser entre 1 y 5' });
+    }
+    
+    // Verificar que el tour pertenece al usuario y está completado
+    db.get(`
+        SELECT id, completed 
+        FROM tour_history 
+        WHERE id = ? AND user_id = ?
+    `, [tourId, userId], (err, tour) => {
+        if (err) {
+            console.error('Error al verificar tour:', err);
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
+        
+        if (!tour) {
+            return res.status(404).json({ error: 'Tour no encontrado' });
+        }
+        
+        if (!tour.completed) {
+            return res.status(400).json({ error: 'Solo se pueden calificar tours completados' });
+        }
+        
+        // Actualizar rating y feedback
+        db.run(`
+            UPDATE tour_history 
+            SET rating = ?, feedback = ? 
+            WHERE id = ? AND user_id = ?
+        `, [rating, feedback || null, tourId, userId], function(err) {
+            if (err) {
+                console.error('Error al actualizar rating:', err);
+                return res.status(500).json({ error: 'Error al guardar la valoración' });
+            }
+            
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Tour no encontrado' });
+            }
+            
+            res.json({ 
+                success: true, 
+                message: 'Valoración guardada correctamente',
+                tourId,
+                rating,
+                feedback
+            });
+        });
     });
 });
 

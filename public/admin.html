@@ -340,51 +340,6 @@
             </table>
         </div>
 
-        <!-- Control del Robot -->
-        <div class="admin-section">
-            <h2>🤖 Control del Robot TurtleBot</h2>
-            <div class="warning-banner">
-                <strong>Acceso Directo al Robot:</strong> Esta sección permite el acceso completo al robot TurtleBot. 
-                <a href="/robot" class="btn btn-primary" style="margin-left: 10px;">Abrir Panel de Control</a>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                <div class="stat-card">
-                    <div><strong>Estado ROS Bridge</strong></div>
-                    <div class="stat-value" id="robotConnectionStatus">🔴 Verificando...</div>
-                </div>
-                <div class="stat-card">
-                    <div><strong>Comandos Enviados Hoy</strong></div>
-                    <div class="stat-value" id="robotCommandsToday">-</div>
-                </div>
-                <div class="stat-card">
-                    <div><strong>Último Usuario Activo</strong></div>
-                    <div class="stat-value" id="robotLastUser">-</div>
-                </div>
-                <div class="stat-card">
-                    <div><strong>Tiempo de Actividad</strong></div>
-                    <div class="stat-value" id="robotUptime">-</div>
-                </div>
-            </div>
-
-            <h3 style="margin-top: 30px;">Historial de Comandos Recientes</h3>
-            <table class="routes-table">
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>Usuario</th>
-                        <th>Acción</th>
-                        <th>Parámetros</th>
-                    </tr>
-                </thead>
-                <tbody id="robotCommandsTable">
-                    <tr>
-                        <td colspan="4" style="text-align: center; padding: 20px;">Cargando comandos...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
         <!-- Gestión de Rutas -->
         <div class="admin-section">
             <h2>Gestión de Rutas</h2>
