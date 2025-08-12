@@ -4,30 +4,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>artTEC</title>
-    <link rel="icon" type="image/x-icon" href="icon.ico">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="styles.css">
-    <script src="https://static.robotwebtools.org/roslibjs/current/roslib.min.js"></script>
 </head>
 <body>
-    <div class="index-container">
-        <!-- Barra superior con estado de sesión -->
-        <div class="session-bar" id="sessionBar" style="display: none;">
-            <div class="container">
-                <div class="session-info">
-                    <span class="welcome-text">Bienvenido, <span id="userName"></span></span>
-                    <div class="session-buttons">
-                        <a href="/robot" class="btn btn-outline btn-small" style="display: none;">Control Robot</a>
-                        <button id="adminBtn" class="btn btn-outline btn-small" style="display: none;">Admin</button>
-                        <button id="logoutBtn" class="btn btn-secondary btn-small">Cerrar Sesión</button>
+    <!-- Barra de navegación fija -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="/favicon.ico" alt="artTEC Logo" class="nav-logo-img">
+                <span class="nav-logo-text">artTEC</span>
+            </div>
+            <ul class="nav-menu" id="navMenu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#tours" class="nav-link">Tours</a>
+                </li>
+                <li class="nav-item">
+                    <a href="#how-it-works" class="nav-link">Cómo Funciona</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/robot" class="nav-link" id="navRobotControl" style="display: none;">Control Robot</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link" id="navAdmin" style="display: none;">Administración</a>
+                </li>
+            </ul>
+            
+            <!-- Sección de usuario -->
+            <div class="nav-user-section">
+                <!-- Menú para usuarios no autenticados -->
+                <div class="nav-auth-menu" id="navAuthMenu">
+                    <a href="/login" class="nav-btn nav-btn-outline">Iniciar Sesión</a>
+                    <a href="/register" class="nav-btn nav-btn-primary">Registrarse</a>
+                </div>
+                
+                <!-- Menú para usuarios autenticados -->
+                <div class="nav-user-menu" id="navUserMenu" style="display: none;">
+                    <div class="nav-user-info">
+                        <span class="nav-username" id="navUsername">Usuario</span>
+                    </div>
+                    <div class="nav-user-dropdown">
+                        <button class="nav-user-toggle" id="navUserToggle">
+                            <img src="/favicon.ico" alt="Usuario" class="nav-user-avatar">
+                            <svg class="nav-dropdown-arrow" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M3 5L6 8L9 5" stroke="currentColor" fill="none" stroke-width="1.5"/>
+                            </svg>
+                        </button>
+                        <div class="nav-dropdown-menu" id="navDropdownMenu">
+                            <a href="/dashboard.html" class="nav-dropdown-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+                                </svg>
+                                Mi Perfil
+                            </a>
+                            <button class="nav-dropdown-item" id="navLogoutBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.59L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="currentColor"/>
+                                </svg>
+                                Cerrar Sesión
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
+            
+            <div class="nav-toggle" id="navToggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
         </div>
+    </nav>
 
+    <div class="index-container">
         <header class="hero-section">
             <div class="hero-content">
                 <div class="logo-container">
-                    <img src="icon.ico" alt="artTEC Logo" class="hero-logo">
+                    <img src="/favicon.ico" alt="artTEC Logo" class="hero-logo">
                 </div>
                 <h1>artTEC</h1>
                 <p class="hero-subtitle">Descubre el arte del pasado con la tecnología del futuro</p>
@@ -134,7 +191,7 @@
             </div>
         </section>
 
-        <section class="how-it-works">
+        <section class="how-it-works" id="how-it-works">
             <div class="container">
                 <h2>¿Cómo Funciona?</h2>
                 <div class="steps-grid">
@@ -205,7 +262,7 @@
             <div class="container">
                 <div class="footer-content">
                     <div class="footer-section">
-                        <img src="icon.ico" alt="Logo" class="footer-logo">
+                        <img src="/favicon.ico" alt="Logo" class="footer-logo">
                         <p>Descubre el arte del pasado con la tecnología del futuro.</p>
                     </div>
                     <div class="footer-section">
@@ -281,9 +338,20 @@
             document.getElementById('sessionBar').style.display = 'block';
             document.getElementById('userName').textContent = user.username;
             
+            // Actualizar navegación universal
+            const navAuthMenu = document.getElementById('navAuthMenu');
+            const navUserMenu = document.getElementById('navUserMenu');
+            const navUsername = document.getElementById('navUsername');
+            
+            if (navAuthMenu) navAuthMenu.style.display = 'none';
+            if (navUserMenu) navUserMenu.style.display = 'flex';
+            if (navUsername) navUsername.textContent = user.username;
+            
             // Mostrar botón de admin solo si es administrador
             const adminBtn = document.getElementById('adminBtn');
             const controlRobotBtn = document.querySelector('a[href="/robot"]');
+            const navRobotControl = document.getElementById('navRobotControl');
+            const navAdmin = document.getElementById('navAdmin');
             
             if (user.role === 'admin') {
                 adminBtn.style.display = 'inline-block';
@@ -292,11 +360,25 @@
                 if (controlRobotBtn) {
                     controlRobotBtn.style.display = 'inline-block';
                 }
+                // Mostrar enlaces de navegación para admin
+                if (navRobotControl) {
+                    navRobotControl.style.display = 'block';
+                }
+                if (navAdmin) {
+                    navAdmin.style.display = 'block';
+                }
             } else {
                 adminBtn.style.display = 'none';
                 // Ocultar botón de control de robot para usuarios no administradores
                 if (controlRobotBtn) {
                     controlRobotBtn.style.display = 'none';
+                }
+                // Ocultar enlaces de navegación para no admin
+                if (navRobotControl) {
+                    navRobotControl.style.display = 'none';
+                }
+                if (navAdmin) {
+                    navAdmin.style.display = 'none';
                 }
             }
             
@@ -312,10 +394,28 @@
             // Ocultar barra de sesión
             document.getElementById('sessionBar').style.display = 'none';
             
+            // Actualizar navegación universal
+            const navAuthMenu = document.getElementById('navAuthMenu');
+            const navUserMenu = document.getElementById('navUserMenu');
+            
+            if (navAuthMenu) navAuthMenu.style.display = 'flex';
+            if (navUserMenu) navUserMenu.style.display = 'none';
+            
             // Ocultar botón de control de robot para usuarios no logueados
             const controlRobotBtn = document.querySelector('a[href="/robot"]');
+            const navRobotControl = document.getElementById('navRobotControl');
+            const navAdmin = document.getElementById('navAdmin');
+            
             if (controlRobotBtn) {
                 controlRobotBtn.style.display = 'none';
+            }
+            
+            // Ocultar enlaces de navegación para usuarios no logueados
+            if (navRobotControl) {
+                navRobotControl.style.display = 'none';
+            }
+            if (navAdmin) {
+                navAdmin.style.display = 'none';
             }
             
             // Mostrar botones de login/registro
@@ -426,6 +526,81 @@
             document.querySelector('#tours').scrollIntoView({
                 behavior: 'smooth',
                 block: 'start'
+            });
+        });
+
+        // Manejar navegación móvil
+        const navToggle = document.getElementById('navToggle');
+        const navMenu = document.getElementById('navMenu');
+
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('nav-menu-active');
+            navToggle.classList.toggle('toggle-active');
+        });
+
+        // Cerrar menú móvil al hacer clic en un enlace
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('nav-menu-active');
+                navToggle.classList.remove('toggle-active');
+            });
+        });
+
+        // Manejar dropdown de usuario en navegación
+        const navUserToggle = document.getElementById('navUserToggle');
+        const navDropdownMenu = document.getElementById('navDropdownMenu');
+
+        if (navUserToggle && navDropdownMenu) {
+            navUserToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navDropdownMenu.classList.toggle('nav-dropdown-open');
+            });
+
+            // Cerrar dropdown al hacer clic fuera
+            document.addEventListener('click', () => {
+                navDropdownMenu.classList.remove('nav-dropdown-open');
+            });
+
+            // Prevenir que el dropdown se cierre al hacer clic dentro
+            navDropdownMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // Manejar logout desde navegación
+        const navLogoutBtn = document.getElementById('navLogoutBtn');
+        if (navLogoutBtn) {
+            navLogoutBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST'
+                    });
+
+                    if (response.ok) {
+                        showLoggedOutState();
+                        // Mostrar mensaje de éxito
+                        showMessage('Sesión cerrada exitosamente', 'success');
+                        // Cerrar dropdown
+                        navDropdownMenu.classList.remove('nav-dropdown-open');
+                    }
+                } catch (error) {
+                    showMessage('Error al cerrar sesión', 'error');
+                }
+            });
+        }
+
+        // Smooth scrolling para enlaces internos
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    const offsetTop = target.offsetTop - 80; // Ajustar por la altura de la navbar
+                    window.scrollTo({
+                        top: offsetTop,
+                        behavior: 'smooth'
+                    });
+                }
             });
         });
     </script>

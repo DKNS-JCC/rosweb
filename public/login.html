@@ -8,6 +8,77 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Barra de navegación fija -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="icon.ico" alt="artTEC Logo" class="nav-logo-img">
+                <span class="nav-logo-text">artTEC</span>
+            </div>
+            <ul class="nav-menu" id="navMenu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/#tours" class="nav-link">Tours</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/#how-it-works" class="nav-link">Cómo Funciona</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/robot" class="nav-link" id="navRobotControl" style="display: none;">Control Robot</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link" id="navAdmin" style="display: none;">Administración</a>
+                </li>
+            </ul>
+            
+            <!-- Sección de usuario -->
+            <div class="nav-user-section">
+                <!-- Menú para usuarios no autenticados -->
+                <div class="nav-auth-menu" id="navAuthMenu">
+                    <a href="/login" class="nav-btn nav-btn-outline">Iniciar Sesión</a>
+                    <a href="/register" class="nav-btn nav-btn-primary">Registrarse</a>
+                </div>
+                
+                <!-- Menú para usuarios autenticados -->
+                <div class="nav-user-menu" id="navUserMenu" style="display: none;">
+                    <div class="nav-user-info">
+                        <span class="nav-username" id="navUsername">Usuario</span>
+                    </div>
+                    <div class="nav-user-dropdown">
+                        <button class="nav-user-toggle" id="navUserToggle">
+                            <img src="icon.ico" alt="Usuario" class="nav-user-avatar">
+                            <svg class="nav-dropdown-arrow" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M3 5L6 8L9 5" stroke="currentColor" fill="none" stroke-width="1.5"/>
+                            </svg>
+                        </button>
+                        <div class="nav-dropdown-menu" id="navDropdownMenu">
+                            <a href="/dashboard.html" class="nav-dropdown-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+                                </svg>
+                                Mi Perfil
+                            </a>
+                            <button class="nav-dropdown-item" id="navLogoutBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.59L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="currentColor"/>
+                                </svg>
+                                Cerrar Sesión
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="nav-toggle" id="navToggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
     <div class="container">
         <div class="login-form">
             <div class="logo-container">
@@ -70,6 +141,45 @@
                 messageDiv.className = 'message error';
             }
         });
+
+        // Manejar navegación móvil
+        const navToggle = document.getElementById('navToggle');
+        const navMenu = document.getElementById('navMenu');
+
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('nav-menu-active');
+            navToggle.classList.toggle('toggle-active');
+        });
+
+        // Cerrar menú móvil al hacer clic en un enlace
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                navMenu.classList.remove('nav-menu-active');
+                navToggle.classList.remove('toggle-active');
+            });
+        });
+
+        // Funciones de navegación universal (placeholder para futuras funcionalidades)
+        function updateNavForLoggedInUser(user) {
+            const navAuthMenu = document.getElementById('navAuthMenu');
+            const navUserMenu = document.getElementById('navUserMenu');
+            const navUsername = document.getElementById('navUsername');
+            
+            if (navAuthMenu) navAuthMenu.style.display = 'none';
+            if (navUserMenu) navUserMenu.style.display = 'flex';
+            if (navUsername) navUsername.textContent = user.username;
+        }
+
+        function updateNavForLoggedOutUser() {
+            const navAuthMenu = document.getElementById('navAuthMenu');
+            const navUserMenu = document.getElementById('navUserMenu');
+            
+            if (navAuthMenu) navAuthMenu.style.display = 'flex';
+            if (navUserMenu) navUserMenu.style.display = 'none';
+        }
+
+        // Inicializar estado de navegación
+        updateNavForLoggedOutUser();
     </script>
 </body>
 </html>

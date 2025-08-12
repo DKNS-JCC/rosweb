@@ -1,3 +1,4 @@
+
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
@@ -8,6 +9,7 @@ const robotManager = require('./robotManager');
 
 const app = express();
 const PORT = 3000;
+
 
 // Configuración de middleware
 app.use(bodyParser.urlencoded({ extended: true }));
