@@ -7,6 +7,141 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Estilos para menú móvil de usuario y autenticación */
+        .nav-mobile-user,
+        .nav-mobile-auth {
+            display: none !important;
+        }
+
+        @media screen and (max-width: 768px) {
+            .nav-mobile-user,
+            .nav-mobile-auth {
+                display: block !important;
+            }
+
+            .nav-mobile-divider {
+                height: 1px;
+                background: linear-gradient(90deg, transparent, #e9ecef, transparent);
+                margin: 15px 20px;
+            }
+
+            .nav-mobile-user-info {
+                padding: 10px 20px;
+                text-align: center;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                margin: 0 20px;
+                border-radius: 8px;
+                border-left: 4px solid #145db1;
+            }
+
+            .nav-mobile-username {
+                font-weight: 600;
+                color: #145db1;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .nav-mobile-username::before {
+                font-size: 18px;
+            }
+
+            .nav-mobile-profile,
+            .nav-mobile-logout {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                background: none;
+                border: none;
+                width: 100%;
+                text-decoration: none;
+                font-size: 15px;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+
+            .nav-mobile-profile {
+                color: #145db1;
+            }
+
+            .nav-mobile-profile:hover {
+                background: rgba(20, 93, 177, 0.1);
+                color: #145db1;
+            }
+
+            .nav-mobile-logout {
+                color: #dc3545;
+                cursor: pointer;
+            }
+
+            .nav-mobile-logout:hover {
+                background: rgba(220, 53, 69, 0.1);
+                color: #dc3545;
+            }
+
+            .nav-mobile-profile svg,
+            .nav-mobile-logout svg {
+                flex-shrink: 0;
+            }
+
+            /* Botones de autenticación en móvil */
+            .nav-mobile-auth-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                padding: 0 20px;
+            }
+
+            .nav-mobile-auth-btn {
+                padding: 12px 20px;
+                text-align: center;
+                text-decoration: none;
+                border-radius: 8px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+            }
+
+            .nav-mobile-login {
+                background: transparent;
+                color: #145db1;
+                border: 2px solid #145db1;
+            }
+
+            .nav-mobile-login:hover {
+                background: #145db1;
+                color: white;
+            }
+
+            .nav-mobile-register {
+                background: #145db1;
+                color: white;
+                border: 2px solid #145db1;
+            }
+
+            .nav-mobile-register:hover {
+                background: #0d4d95;
+                border-color: #0d4d95;
+            }
+
+            /* Ocultar dropdown de usuario en móvil */
+            .nav-user-dropdown {
+                display: none;
+            }
+
+            .nav-user-info {
+                display: none;
+            }
+
+            /* Ocultar botones de autenticación del header en móvil */
+            .nav-auth-menu {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Barra de navegación fija -->
@@ -31,6 +166,36 @@
                 </li>
                 <li class="nav-item">
                     <a href="/admin" class="nav-link" id="navAdmin" style="display: none;">Administración</a>
+                </li>
+                
+                <!-- Sección móvil de usuario (solo visible en móvil cuando está logueado) -->
+                <li class="nav-item nav-mobile-user" id="navMobileUser" style="display: none;">
+                    <div class="nav-mobile-divider"></div>
+                </li>
+                <li class="nav-item nav-mobile-user" id="navMobileProfile" style="display: none;">
+                    <a href="/dashboard.html" class="nav-link nav-mobile-profile">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+                        </svg>
+                        Mi Perfil
+                    </a>
+                </li>
+                <li class="nav-item nav-mobile-user" id="navMobileLogout" style="display: none;">
+                    <button class="nav-link nav-mobile-logout" id="navMobileLogoutBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.59L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="currentColor"/>
+                        </svg>
+                        Cerrar Sesión
+                    </button>
+                </li>
+                
+                <!-- Sección móvil de autenticación (solo visible en móvil cuando NO está logueado) -->
+                <li class="nav-item nav-mobile-auth" id="navMobileAuth">
+                    <div class="nav-mobile-divider"></div>
+                    <div class="nav-mobile-auth-buttons">
+                        <a href="/login" class="nav-mobile-auth-btn nav-mobile-login">Iniciar Sesión</a>
+                        <a href="/register" class="nav-mobile-auth-btn nav-mobile-register">Registrarse</a>
+                    </div>
                 </li>
             </ul>
             
@@ -355,9 +520,23 @@
             const navRobotControl = document.getElementById('navRobotControl');
             const navAdmin = document.getElementById('navAdmin');
             
+            // Elementos móviles
+            const navMobileUser = document.getElementById('navMobileUser');
+            const navMobileProfile = document.getElementById('navMobileProfile');
+            const navMobileLogout = document.getElementById('navMobileLogout');
+            const navMobileUsername = document.getElementById('navMobileUsername');
+            const navMobileAuth = document.getElementById('navMobileAuth');
+            
             if (navAuthMenu) navAuthMenu.style.display = 'none';
             if (navUserMenu) navUserMenu.style.display = 'flex';
             if (navUsername) navUsername.textContent = user.username;
+            
+            // Mostrar elementos móviles de usuario y ocultar autenticación
+            if (navMobileUser) navMobileUser.style.display = 'block';
+            if (navMobileProfile) navMobileProfile.style.display = 'block';
+            if (navMobileLogout) navMobileLogout.style.display = 'block';
+            if (navMobileUsername) navMobileUsername.textContent = user.username;
+            if (navMobileAuth) navMobileAuth.style.display = 'none';
             
             // Actualizar foto de perfil en navegación
             const navUserAvatar = document.querySelector('.nav-user-avatar');
@@ -400,6 +579,7 @@
             
             // Configurar dropdown de usuario
             setupUserDropdown();
+            setupMobileUserActions();
         }
 
         // Mostrar estado cuando el usuario no está logueado
@@ -417,10 +597,22 @@
             const navRobotControl = document.getElementById('navRobotControl');
             const navAdmin = document.getElementById('navAdmin');
             
+            // Elementos móviles
+            const navMobileUser = document.getElementById('navMobileUser');
+            const navMobileProfile = document.getElementById('navMobileProfile');
+            const navMobileLogout = document.getElementById('navMobileLogout');
+            const navMobileAuth = document.getElementById('navMobileAuth');
+            
             if (navAuthMenu) navAuthMenu.style.display = 'flex';
             if (navUserMenu) navUserMenu.style.display = 'none';
             if (navRobotControl) navRobotControl.style.display = 'none';
             if (navAdmin) navAdmin.style.display = 'none';
+            
+            // Ocultar elementos móviles de usuario y mostrar autenticación
+            if (navMobileUser) navMobileUser.style.display = 'none';
+            if (navMobileProfile) navMobileProfile.style.display = 'none';
+            if (navMobileLogout) navMobileLogout.style.display = 'none';
+            if (navMobileAuth) navMobileAuth.style.display = 'block';
             
             // Mostrar botones de login/registro
             const heroButtons = document.getElementById('heroButtons');
@@ -474,6 +666,34 @@
                         navMenu.classList.remove('nav-menu-active');
                         navToggle.classList.remove('toggle-active');
                     });
+                });
+            }
+        }
+
+        // Configurar acciones del menú móvil de usuario
+        function setupMobileUserActions() {
+            const navMobileLogoutBtn = document.getElementById('navMobileLogoutBtn');
+            
+            if (navMobileLogoutBtn) {
+                navMobileLogoutBtn.addEventListener('click', async () => {
+                    try {
+                        const response = await fetch('/api/logout', {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            showLoggedOutState();
+                            showMessage('Sesión cerrada exitosamente', 'success');
+                            
+                            // Cerrar menú móvil
+                            const navMenu = document.getElementById('navMenu');
+                            const navToggle = document.getElementById('navToggle');
+                            if (navMenu) navMenu.classList.remove('nav-menu-active');
+                            if (navToggle) navToggle.classList.remove('toggle-active');
+                        }
+                    } catch (error) {
+                        showMessage('Error al cerrar sesión', 'error');
+                    }
                 });
             }
         }
@@ -600,41 +820,22 @@
             });
         });
 
-        // Manejar navegación móvil
-        const navToggle = document.getElementById('navToggle');
-        const navMenu = document.getElementById('navMenu');
-
-        navToggle.addEventListener('click', () => {
-            navMenu.classList.toggle('nav-menu-active');
-            navToggle.classList.toggle('toggle-active');
-        });
-
-        // Cerrar menú móvil al hacer clic en un enlace
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', () => {
-                navMenu.classList.remove('nav-menu-active');
-                navToggle.classList.remove('toggle-active');
-            });
-        });
-
         // Manejar dropdown de usuario en navegación
         function setupUserDropdown() {
             const navUserToggle = document.getElementById('navUserToggle');
             const navDropdownMenu = document.getElementById('navDropdownMenu');
 
             if (navUserToggle && navDropdownMenu) {
-                // Remover event listeners existentes
-                navUserToggle.replaceWith(navUserToggle.cloneNode(true));
-                const newNavUserToggle = document.getElementById('navUserToggle');
-                
-                newNavUserToggle.addEventListener('click', (e) => {
+                navUserToggle.addEventListener('click', (e) => {
                     e.stopPropagation();
                     navDropdownMenu.classList.toggle('nav-dropdown-open');
                 });
 
                 // Cerrar dropdown al hacer clic fuera
-                document.addEventListener('click', () => {
-                    navDropdownMenu.classList.remove('nav-dropdown-open');
+                document.addEventListener('click', (event) => {
+                    if (!navUserToggle.contains(event.target) && !navDropdownMenu.contains(event.target)) {
+                        navDropdownMenu.classList.remove('nav-dropdown-open');
+                    }
                 });
 
                 // Prevenir que el dropdown se cierre al hacer clic dentro

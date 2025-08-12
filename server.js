@@ -627,6 +627,100 @@ app.delete('/api/user/profile-picture', requireAuth, (req, res) => {
     });
 });
 
+// API para actualizar información del perfil
+app.put('/api/user/profile', requireAuth, (req, res) => {
+    const userId = req.session.userId;
+    const { username, email } = req.body;
+
+    // Validaciones básicas
+    if (!username || !email) {
+        return res.status(400).json({ error: 'Username y email son requeridos' });
+    }
+
+    if (username.length < 3) {
+        return res.status(400).json({ error: 'El username debe tener al menos 3 caracteres' });
+    }
+
+    if (!email.includes('@')) {
+        return res.status(400).json({ error: 'Email inválido' });
+    }
+
+    // Verificar que el username y email no estén en uso por otro usuario
+    db.get('SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?', 
+        [username, email, userId], (err, existingUser) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
+
+        if (existingUser) {
+            return res.status(400).json({ error: 'El username o email ya están en uso' });
+        }
+
+        // Actualizar información
+        db.run('UPDATE users SET username = ?, email = ? WHERE id = ?', 
+            [username, email, userId], function(updateErr) {
+            if (updateErr) {
+                return res.status(500).json({ error: 'Error al actualizar el perfil' });
+            }
+
+            res.json({ 
+                message: 'Perfil actualizado correctamente',
+                username: username,
+                email: email
+            });
+        });
+    });
+});
+
+// API para cambiar contraseña
+app.put('/api/user/password', requireAuth, async (req, res) => {
+    const userId = req.session.userId;
+    const { currentPassword, newPassword } = req.body;
+
+    // Validaciones
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Contraseña actual y nueva contraseña son requeridas' });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+    }
+
+    try {
+        // Obtener contraseña actual del usuario
+        db.get('SELECT password FROM users WHERE id = ?', [userId], async (err, user) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error en la base de datos' });
+            }
+
+            if (!user) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+
+            // Verificar contraseña actual
+            const validPassword = await bcrypt.compare(currentPassword, user.password);
+            if (!validPassword) {
+                return res.status(400).json({ error: 'Contraseña actual incorrecta' });
+            }
+
+            // Encriptar nueva contraseña
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Actualizar contraseña
+            db.run('UPDATE users SET password = ? WHERE id = ?', 
+                [hashedPassword, userId], function(updateErr) {
+                if (updateErr) {
+                    return res.status(500).json({ error: 'Error al actualizar la contraseña' });
+                }
+
+                res.json({ message: 'Contraseña actualizada correctamente' });
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+});
+
 // API para obtener tours realizados por el usuario
 app.get('/api/user/tours', requireAuth, (req, res) => {
     const userId = req.session.userId;

@@ -745,6 +745,206 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
+
+        /* Estilos para editar perfil */
+        .edit-profile-section {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(65, 41, 202, 0.1);
+            border: 1px solid rgba(65, 41, 202, 0.1);
+            border-left: 5px solid #4129ca;
+        }
+
+        .edit-profile-tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 12px 24px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6c757d;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .tab-button.active {
+            color: #4129ca;
+            border-bottom-color: #4129ca;
+        }
+
+        .tab-button:hover {
+            color: #4129ca;
+            background: rgba(65, 41, 202, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #4129ca;
+            box-shadow: 0 0 0 3px rgba(65, 41, 202, 0.1);
+        }
+
+        .form-input:invalid {
+            border-color: #dc3545;
+        }
+
+        .form-input[readonly] {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #4129ca 0%, #5a3fd4 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(65, 41, 202, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-right: 10px;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(65, 41, 202, 0.4);
+        }
+
+        .btn-save:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-cancel {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-cancel:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .form-help {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .password-strength {
+            margin-top: 8px;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+            width: 0%;
+        }
+
+        .strength-weak {
+            background: #dc3545;
+            width: 33%;
+        }
+
+        .strength-medium {
+            background: #ffc107;
+            width: 66%;
+        }
+
+        .strength-strong {
+            background: #28a745;
+            width: 100%;
+        }
+
+        .form-status {
+            margin-top: 15px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .form-status.success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .form-status.error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
         </style>
 </head>
 <body>
@@ -844,9 +1044,126 @@
                     <div id="uploadStatus" class="upload-status"></div>
                 </div>
 
-                <h3>Información del Usuario</h3>
-                <div id="userDetails" class="user-details">
-                    <p>Cargando...</p>
+
+                <!-- Sección para editar perfil -->
+                <div class="edit-profile-section">
+                    <h3>⚙️ Editar Perfil</h3>
+                    
+                    <div class="edit-profile-tabs">
+                        <button class="tab-button active" data-tab="info">
+                            📝 Información Personal
+                        </button>
+                        <button class="tab-button" data-tab="password">
+                            🔒 Cambiar Contraseña
+                        </button>
+                    </div>
+
+                    <!-- Tab: Información Personal -->
+                    <div class="tab-content active" id="tab-info">
+                        <form id="profileForm">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="editUsername">Nombre de Usuario</label>
+                                    <input 
+                                        type="text" 
+                                        id="editUsername" 
+                                        class="form-input"
+                                        placeholder="Tu nombre de usuario"
+                                        required
+                                        minlength="3"
+                                    >
+                                    <div class="form-help">Mínimo 3 caracteres. Solo letras, números y guiones bajos.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="editEmail">Correo Electrónico</label>
+                                    <input 
+                                        type="email" 
+                                        id="editEmail" 
+                                        class="form-input"
+                                        placeholder="tu@email.com"
+                                        required
+                                    >
+                                    <div class="form-help">Recibirás notificaciones importantes en este correo.</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label" for="registrationDate">Fecha de Registro</label>
+                                <input 
+                                    type="text" 
+                                    id="registrationDate" 
+                                    class="form-input"
+                                    readonly
+                                >
+                                <div class="form-help">Esta información no se puede modificar.</div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn-save">
+                                    Guardar Cambios
+                                </button>
+                            </div>
+
+                            <div id="profileStatus" class="form-status"></div>
+                        </form>
+                    </div>
+
+                    <!-- Tab: Cambiar Contraseña -->
+                    <div class="tab-content" id="tab-password">
+                        <form id="passwordForm">
+                            <div class="form-group">
+                                <label class="form-label" for="currentPassword">Contraseña Actual</label>
+                                <input 
+                                    type="password" 
+                                    id="currentPassword" 
+                                    class="form-input"
+                                    placeholder="Tu contraseña actual"
+                                    required
+                                >
+                                <div class="form-help">Ingresa tu contraseña actual para verificar tu identidad.</div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label" for="newPassword">Nueva Contraseña</label>
+                                    <input 
+                                        type="password" 
+                                        id="newPassword" 
+                                        class="form-input"
+                                        placeholder="Nueva contraseña"
+                                        required
+                                        minlength="6"
+                                    >
+                                    <div class="password-strength">
+                                        <div class="password-strength-bar" id="passwordStrengthBar"></div>
+                                    </div>
+                                    <div class="form-help">Mínimo 6 caracteres. Incluye mayúsculas, números y símbolos para mayor seguridad.</div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="confirmPassword">Confirmar Contraseña</label>
+                                    <input 
+                                        type="password" 
+                                        id="confirmPassword" 
+                                        class="form-input"
+                                        placeholder="Confirma tu nueva contraseña"
+                                        required
+                                    >
+                                    <div class="form-help">Debe coincidir con la nueva contraseña.</div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" class="btn-save">
+                                    🔒 Cambiar Contraseña
+                                </button>
+                                <button type="button" class="btn-cancel" onclick="resetPasswordForm()">
+                                    ↶ Cancelar
+                                </button>
+                            </div>
+
+                            <div id="passwordStatus" class="form-status"></div>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -919,11 +1236,10 @@
                 }
 
                 if (userData.id) {
+                    // Guardar datos del usuario globalmente para resetear formularios
+                    window.currentUserData = userData;
+                    
                     // Actualizar información en la página
-                    document.getElementById('userDetails').innerHTML = `
-                        <p><strong>Usuario:</strong> ${userData.username}</p>
-                        <p><strong>Email:</strong> ${userData.email}</p>
-                    `;
                     document.getElementById('userDate').textContent = new Date(userData.created_at).toLocaleDateString();
                     
                     // Actualizar foto de perfil
@@ -931,6 +1247,9 @@
                     
                     // Actualizar navegación universal
                     updateNavForLoggedInUser(userData);
+                    
+                    // Cargar datos en formularios de edición
+                    loadProfileEditForm(userData);
                     
                     // Cargar tours realizados
                     await loadUserTours(userData.id);
@@ -994,6 +1313,242 @@
             if (navUserAvatar) {
                 navUserAvatar.src = imageSrc;
             }
+        }
+
+        // Función para cargar datos en el formulario de edición
+        function loadProfileEditForm(user) {
+            document.getElementById('editUsername').value = user.username || '';
+            document.getElementById('editEmail').value = user.email || '';
+            document.getElementById('registrationDate').value = new Date(user.created_at).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // Configurar tabs de edición de perfil
+        document.addEventListener('DOMContentLoaded', function() {
+            setupProfileEditTabs();
+            setupProfileEditForms();
+        });
+
+        // Configurar tabs
+        function setupProfileEditTabs() {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    // Remover active de todos los tabs
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Activar tab seleccionado
+                    button.classList.add('active');
+                    document.getElementById(`tab-${targetTab}`).classList.add('active');
+                });
+            });
+        }
+
+        // Configurar formularios de edición
+        function setupProfileEditForms() {
+            // Formulario de información personal
+            const profileForm = document.getElementById('profileForm');
+            if (profileForm) {
+                profileForm.addEventListener('submit', handleProfileSubmit);
+            }
+
+            // Formulario de contraseña
+            const passwordForm = document.getElementById('passwordForm');
+            if (passwordForm) {
+                passwordForm.addEventListener('submit', handlePasswordSubmit);
+            }
+
+            // Monitor de fuerza de contraseña
+            const newPasswordInput = document.getElementById('newPassword');
+            if (newPasswordInput) {
+                newPasswordInput.addEventListener('input', updatePasswordStrength);
+            }
+
+            // Validación de confirmación de contraseña
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            if (confirmPasswordInput) {
+                confirmPasswordInput.addEventListener('input', validatePasswordConfirmation);
+            }
+        }
+
+        // Manejar envío del formulario de perfil
+        async function handleProfileSubmit(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('editUsername').value.trim();
+            const email = document.getElementById('editEmail').value.trim();
+            
+            if (!username || !email) {
+                showFormStatus('profileStatus', 'Todos los campos son requeridos', 'error');
+                return;
+            }
+
+            if (username.length < 3) {
+                showFormStatus('profileStatus', 'El username debe tener al menos 3 caracteres', 'error');
+                return;
+            }
+
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = '💾 Guardando...';
+
+            try {
+                const response = await fetch('/api/user/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, email })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showFormStatus('profileStatus', '✅ ' + result.message, 'success');
+                    
+                    // Actualizar navegación
+                    const navUsername = document.getElementById('navUsername');
+                    if (navUsername) navUsername.textContent = result.username;
+                } else {
+                    throw new Error(result.error || 'Error al actualizar el perfil');
+                }
+            } catch (error) {
+                console.error('Error actualizando perfil:', error);
+                showFormStatus('profileStatus', '❌ ' + error.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Guardar Cambios';
+            }
+        }
+
+        // Manejar envío del formulario de contraseña
+        async function handlePasswordSubmit(event) {
+            event.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showFormStatus('passwordStatus', 'Todos los campos son requeridos', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showFormStatus('passwordStatus', 'La nueva contraseña debe tener al menos 6 caracteres', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showFormStatus('passwordStatus', 'Las contraseñas no coinciden', 'error');
+                return;
+            }
+
+            const submitButton = event.target.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = '🔒 Cambiando...';
+
+            try {
+                const response = await fetch('/api/user/password', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showFormStatus('passwordStatus', '✅ ' + result.message, 'success');
+                    resetPasswordForm();
+                } else {
+                    throw new Error(result.error || 'Error al cambiar la contraseña');
+                }
+            } catch (error) {
+                console.error('Error cambiando contraseña:', error);
+                showFormStatus('passwordStatus', '❌ ' + error.message, 'error');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = '🔒 Cambiar Contraseña';
+            }
+        }
+
+        // Actualizar indicador de fuerza de contraseña
+        function updatePasswordStrength() {
+            const password = document.getElementById('newPassword').value;
+            const strengthBar = document.getElementById('passwordStrengthBar');
+            
+            let strength = 0;
+            let strengthClass = '';
+
+            if (password.length >= 6) strength++;
+            if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
+            if (password.match(/\d/)) strength++;
+            if (password.match(/[^a-zA-Z\d]/)) strength++;
+
+            if (strength <= 1) {
+                strengthClass = 'strength-weak';
+            } else if (strength <= 2) {
+                strengthClass = 'strength-medium';
+            } else {
+                strengthClass = 'strength-strong';
+            }
+
+            strengthBar.className = `password-strength-bar ${strengthClass}`;
+        }
+
+        // Validar confirmación de contraseña
+        function validatePasswordConfirmation() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const confirmInput = document.getElementById('confirmPassword');
+
+            if (confirmPassword && newPassword !== confirmPassword) {
+                confirmInput.style.borderColor = '#dc3545';
+            } else {
+                confirmInput.style.borderColor = '#e9ecef';
+            }
+        }
+
+        // Mostrar estado del formulario
+        function showFormStatus(statusId, message, type) {
+            const statusElement = document.getElementById(statusId);
+            statusElement.textContent = message;
+            statusElement.className = `form-status ${type}`;
+            statusElement.style.display = 'block';
+
+            // Auto ocultar después de 5 segundos para mensajes de éxito
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusElement.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Resetear formulario de perfil
+        function resetProfileForm() {
+            const currentUser = window.currentUserData;
+            if (currentUser) {
+                loadProfileEditForm(currentUser);
+            }
+            document.getElementById('profileStatus').style.display = 'none';
+        }
+
+        // Resetear formulario de contraseña
+        function resetPasswordForm() {
+            document.getElementById('passwordForm').reset();
+            document.getElementById('passwordStatus').style.display = 'none';
+            document.getElementById('passwordStrengthBar').className = 'password-strength-bar';
+            document.getElementById('confirmPassword').style.borderColor = '#e9ecef';
         }
 
         // Manejar subida de archivo
