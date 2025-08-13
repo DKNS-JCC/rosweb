@@ -9,6 +9,141 @@
     <script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
     <script src="https://unpkg.com/three@0.145.0/build/three.min.js"></script>
     <style>
+        /* Estilos para menú móvil de usuario y autenticación */
+        .nav-mobile-user,
+        .nav-mobile-auth {
+            display: none !important;
+        }
+
+        @media screen and (max-width: 768px) {
+            .nav-mobile-user,
+            .nav-mobile-auth {
+                display: block !important;
+            }
+
+            .nav-mobile-divider {
+                height: 1px;
+                background: linear-gradient(90deg, transparent, #e9ecef, transparent);
+                margin: 15px 20px;
+            }
+
+            .nav-mobile-user-info {
+                padding: 10px 20px;
+                text-align: center;
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                margin: 0 20px;
+                border-radius: 8px;
+                border-left: 4px solid #4129ca;
+            }
+
+            .nav-mobile-username {
+                font-weight: 600;
+                color: #4129ca;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .nav-mobile-username::before {
+                content: "👤";
+                font-size: 18px;
+            }
+
+            .nav-mobile-profile,
+            .nav-mobile-logout {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                background: none;
+                border: none;
+                width: 100%;
+                text-decoration: none;
+                font-size: 15px;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+
+            .nav-mobile-profile {
+                color: #4129ca;
+            }
+
+            .nav-mobile-profile:hover {
+                background: rgba(65, 41, 202, 0.1);
+                color: #4129ca;
+            }
+
+            .nav-mobile-logout {
+                color: #dc3545;
+                cursor: pointer;
+            }
+
+            .nav-mobile-logout:hover {
+                background: rgba(220, 53, 69, 0.1);
+                color: #dc3545;
+            }
+
+            .nav-mobile-profile svg,
+            .nav-mobile-logout svg {
+                flex-shrink: 0;
+            }
+
+            /* Botones de autenticación en móvil */
+            .nav-mobile-auth-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                padding: 0 20px;
+            }
+
+            .nav-mobile-auth-btn {
+                padding: 12px 20px;
+                text-align: center;
+                text-decoration: none;
+                border-radius: 8px;
+                font-weight: 600;
+                transition: all 0.3s ease;
+            }
+
+            .nav-mobile-login {
+                background: transparent;
+                color: #4129ca;
+                border: 2px solid #4129ca;
+            }
+
+            .nav-mobile-login:hover {
+                background: #4129ca;
+                color: white;
+            }
+
+            .nav-mobile-register {
+                background: #4129ca;
+                color: white;
+                border: 2px solid #4129ca;
+            }
+
+            .nav-mobile-register:hover {
+                background: #3a23b8;
+                border-color: #3a23b8;
+            }
+
+            /* Ocultar dropdown de usuario en móvil */
+            .nav-user-dropdown {
+                display: none;
+            }
+
+            .nav-user-info {
+                display: none;
+            }
+
+            /* Ocultar botones de autenticación del header en móvil */
+            .nav-auth-menu {
+                display: none;
+            }
+        }
+
         .robot-container {
             min-width: 90%;
             margin: 0 auto;
@@ -327,6 +462,35 @@
                 <li class="nav-item">
                     <a href="/admin" class="nav-link" id="navAdmin">Administración</a>
                 </li>
+                
+                <!-- Sección móvil de usuario (solo visible en móvil cuando está logueado) -->
+                <li class="nav-item nav-mobile-user" id="navMobileUser" style="display: none;">
+                    <div class="nav-mobile-divider"></div>
+                    <div class="nav-mobile-user-info">
+                        <div id="nav-mobile-username" class="nav-mobile-username"></div>
+                    </div>
+                </li>
+                <li class="nav-item nav-mobile-user" id="navMobileProfile" style="display: none;">
+                    <a href="/dashboard.html" class="nav-link nav-mobile-profile">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Mi Perfil
+                    </a>
+                </li>
+                <li class="nav-item nav-mobile-user" id="navMobileLogout" style="display: none;">
+                    <button class="nav-link nav-mobile-logout" id="navMobileLogoutBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Cerrar Sesión
+                    </button>
+                </li>
+                
+                <!-- Sección móvil de autenticación (solo visible en móvil cuando NO está logueado) -->
+                <li class="nav-item nav-mobile-auth" id="navMobileAuth">
+                    <div class="nav-mobile-divider"></div>
+                    <div class="nav-mobile-auth-buttons">
+                        <a href="/login" class="nav-mobile-auth-btn nav-mobile-login">Iniciar Sesión</a>
+                        <a href="/register" class="nav-mobile-auth-btn nav-mobile-register">Registrarse</a>
+                    </div>
+                </li>
             </ul>
             
             <!-- Sección de usuario -->
@@ -344,7 +508,7 @@
                     </div>
                     <div class="nav-user-dropdown">
                         <button class="nav-user-toggle" id="navUserToggle">
-                            <img src="icon.ico" alt="Usuario" class="nav-user-avatar">
+                            <img src="/favicon.ico" alt="Usuario" class="nav-user-avatar" id="navUserAvatar">
                             <svg class="nav-dropdown-arrow" width="12" height="12" viewBox="0 0 12 12">
                                 <path d="M3 5L6 8L9 5" stroke="currentColor" fill="none" stroke-width="1.5"/>
                             </svg>
@@ -379,13 +543,7 @@
         <div class="robot-header">
             <div class="robot-title">
                 <img src="icon.ico" alt="Logo" style="width: 40px; height: 40px;">
-                <h1>Control Avanzado de ArtTEC-bot - Panel Admin</h1>
-            </div>
-            <div>
-                <span id="userName" style="margin-right: 10px;">Usuario</span>
-                <button id="logoutBtn" class="btn btn-secondary btn-small">Cerrar Sesión</button>
-                <a href="/admin" class="btn btn-outline btn-small" style="margin-left: 10px;">Panel Admin</a>
-                <a href="/" class="btn btn-outline btn-small" style="margin-left: 10px;">Inicio</a>
+                <h1>Control Avanzado del Robot</h1>
             </div>
         </div>
 
@@ -581,6 +739,12 @@
             }
         };
 
+        // Configurar eventos de DOM al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            setupMobileNavigation();
+            setupUserDropdown();
+        });
+
         // Inicializar cuando se carga la página
         window.addEventListener('load', async () => {
             await checkUserAccess();
@@ -600,21 +764,154 @@
             return true;
         }
 
+        // Configurar navegación móvil
+        function setupMobileNavigation() {
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.querySelector('.nav-menu');
+            
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', () => {
+                    navMenu.classList.toggle('nav-menu-active');
+                    navToggle.classList.toggle('toggle-active');
+                });
+
+                // Cerrar menú móvil al hacer clic en un enlace
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.addEventListener('click', () => {
+                        navMenu.classList.remove('nav-menu-active');
+                        navToggle.classList.remove('toggle-active');
+                    });
+                });
+
+                // Configurar logout desde navegación móvil
+                const navMobileLogoutBtn = document.getElementById('navMobileLogoutBtn');
+                if (navMobileLogoutBtn) {
+                    navMobileLogoutBtn.addEventListener('click', logoutUser);
+                }
+            }
+        }
+
+        // Configurar dropdown de usuario en navegación
+        function setupUserDropdown() {
+            const navUserToggle = document.getElementById('navUserToggle');
+            const navDropdownMenu = document.getElementById('navDropdownMenu');
+
+            if (navUserToggle && navDropdownMenu) {
+                navUserToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    navDropdownMenu.classList.toggle('nav-dropdown-open');
+                });
+
+                // Cerrar dropdown al hacer clic fuera
+                document.addEventListener('click', (event) => {
+                    if (!navUserToggle.contains(event.target) && !navDropdownMenu.contains(event.target)) {
+                        navDropdownMenu.classList.remove('nav-dropdown-open');
+                    }
+                });
+
+                // Prevenir que el dropdown se cierre al hacer clic dentro
+                navDropdownMenu.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+
+                // Configurar logout desde navegación
+                const navLogoutBtn = document.getElementById('navLogoutBtn');
+                if (navLogoutBtn) {
+                    navLogoutBtn.addEventListener('click', logoutUser);
+                }
+            }
+        }
+
+        // Mostrar estado de usuario logueado
+        function updateUIForLoggedInUser(userData) {
+            // Actualizar nombre en navegación
+            const navUsername = document.getElementById('navUsername');
+            const navMobileUsername = document.getElementById('nav-mobile-username');
+            if (navUsername) navUsername.textContent = userData.username;
+            if (navMobileUsername) navMobileUsername.textContent = userData.username;
+
+            // Actualizar foto de perfil en navegación
+            const navUserAvatar = document.getElementById('navUserAvatar');
+            if (navUserAvatar) {
+                navUserAvatar.src = userData.profile_picture || '/favicon.ico';
+                navUserAvatar.alt = `Foto de ${userData.username}`;
+            }
+
+            // Mostrar menú de usuario y ocultar botones de auth
+            const navUserMenu = document.getElementById('navUserMenu');
+            const navAuthMenu = document.getElementById('navAuthMenu');
+            const navMobileUser = document.querySelectorAll('.nav-mobile-user');
+            const navMobileAuth = document.getElementById('navMobileAuth');
+
+            if (navUserMenu) navUserMenu.style.display = 'flex';
+            if (navAuthMenu) navAuthMenu.style.display = 'none';
+            if (navMobileAuth) navMobileAuth.style.display = 'none';
+            
+            navMobileUser.forEach(element => {
+                if (element) element.style.display = 'block';
+            });
+        }
+
+        // Función unificada de logout
+        async function logoutUser() {
+            try {
+                const response = await fetch('/api/logout', { method: 'POST' });
+                if (response.ok) {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+            }
+        }
+
+        // Mostrar mensajes al usuario
+        function showMessage(message, type = 'info') {
+            // Crear elemento de mensaje si no existe
+            let messageDiv = document.getElementById('messageDiv');
+            if (!messageDiv) {
+                messageDiv = document.createElement('div');
+                messageDiv.id = 'messageDiv';
+                messageDiv.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    padding: 12px 20px;
+                    border-radius: 4px;
+                    color: white;
+                    font-weight: 500;
+                    z-index: 10000;
+                    max-width: 400px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                `;
+                document.body.appendChild(messageDiv);
+            }
+
+            // Colores según el tipo
+            const colors = {
+                success: '#28a745',
+                error: '#dc3545',
+                warning: '#ffc107',
+                info: '#17a2b8'
+            };
+
+            messageDiv.style.backgroundColor = colors[type] || colors.info;
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+
+            // Ocultar después de 3 segundos
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
         // Verificar acceso del usuario
         async function checkUserAccess() {
             try {
                 const response = await fetch('/api/user');
                 if (response.ok) {
                     const userData = await response.json();
-                    
-                    // Verificar que el usuario tenga rol de admin
-                    if (userData.role !== 'admin') {
-                        window.location.href = '/';
-                        return;
-                    }
-                    
                     currentUser = userData;
-                    document.getElementById('userName').textContent = userData.username;
+                    updateUIForLoggedInUser(userData);
                 } else {
                     window.location.href = '/login';
                 }
@@ -1161,18 +1458,6 @@
             document.getElementById('systemLog').innerHTML = 'Log limpiado...<br>';
         }
 
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/logout', { method: 'POST' });
-                if (response.ok) {
-                    window.location.href = '/';
-                }
-            } catch (error) {
-                console.error('Error al cerrar sesión:', error);
-            }
-        });
-
         // ===== SISTEMA DE WAYPOINTS 3D =====
         
         // Configuración del mapa 3D
@@ -1648,24 +1933,6 @@
             }
         });
 
-        // Manejar navegación móvil
-        const navToggle = document.getElementById('navToggle');
-        const navMenu = document.getElementById('navMenu');
-
-        if (navToggle && navMenu) {
-            navToggle.addEventListener('click', () => {
-                navMenu.classList.toggle('nav-menu-active');
-                navToggle.classList.toggle('toggle-active');
-            });
-
-            // Cerrar menú móvil al hacer clic en un enlace
-            document.querySelectorAll('.nav-link').forEach(link => {
-                link.addEventListener('click', () => {
-                    navMenu.classList.remove('nav-menu-active');
-                    navToggle.classList.remove('toggle-active');
-                });
-            });
-        }
     </script>
 </body>
 </html>
