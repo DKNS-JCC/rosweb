@@ -141,6 +141,46 @@
                 display: none;
             }
         }
+
+        /* Estilos para carga y error de tours */
+        .loading-tours, .no-tours, .tours-error {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .tours-error {
+            color: #dc3545;
+        }
+
+        .tours-error .btn {
+            margin-top: 15px;
+        }
+
+        /* Estilos para valoraciones de tours */
+        .tour-rating {
+            align-items: center;
+            gap: 5px;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+
+        .rating-stars {
+            color: #ffc107;
+            font-size: 25px;
+        }
+
+        .rating-text {
+            color: #666;
+            font-size: 20px;
+        }
+
+        .no-rating {
+            color: #999;
+            font-style: italic;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -279,78 +319,10 @@
         <section class="tours-section" id="tours">
             <div class="container">
                 <h2>Tours Disponibles</h2>
-                <div class="tours-grid">
-                    <div class="tour-card">
-                        <div class="tour-icon">🎨</div>
-                        <h3>Obras de Da Vinci</h3>
-                        <p>Sumérgete en el genio renacentista. Descubre los secretos detrás de La Mona Lisa, La Última Cena y otras obras maestras.</p>
-                        <div class="tour-info">
-                            <span class="duration">⏱️ 45 minutos</span>
-                            <span class="languages">🌍 Español, Inglés, Francés</span>
-                        </div>
-                        <button class="btn btn-primary tour-btn" data-tour="da-vinci">
-                             Comenzar Tour
-                        </button>
-                    </div>
-                    <div class="tour-card">
-                        <div class="tour-icon">🏛️</div>
-                        <h3>Arte Renacentista</h3>
-                        <p>Un viaje por el Renacimiento italiano. Desde Botticelli hasta Miguel Ángel y de Florencia a Roma, conoce la época dorada del arte.</p>
-                        <div class="tour-info">
-                            <span class="duration">⏱️ 60 minutos</span>
-                            <span class="languages">🌍 Español, Inglés</span>
-                        </div>
-                        <button class="btn btn-primary tour-btn" data-tour="renacimiento">
-                             Comenzar Tour
-                        </button>
-                    </div>
-                    <div class="tour-card">
-                        <div class="tour-icon">🖼️</div>
-                        <h3>Impresionismo Francés</h3>
-                        <p>Explora la luz y el color con Monet, Renoir y Degas. Una experiencia sensorial única del arte impresionista. Disponible en Francés para mayor inmersión.</p>
-                        <div class="tour-info">
-                            <span class="duration">⏱️ 50 minutos</span>
-                            <span class="languages">🌍 Español, Francés</span>
-                        </div>
-                        <button class="btn btn-primary tour-btn" data-tour="impresionismo">
-                             Comenzar Tour
-                        </button>
-                    </div>
-                    <div class="tour-card">
-                        <div class="tour-icon">🎭</div>
-                        <h3>Arte Contemporáneo</h3>
-                        <p>Descubre las corrientes más actuales del arte. Desde Picasso hasta las instalaciones más modernas.</p>
-                        <div class="tour-info">
-                            <span class="duration">⏱️ 40 minutos</span>
-                            <span class="languages">🌍 Español, Inglés, Alemán</span>
-                        </div>
-                        <button class="btn btn-primary tour-btn" data-tour="contemporaneo">
-                             Comenzar Tour
-                        </button>
-                    </div>
-                    <div class="tour-card">
-                        <div class="tour-icon">👑</div>
-                        <h3>Arte Real Español</h3>
-                        <p>Recorre la historia de España a través del arte. Desde Velázquez hasta Goya, conoce nuestro patrimonio.</p>
-                        <div class="tour-info">
-                            <span class="duration">⏱️ 55 minutos</span>
-                            <span class="languages">🌍 Español, Inglés</span>
-                        </div>
-                        <button class="btn btn-primary tour-btn" data-tour="arte-espanol">
-                             Comenzar Tour
-                        </button>
-                    </div>
-                    <div class="tour-card">
-                        <div class="tour-icon">🌟</div>
-                        <h3>Tour Familiar</h3>
-                        <p>Perfecto para niños y familias. Arte explicado de forma divertida con juegos y actividades interactivas.</p>
-                        <div class="tour-info">
-                            <span class="duration">⏱️ 35 minutos</span>
-                            <span class="languages">🌍 Español, Inglés</span>
-                        </div>
-                        <button class="btn btn-primary tour-btn" data-tour="familiar">
-                             Comenzar Tour
-                        </button>
+                <div class="tours-grid" id="toursGrid">
+                    <!-- Los tours se cargarán dinámicamente desde la base de datos -->
+                    <div class="loading-tours">
+                        <p>Cargando tours disponibles...</p>
                     </div>
                 </div>
             </div>
@@ -473,13 +445,13 @@
         // Verificar estado de sesión al cargar la página
         window.addEventListener('load', async () => {
             await checkSession();
+            await loadTours();
         });
 
         // Inicialización del DOM
         document.addEventListener('DOMContentLoaded', function() {
             setupMobileNavigation();
             setupScrollIndicator();
-            setupTourButtons();
             setupSmoothScrolling();
         });
 
@@ -580,6 +552,72 @@
             // Configurar dropdown de usuario
             setupUserDropdown();
             setupMobileUserActions();
+        }
+
+        // Cargar tours desde la base de datos
+        async function loadTours() {
+            try {
+                const response = await fetch('/api/tours');
+                if (response.ok) {
+                    const tours = await response.json();
+                    displayTours(tours);
+                } else {
+                    showToursError('Error al cargar los tours disponibles');
+                }
+            } catch (error) {
+                console.error('Error loading tours:', error);
+                showToursError('Error de conexión al cargar los tours');
+            }
+        }
+
+        // Mostrar tours en la interfaz
+        function displayTours(tours) {
+            const toursGrid = document.getElementById('toursGrid');
+            
+            if (!tours || tours.length === 0) {
+                toursGrid.innerHTML = `
+                    <div class="no-tours">
+                        <p>No hay tours disponibles en este momento.</p>
+                        <p>Vuelve pronto para descubrir nuevas experiencias.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            toursGrid.innerHTML = tours.map(tour => `
+                <div class="tour-card">
+                    <div class="tour-icon">${tour.icon || '🎨'}</div>
+                    <h3>${tour.name}</h3>
+                    <p>${tour.description}</p>
+                    <div class="tour-info">
+                        <span class="duration">⏱️ ${tour.duration} minutos</span>
+                        <span class="languages">🌍 ${tour.languages || 'Español'}</span>
+                    </div>
+                    ${tour.average_rating ? `
+                        <div class="tour-rating">
+                            <span class="rating-stars">${generateStars(tour.average_rating)}</span>
+                            <span class="rating-text">${tour.average_rating}/5 (${tour.total_ratings} ${tour.total_ratings === 1 ? 'valoración' : 'valoraciones'})</span>
+                        </div>
+                    ` : '<div class="no-rating">Sin valoraciones aún</div>'}
+                    <button class="btn btn-primary tour-btn" data-tour-id="${tour.id}" data-tour-name="${tour.name}">
+                        Comenzar Tour
+                    </button>
+                </div>
+            `).join('');
+
+            // Configurar eventos de los nuevos botones
+            setupTourButtons();
+        }
+
+        // Mostrar error al cargar tours
+        function showToursError(message) {
+            const toursGrid = document.getElementById('toursGrid');
+            toursGrid.innerHTML = `
+                <div class="tours-error">
+                    <p>${message}</p>
+                    <button onclick="loadTours()" class="btn btn-outline">Reintentar</button>
+                </div>
+            `;
         }
 
         // Mostrar estado cuando el usuario no está logueado
@@ -715,8 +753,8 @@
         function setupTourButtons() {
             document.querySelectorAll('.tour-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
-                    const tourType = e.target.getAttribute('data-tour');
-                    const tourName = e.target.closest('.tour-card').querySelector('h3').textContent;
+                    const tourId = e.target.getAttribute('data-tour-id');
+                    const tourName = e.target.getAttribute('data-tour-name');
                     
                     // Si no está logueado, redirigir al login
                     if (!isLoggedIn) {
@@ -728,7 +766,7 @@
                     }
                     
                     if (confirm(`¿Deseas iniciar el tour "${tourName}"?\n\nTu guía robótico te estará esperando en la sala principal.`)) {
-                        await startTour(tourType, tourName);
+                        await startTour(tourId, tourName);
                     }
                 });
             });
@@ -752,14 +790,14 @@
         }
 
         // Iniciar tour
-        async function startTour(tourType, tourName) {
+        async function startTour(tourId, tourName) {
             try {
                 const response = await fetch('/api/start-tour', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ tourType })
+                    body: JSON.stringify({ tourId })
                 });
 
                 const data = await response.json();
@@ -831,7 +869,7 @@
                     navDropdownMenu.classList.toggle('nav-dropdown-open');
                 });
 
-                // Cerrar dropdown al hacer clic fuera
+                // Cerrar dropdown al hacer clic fuera11101
                 document.addEventListener('click', (event) => {
                     if (!navUserToggle.contains(event.target) && !navDropdownMenu.contains(event.target)) {
                         navDropdownMenu.classList.remove('nav-dropdown-open');
@@ -863,6 +901,25 @@
                     });
                 }
             }
+        }
+
+        // Función auxiliar para generar estrellas
+        function generateStars(rating) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            
+            let stars = '';
+            for (let i = 0; i < fullStars; i++) {
+                stars += '★';
+            }
+            if (hasHalfStar) {
+                stars += '☆';
+            }
+            for (let i = 0; i < emptyStars; i++) {
+                stars += '☆';
+            }
+            return stars;
         }
 
     </script>

@@ -7,6 +7,7 @@
     <title>Panel Administrativo - artTEC</title>
     <link rel="icon" type="image/x-icon" href="icon.ico">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
     <style>
         /* Estilos para menú móvil de usuario y autenticación */
         .nav-mobile-user,
@@ -144,6 +145,294 @@
             }
         }
 
+        /* Estilos para modal de tours */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #4129ca;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .tour-form {
+            padding: 25px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4129ca;
+            box-shadow: 0 0 0 2px rgba(65, 41, 202, 0.1);
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .tours-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-footer {
+                flex-direction: column-reverse;
+            }
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-inactive {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+            margin: 0 2px;
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid #007bff;
+            color: #007bff;
+        }
+
+        .btn-outline:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            padding: 6px 12px;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        .rating-stars {
+            color: #ffc107;
+            font-size: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .rating-text {
+            margin-left: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .reviews-modal {
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .reviews-modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .review-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #4129ca;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .review-user {
+            font-weight: 600;
+            color: #4129ca;
+        }
+
+        .review-date {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .review-rating {
+            color: #ffc107;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .review-feedback {
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .btn-reviews {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin: 0 2px;
+        }
+
+        .btn-reviews:hover {
+            background-color: #138496;
+        }
+
         .admin-container {
             min-width: 80%;
             margin: 0 auto;
@@ -257,20 +546,6 @@
             background: #f8f9fa;
         }
 
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-        }
-
         .btn-warning {
             background: #ffc107;
             color: #212529;
@@ -341,6 +616,275 @@
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
+        }
+
+        /* Estilos para waypoints */
+        .waypoints-section {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .waypoints-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .waypoint-item {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .waypoint-item:hover {
+            background: #f8f9fa;
+            border-color: #4129ca;
+        }
+
+        .waypoint-number {
+            background: #4129ca;
+            color: white;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .waypoint-coords {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .waypoint-input {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 100%;
+        }
+
+        .waypoint-input:focus {
+            outline: none;
+            border-color: #4129ca;
+            box-shadow: 0 0 0 2px rgba(65, 41, 202, 0.1);
+        }
+
+        .waypoint-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-waypoint {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .btn-up {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-down {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-remove {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-waypoint:hover {
+            opacity: 0.8;
+        }
+
+        .btn-waypoint:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .waypoint-description {
+            grid-column: 1 / -1;
+            margin-top: 5px;
+        }
+
+        /* Estilos específicos para el modal del mapa */
+        #mapModal .modal-content {
+            max-width: 1200px;
+            height: 90vh;
+            width: 95%;
+        }
+
+        .map-container {
+            display: flex;
+            height: calc(100% - 120px);
+        }
+
+        .map-controls {
+            width: 300px;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+            background: #f8f9fa;
+            overflow-y: auto;
+        }
+
+        .connection-status {
+            padding: 10px;
+            border-radius: 5px;
+            background: white;
+            border: 1px solid #ddd;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .map-info, .robot-pose, .waypoints-preview, .tour-form-preview {
+            margin: 20px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .map-info h4, .robot-pose h4, .waypoints-preview h4, .tour-form-preview h4 {
+            margin-top: 0;
+            color: #4129ca;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .map-info p, .robot-pose p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .map-canvas-container {
+            flex: 1;
+            position: relative;
+            background: #f0f0f0;
+        }
+
+        #mapCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            border: 1px solid #ddd;
+        }
+
+        .map-overlay, .map-legend {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-overlay {
+            top: 10px;
+            left: 10px;
+        }
+
+        .map-legend {
+            bottom: 10px;
+            right: 10px;
+        }
+
+        .map-legend > div {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .map-legend > div:last-child {
+            margin-bottom: 0;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        .tour-form-preview .form-group {
+            margin-bottom: 10px;
+        }
+
+        .tour-form-preview label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .tour-form-preview input, .tour-form-preview textarea {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .tour-form-preview textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        @media (max-width: 1200px) {
+            .map-controls {
+                width: 250px;
+            }
+
+            #mapModal .modal-content {
+                width: 98%;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .map-container {
+                flex-direction: column;
+            }
+
+            .map-controls {
+                width: 100%;
+                max-height: 200px;
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+            }
+
+            .map-canvas-container {
+                min-height: 400px;
+            }
         }
     </style>
 </head>
@@ -477,7 +1021,7 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="totalRoutes">-</div>
-                    <div>Rutas Creadas</div>
+                    <div>Tours Creados</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="totalToursCompleted">-</div>
@@ -489,12 +1033,6 @@
         <!-- Gestión de Usuarios -->
         <div class="admin-section">
             <h2>Gestión de Usuarios</h2>
-
-            <div class="users-controls" style="margin-bottom: 20px;">
-                <input type="text" id="userSearch" placeholder="Buscar usuarios..."
-                    style="padding: 10px; border: 1px solid #ddd; border-radius: 5px; width: 300px;">
-                <button id="refreshUsers" class="btn btn-secondary" style="margin-left: 10px;">Actualizar</button>
-            </div>
 
             <table class="routes-table">
                 <thead>
@@ -517,49 +1055,225 @@
             </table>
         </div>
 
-        <!-- Gestión de Rutas -->
-        <div class="admin-section">
-            <h2>Gestión de Rutas</h2>
 
-            <h3>Crear Nueva Ruta</h3>
-            <form id="routeForm" class="route-form">
-                <input type="text" id="routeName" placeholder="Nombre de la ruta" required>
-                <input type="number" id="routeDuration" placeholder="Duración (min)" required>
-                <input type="text" id="routeLanguages" placeholder="Idiomas (ej: Español, Inglés)">
-                <input type="text" id="routeIcon" placeholder="Icono (emoji)" maxlength="2">
-                <input type="number" id="routePrice" placeholder="Precio (€)" step="0.01">
-                <textarea id="routeDescription" placeholder="Descripción de la ruta"></textarea>
-                <button type="submit" class="btn btn-primary">Crear Ruta</button>
-            </form>
-        </div>
 
-        <!-- Lista de Rutas -->
+        <!-- Gestión de Tours/Rutas -->
         <div class="admin-section">
-            <h3>Rutas Existentes</h3>
+            <h2>Gestión de Tours</h2>
+
+            <div class="tours-controls" style="margin-bottom: 20px;">
+                <button id="createTourBtn" class="btn btn-primary">Crear Nuevo Tour</button>
+                <button id="refreshTours" class="btn btn-secondary" style="margin-left: 10px;">Actualizar</button>
+            </div>
+
             <table class="routes-table">
                 <thead>
                     <tr>
                         <th>ID</th>
+                        <th>Icono</th>
                         <th>Nombre</th>
-                        <th>Duración</th>
+                        <th>Descripción</th>
+                        <th>Duración (min)</th>
                         <th>Idiomas</th>
-                        <th>Precio</th>
+                        <th>Waypoints</th>
+                        <th>Valoración</th>
+                        <th>Estado</th>
                         <th>Fecha Creación</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
-                <tbody id="routesTableBody">
+                <tbody id="toursTableBody">
                     <tr>
-                        <td colspan="7" style="text-align: center; padding: 20px;">Cargando rutas...</td>
+                        <td colspan="11" style="text-align: center; padding: 20px;">Cargando tours...</td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <!-- Modal del Mapa para Crear Tours -->
+        <div id="mapModal" class="modal" style="display: none;">
+            <div class="modal-content" style="max-width: 1200px; height: 90vh;">
+                <div class="modal-header">
+                    <h3>Crear Tour - Seleccionar Waypoints en el Mapa</h3>
+                    <span class="close" id="closeMapModal">&times;</span>
+                </div>
+                <div class="map-container" style="display: flex; height: calc(100% - 120px);">
+                    <!-- Panel de control del mapa -->
+                    <div class="map-controls" style="width: 300px; padding: 20px; border-right: 1px solid #ddd; background: #f8f9fa; overflow-y: auto;">
+                        <div class="connection-status" id="mapConnectionStatus">
+                            <div class="status-indicator" id="mapStatusIndicator" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dc3545; margin-right: 8px;"></div>
+                            <span id="mapStatusText">Conectando al robot...</span>
+                        </div>
+                        
+                        <div class="map-info" style="margin: 20px 0; padding: 15px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                            <h4 style="margin-top: 0;">Información del Mapa</h4>
+                            <div id="mapMetadata">
+                                <p>Resolución: <span id="mapResolution">-</span> m/px</p>
+                                <p>Tamaño: <span id="mapSize">-</span></p>
+                                <p>Origen: <span id="mapOrigin">-</span></p>
+                            </div>
+                        </div>
+
+                        <div class="robot-pose" style="margin: 20px 0; padding: 15px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                            <h4 style="margin-top: 0;">Posición del Robot</h4>
+                            <div id="robotPoseInfo">
+                                <p>AMCL: <span id="amclPosition">-</span></p>
+                                <p>Odometría: <span id="odomPosition">-</span></p>
+                            </div>
+                        </div>
+
+                        <div class="waypoints-preview" style="margin: 20px 0; padding: 15px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                            <h4 style="margin-top: 0;">Waypoints del Tour</h4>
+                            <p>Total: <span id="mapWaypointCount">0</span> waypoints</p>
+                            <div id="mapWaypointsList" style="max-height: 200px; overflow-y: auto;">
+                                <p style="color: #666; font-style: italic;">Haz clic en el mapa para añadir waypoints</p>
+                            </div>
+                            <div style="margin-top: 15px;">
+                                <button type="button" id="clearMapWaypoints" class="btn btn-warning btn-small">Limpiar Waypoints</button>
+                                <button type="button" id="undoLastWaypoint" class="btn btn-secondary btn-small">Deshacer Último</button>
+                            </div>
+                        </div>
+
+                        <div class="tour-form-preview" style="margin: 20px 0; padding: 15px; background: white; border-radius: 5px; border: 1px solid #ddd;">
+                            <h4 style="margin-top: 0;">Información del Tour</h4>
+                            <div class="form-group">
+                                <label for="mapTourName">Nombre del Tour *</label>
+                                <input type="text" id="mapTourName" placeholder="Nombre del tour" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="mapTourDescription">Descripción *</label>
+                                <textarea id="mapTourDescription" placeholder="Descripción del tour..." required rows="3"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="mapTourDuration">Duración (min) *</label>
+                                <input type="number" id="mapTourDuration" placeholder="45" min="1" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canvas del mapa -->
+                    <div class="map-canvas-container" style="flex: 1; position: relative; background: #f0f0f0;">
+                        <canvas id="mapCanvas" style="width: 100%; height: 100%; cursor: crosshair; border: 1px solid #ddd;"></canvas>
+                        <div class="map-overlay" style="position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; font-size: 12px;">
+                            <div>Zoom: <span id="mapZoom">1.0x</span></div>
+                            <div>Coordenadas: <span id="mouseCoords">(0, 0)</span></div>
+                        </div>
+                        <div class="map-legend" style="position: absolute; bottom: 10px; right: 10px; background: rgba(255,255,255,0.9); padding: 10px; border-radius: 5px; font-size: 12px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <div style="width: 15px; height: 15px; background: #000; margin-right: 8px;"></div>
+                                <span>Obstáculo</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <div style="width: 15px; height: 15px; background: #fff; border: 1px solid #ccc; margin-right: 8px;"></div>
+                                <span>Espacio libre</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <div style="width: 15px; height: 15px; background: #0066cc; margin-right: 8px; border-radius: 50%;"></div>
+                                <span>Robot</span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 15px; height: 15px; background: #ff6600; margin-right: 8px; border-radius: 50%;"></div>
+                                <span>Waypoint</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelMapTour">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveMapTour">Crear Tour con Waypoints</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para crear/editar tour -->
+        <div id="tourModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="tourModalTitle">Crear Nuevo Tour</h3>
+                    <span class="close" id="closeTourModal">&times;</span>
+                </div>
+                <form id="tourForm" class="tour-form">
+                    <input type="hidden" id="tourId">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tourName">Nombre del Tour *</label>
+                            <input type="text" id="tourName" placeholder="Nombre del tour" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tourIcon">Icono</label>
+                            <input type="text" id="tourIcon" placeholder="🎨" maxlength="2">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tourDescription">Descripción *</label>
+                        <textarea id="tourDescription" placeholder="Descripción del tour..." required
+                            rows="3"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="tourDuration">Duración (minutos) *</label>
+                            <input type="number" id="tourDuration" placeholder="45" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="tourLanguages">Idiomas</label>
+                            <input type="text" id="tourLanguages" placeholder="Español, Inglés, Francés">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tourStatus">Estado</label>
+                        <select id="tourStatus">
+                            <option value="active">Activo</option>
+                            <option value="inactive">Inactivo</option>
+                        </select>
+                    </div>
+
+                    <!-- Sección de Waypoints -->
+                    <div class="form-group" style="border-top: 2px solid #e9ecef; padding-top: 20px; margin-top: 20px;">
+                        <label>Ruta de Navegación (Waypoints)</label>
+                        <div class="waypoints-section">
+                            <div class="waypoints-controls" style="margin-bottom: 15px;">
+                                <button type="button" id="addWaypoint" class="btn btn-secondary">Añadir Waypoint</button>
+                                <button type="button" id="clearWaypoints" class="btn btn-warning">Limpiar Todo</button>
+                                <span style="margin-left: 15px;">Total: <span id="waypointCount">0</span> waypoints</span>
+                            </div>
+                            <div class="waypoints-list" id="waypointsList" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px; padding: 10px; background: #f8f9fa;">
+                                <p id="noWaypoints" style="text-align: center; color: #666; margin: 20px 0;">No hay waypoints definidos. Haz clic en "Añadir Waypoint" para empezar.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancelTour">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="saveTour">Guardar Tour</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
         // Variables globales
         let currentUser = null;
+        
+        // Variables globales para el mapa
+        let mapCanvas, mapCtx;
+        let mapData = null;
+        let robotPose = null;
+        let mapWaypoints = [];
+        let mapScale = 1.0;
+        let mapOffset = { x: 0, y: 0 };
+        let isDragging = false;
+        let lastMousePos = { x: 0, y: 0 };
+        
+        // Variables ROS para el mapa
+        let ros = null;
+        let mapTopic = null;
+        let amclTopic = null;
+        let odomTopic = null;
 
         // Configurar eventos de DOM al cargar la página
         document.addEventListener('DOMContentLoaded', function () {
@@ -571,11 +1285,11 @@
         window.addEventListener('load', async () => {
             await checkAdminAccess();
             await loadStats();
-            await loadRoutes();
             await loadUsers();
+            await loadTours();
+            setupTourModal();
+            setupMapModal();
         });
-
-        // Verificar que el usuario sea admin
 
         // Configurar dropdown de usuario en navegación
         function setupUserDropdown() {
@@ -624,7 +1338,7 @@
         function setupMobileNavigation() {
             const navToggle = document.getElementById('navToggle');
             const navMenu = document.querySelector('.nav-menu');
-            
+
             if (navToggle && navMenu) {
                 navToggle.addEventListener('click', () => {
                     navMenu.classList.toggle('nav-menu-active');
@@ -643,37 +1357,6 @@
                 const navMobileLogoutBtn = document.getElementById('navMobileLogoutBtn');
                 if (navMobileLogoutBtn) {
                     navMobileLogoutBtn.addEventListener('click', logoutUser);
-                }
-            }
-        }
-
-        // Configurar dropdown de usuario en navegación
-        function setupUserDropdown() {
-            const navUserToggle = document.getElementById('navUserToggle');
-            const navDropdownMenu = document.getElementById('navDropdownMenu');
-
-            if (navUserToggle && navDropdownMenu) {
-                navUserToggle.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    navDropdownMenu.classList.toggle('nav-dropdown-open');
-                });
-
-                // Cerrar dropdown al hacer clic fuera
-                document.addEventListener('click', (event) => {
-                    if (!navUserToggle.contains(event.target) && !navDropdownMenu.contains(event.target)) {
-                        navDropdownMenu.classList.remove('nav-dropdown-open');
-                    }
-                });
-
-                // Prevenir que el dropdown se cierre al hacer clic dentro
-                navDropdownMenu.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                });
-
-                // Configurar logout desde navegación
-                const navLogoutBtn = document.getElementById('navLogoutBtn');
-                if (navLogoutBtn) {
-                    navLogoutBtn.addEventListener('click', logoutUser);
                 }
             }
         }
@@ -702,7 +1385,7 @@
             if (navUserMenu) navUserMenu.style.display = 'flex';
             if (navAuthMenu) navAuthMenu.style.display = 'none';
             if (navMobileAuth) navMobileAuth.style.display = 'none';
-            
+
             navMobileUser.forEach(element => {
                 if (element) element.style.display = 'block';
             });
@@ -740,100 +1423,6 @@
                 }
             } catch (error) {
                 console.error('Error al cargar estadísticas:', error);
-            }
-        }
-
-        // Cargar rutas
-        async function loadRoutes() {
-            try {
-                const response = await fetch('/api/admin/routes');
-                if (response.ok) {
-                    const routes = await response.json();
-                    displayRoutes(routes);
-                }
-            } catch (error) {
-                console.error('Error al cargar rutas:', error);
-            }
-        }
-
-        // Mostrar rutas en la tabla
-        function displayRoutes(routes) {
-            const tbody = document.getElementById('routesTableBody');
-
-            if (routes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No hay rutas creadas</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = routes.map(route => `
-                <tr>
-                    <td>${route.id}</td>
-                    <td>${route.icon || '🎨'} ${route.name}</td>
-                    <td>${route.duration} min</td>
-                    <td>${route.languages || 'N/A'}</td>
-                    <td>${route.price ? route.price + '€' : 'Gratis'}</td>
-                    <td>${new Date(route.created_at).toLocaleDateString()}</td>
-                    <td>
-                        <button onclick="deleteRoute(${route.id})" class="btn-danger">Eliminar</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        // Crear nueva ruta
-        document.getElementById('routeForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            const routeData = {
-                name: document.getElementById('routeName').value,
-                description: document.getElementById('routeDescription').value,
-                duration: parseInt(document.getElementById('routeDuration').value),
-                languages: document.getElementById('routeLanguages').value,
-                icon: document.getElementById('routeIcon').value,
-                price: parseFloat(document.getElementById('routePrice').value) || 0
-            };
-
-            try {
-                const response = await fetch('/api/admin/routes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(routeData)
-                });
-
-                if (response.ok) {
-                    showMessage('Ruta creada exitosamente', 'success');
-                    document.getElementById('routeForm').reset();
-                    await loadRoutes();
-                    await loadStats();
-                } else {
-                    const error = await response.json();
-                    showMessage(error.error || 'Error al crear ruta', 'error');
-                }
-            } catch (error) {
-                showMessage('Error de conexión', 'error');
-            }
-        });
-
-        // Eliminar ruta
-        async function deleteRoute(routeId) {
-            if (!confirm('¿Estás seguro de que quieres eliminar esta ruta?')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`/api/admin/routes/${routeId}`, {
-                    method: 'DELETE'
-                });
-
-                if (response.ok) {
-                    showMessage('Ruta eliminada exitosamente', 'success');
-                    await loadRoutes();
-                    await loadStats();
-                } else {
-                    showMessage('Error al eliminar ruta', 'error');
-                }
-            } catch (error) {
-                showMessage('Error de conexión', 'error');
             }
         }
 
@@ -875,7 +1464,7 @@
                             <button onclick="viewUserTours(${user.id}, '${user.username}')" class="btn-info" title="Ver tours">Tours</button>
                             <button onclick="changeUserRole(${user.id}, '${user.role}')" class="btn-warning" title="Cambiar rol">Rol</button>
                             <button onclick="resetUserPassword(${user.id})" class="btn-warning" title="Reset contraseña">Contraseña</button>
-                            <button onclick="deleteUser(${user.id})" class="btn-danger" title="Eliminar">🗑️</button>
+                            <button onclick="deleteUser(${user.id})" class="btn-danger" title="Eliminar">Eliminar</button>
                         </div>
                     </td>
                 </tr>
@@ -1002,9 +1591,6 @@
             }
         }
 
-        // Botón de actualizar usuarios
-        document.getElementById('refreshUsers').addEventListener('click', loadUsers);
-
         // Mostrar mensajes
         function showMessage(text, type) {
             const messageDiv = document.createElement('div');
@@ -1022,7 +1608,7 @@
                 ${type === 'success' ? 'background: #28a745;' : 'background: #dc3545;'}
             `;
             messageDiv.textContent = text;
-            
+
             // Add CSS animation if not exists
             if (!document.querySelector('#message-animations')) {
                 const style = document.createElement('style');
@@ -1035,14 +1621,1128 @@
                 `;
                 document.head.appendChild(style);
             }
-            
+
             document.body.appendChild(messageDiv);
-            
+
             setTimeout(() => {
                 messageDiv.remove();
             }, 3000);
         }
 
+        // ========== GESTIÓN DE TOURS ==========
+
+        // Cargar tours desde la base de datos
+        async function loadTours() {
+            try {
+                const response = await fetch('/api/admin/tours');
+                if (response.ok) {
+                    const tours = await response.json();
+                    displayTours(tours);
+                } else {
+                    document.getElementById('toursTableBody').innerHTML =
+                        '<tr><td colspan="10" style="text-align: center; color: red;">Error al cargar tours</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error loading tours:', error);
+                document.getElementById('toursTableBody').innerHTML =
+                    '<tr><td colspan="10" style="text-align: center; color: red;">Error de conexión</td></tr>';
+            }
+        }
+
+        // Mostrar tours en la tabla
+        function displayTours(tours) {
+            const tbody = document.getElementById('toursTableBody');
+
+            if (!tours || tours.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">No hay tours registrados</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = tours.map(tour => `
+                <tr>
+                    <td>${tour.id}</td>
+                    <td style="font-size: 20px; text-align: center;">${tour.icon || '🎨'}</td>
+                    <td><strong>${tour.name}</strong></td>
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${tour.description}</td>
+                    <td>${tour.duration}</td>
+                    <td>${tour.languages || 'Español'}</td>
+                    <td style="text-align: center;">
+                        <span style="background: ${tour.waypoint_count > 0 ? '#28a745' : '#dc3545'}; color: white; padding: 2px 6px; border-radius: 12px; font-size: 12px;">
+                            📍 ${tour.waypoint_count || 0}
+                        </span>
+                    </td>
+                    <td>
+                        ${tour.average_rating ? `
+                            <div class="rating-stars">
+                                ${generateStars(tour.average_rating)}
+                                <span class="rating-text">${tour.average_rating}/5 (${tour.total_ratings})</span>
+                            </div>
+                            <br>
+                            <button onclick="showTourReviews(${tour.id}, '${tour.name}')" class="btn-reviews">Ver reseñas</button>
+                        ` : '<span style="color: #999;">Sin valoraciones</span>'}
+                    </td>
+                    <td>
+                        <span class="status-badge ${tour.status === 'active' ? 'status-active' : 'status-inactive'}">
+                            ${tour.status === 'active' ? 'Activo' : 'Inactivo'}
+                        </span>
+                    </td>
+                    <td>${formatDate(tour.created_at)}</td>
+                    <td>
+                        <button onclick="editTour(${tour.id})" class="btn btn-sm btn-outline">Editar</button>
+                        <button onclick="deleteTour(${tour.id}, '${tour.name}')" class="btn btn-sm btn-danger">Eliminar</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Configurar modal de tours
+        function setupTourModal() {
+            const modal = document.getElementById('tourModal');
+            const createBtn = document.getElementById('createTourBtn');
+            const closeBtn = document.getElementById('closeTourModal');
+            const cancelBtn = document.getElementById('cancelTour');
+            const refreshBtn = document.getElementById('refreshTours');
+            const form = document.getElementById('tourForm');
+
+            // Configurar eventos de waypoints
+            setupWaypointsEvents();
+
+            // Abrir modal para crear tour
+            createBtn.addEventListener('click', () => {
+                openMapModal();
+            });
+
+            // Cerrar modal
+            [closeBtn, cancelBtn].forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+            });
+
+            // Cerrar modal al hacer clic fuera
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+
+            // Refrescar tours
+            refreshBtn.addEventListener('click', loadTours);
+
+            // Manejar envío del formulario
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await saveTour();
+            });
+        }
+
+        // Abrir modal para crear/editar tour
+        function openTourModal(tourData = null) {
+            const modal = document.getElementById('tourModal');
+            const title = document.getElementById('tourModalTitle');
+            const form = document.getElementById('tourForm');
+
+            if (tourData) {
+                title.textContent = 'Editar Tour';
+                document.getElementById('tourId').value = tourData.id;
+                document.getElementById('tourName').value = tourData.name;
+                document.getElementById('tourIcon').value = tourData.icon || '';
+                document.getElementById('tourDescription').value = tourData.description;
+                document.getElementById('tourDuration').value = tourData.duration;
+                document.getElementById('tourLanguages').value = tourData.languages || '';
+                document.getElementById('tourStatus').value = tourData.status;
+                
+                // Cargar waypoints del tour
+                loadTourWaypoints(tourData.id);
+            } else {
+                title.textContent = 'Crear Nuevo Tour';
+                form.reset();
+                document.getElementById('tourId').value = '';
+                document.getElementById('tourStatus').value = 'active';
+                
+                // Limpiar waypoints
+                currentWaypoints = [];
+                renderWaypoints();
+            }
+
+            modal.style.display = 'block';
+        }
+
+        // Guardar tour (crear o actualizar)
+        async function saveTour() {
+            const tourId = document.getElementById('tourId').value;
+            const tourData = {
+                name: document.getElementById('tourName').value.trim(),
+                icon: document.getElementById('tourIcon').value.trim(),
+                description: document.getElementById('tourDescription').value.trim(),
+                duration: parseInt(document.getElementById('tourDuration').value),
+                languages: document.getElementById('tourLanguages').value.trim(),
+                status: document.getElementById('tourStatus').value
+            };
+
+            // Validaciones
+            if (!tourData.name || !tourData.description || !tourData.duration) {
+                showMessage('Por favor, completa todos los campos obligatorios', 'error');
+                return;
+            }
+
+            if (tourData.duration < 1) {
+                showMessage('La duración debe ser al menos 1 minuto', 'error');
+                return;
+            }
+
+            try {
+                const url = tourId ? `/api/admin/tours/${tourId}` : '/api/admin/tours';
+                const method = tourId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tourData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    const action = tourId ? 'actualizado' : 'creado';
+                    const finalTourId = tourId || result.tourId;
+                    
+                    // Guardar waypoints si el tour se guardó exitosamente
+                    if (currentWaypoints.length > 0) {
+                        const waypointsResult = await saveWaypoints(finalTourId);
+                        if (!waypointsResult.success) {
+                            showMessage(`Tour ${action} pero error al guardar waypoints: ${waypointsResult.error}`, 'error');
+                        } else {
+                            showMessage(`Tour ${action} exitosamente con ${currentWaypoints.length} waypoints`, 'success');
+                        }
+                    } else {
+                        // Si no hay waypoints, limpiar waypoints existentes
+                        if (tourId) {
+                            await saveWaypoints(finalTourId); // Esto enviará un array vacío
+                        }
+                        showMessage(`Tour ${action} exitosamente`, 'success');
+                    }
+                    
+                    document.getElementById('tourModal').style.display = 'none';
+                    await loadTours();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Error al guardar el tour', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving tour:', error);
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Editar tour
+        async function editTour(tourId) {
+            try {
+                const response = await fetch(`/api/admin/tours/${tourId}`);
+                if (response.ok) {
+                    const tour = await response.json();
+                    openTourModal(tour);
+                } else {
+                    showMessage('Error al cargar los datos del tour', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading tour:', error);
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Eliminar tour
+        async function deleteTour(tourId, tourName) {
+            if (!confirm(`¿Estás seguro de que quieres eliminar el tour "${tourName}"?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/tours/${tourId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showMessage('Tour eliminado exitosamente', 'success');
+                    await loadTours();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Error al eliminar el tour', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting tour:', error);
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Función auxiliar para generar estrellas
+        function generateStars(rating) {
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+            let stars = '';
+            for (let i = 0; i < fullStars; i++) {
+                stars += '★';
+            }
+            if (hasHalfStar) {
+                stars += '☆';
+            }
+            for (let i = 0; i < emptyStars; i++) {
+                stars += '☆';
+            }
+            return stars;
+        }
+
+        // Mostrar reseñas de un tour
+        async function showTourReviews(tourId, tourName) {
+            try {
+                const response = await fetch(`/api/admin/tours/${tourId}/reviews`);
+                if (response.ok) {
+                    const reviews = await response.json();
+                    showReviewsModal(tourName, reviews);
+                } else {
+                    showMessage('Error al cargar las reseñas', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading reviews:', error);
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Mostrar modal con reseñas
+        function showReviewsModal(tourName, reviews) {
+            const modal = document.createElement('div');
+            modal.className = 'reviews-modal';
+
+            const reviewsHTML = reviews.length > 0 ? reviews.map(review => `
+                <div class="review-item">
+                    <div class="review-header">
+                        <span class="review-user">${review.username}</span>
+                        <span class="review-date">${new Date(review.started_at).toLocaleDateString('es-ES')}</span>
+                    </div>
+                    <div class="review-rating">
+                        ${generateStars(review.rating)} (${review.rating}/5)
+                    </div>
+                    ${review.feedback ? `<div class="review-feedback">${review.feedback}</div>` : '<div class="review-feedback" style="font-style: italic; color: #999;">Sin comentarios</div>'}
+                </div>
+            `).join('') : '<p style="text-align: center; color: #999; padding: 20px;">Este tour no tiene reseñas aún.</p>';
+
+            modal.innerHTML = `
+                <div class="reviews-modal-content">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #4129ca; padding-bottom: 10px;">
+                        <h2 style="margin: 0; color: #4129ca;">Reseñas de "${tourName}"</h2>
+                        <button onclick="this.closest('.reviews-modal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">&times;</button>
+                    </div>
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        ${reviewsHTML}
+                    </div>
+                    <div style="text-align: center; margin-top: 20px;">
+                        <button onclick="this.closest('.reviews-modal').remove()" class="btn btn-primary">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Cerrar modal al hacer clic fuera
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+
+            document.body.appendChild(modal);
+        }
+
+        // Función auxiliar para formatear fechas
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            return new Date(dateString).toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // ========== GESTIÓN DE WAYPOINTS ==========
+
+        let currentWaypoints = [];
+
+        // Configurar eventos de waypoints
+        function setupWaypointsEvents() {
+            document.getElementById('addWaypoint').addEventListener('click', addWaypoint);
+            document.getElementById('clearWaypoints').addEventListener('click', clearAllWaypoints);
+        }
+
+        // Agregar nuevo waypoint
+        function addWaypoint() {
+            const waypoint = {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                description: ''
+            };
+            
+            currentWaypoints.push(waypoint);
+            renderWaypoints();
+        }
+
+        // Eliminar waypoint
+        function removeWaypoint(index) {
+            if (confirm('¿Eliminar este waypoint?')) {
+                currentWaypoints.splice(index, 1);
+                renderWaypoints();
+            }
+        }
+
+        // Mover waypoint hacia arriba
+        function moveWaypointUp(index) {
+            if (index > 0) {
+                [currentWaypoints[index], currentWaypoints[index - 1]] = 
+                [currentWaypoints[index - 1], currentWaypoints[index]];
+                renderWaypoints();
+            }
+        }
+
+        // Mover waypoint hacia abajo
+        function moveWaypointDown(index) {
+            if (index < currentWaypoints.length - 1) {
+                [currentWaypoints[index], currentWaypoints[index + 1]] = 
+                [currentWaypoints[index + 1], currentWaypoints[index]];
+                renderWaypoints();
+            }
+        }
+
+        // Limpiar todos los waypoints
+        function clearAllWaypoints() {
+            if (currentWaypoints.length === 0) return;
+            
+            if (confirm('¿Eliminar todos los waypoints?')) {
+                currentWaypoints = [];
+                renderWaypoints();
+            }
+        }
+
+        // Renderizar lista de waypoints
+        function renderWaypoints() {
+            const container = document.getElementById('waypointsList');
+            const countElement = document.getElementById('waypointCount');
+            const noWaypointsElement = document.getElementById('noWaypoints');
+            
+            countElement.textContent = currentWaypoints.length;
+            
+            if (currentWaypoints.length === 0) {
+                noWaypointsElement.style.display = 'block';
+                container.innerHTML = '<p id="noWaypoints" style="text-align: center; color: #666; margin: 20px 0;">No hay waypoints definidos. Haz clic en "Añadir Waypoint" para empezar.</p>';
+                return;
+            }
+            
+            noWaypointsElement.style.display = 'none';
+            
+            const waypointsHTML = currentWaypoints.map((waypoint, index) => `
+                <div class="waypoint-item">
+                    <div class="waypoint-number">${index + 1}</div>
+                    <div class="waypoint-coords">
+                        <input type="number" step="0.1" value="${waypoint.x}" 
+                               class="waypoint-input" placeholder="X" 
+                               onchange="updateWaypointCoord(${index}, 'x', this.value)">
+                        <input type="number" step="0.1" value="${waypoint.y}" 
+                               class="waypoint-input" placeholder="Y" 
+                               onchange="updateWaypointCoord(${index}, 'y', this.value)">
+                        <input type="number" step="0.1" value="${waypoint.z}" 
+                               class="waypoint-input" placeholder="Z" 
+                               onchange="updateWaypointCoord(${index}, 'z', this.value)">
+                        <div class="waypoint-actions">
+                            <button type="button" class="btn-waypoint btn-up" 
+                                    onclick="moveWaypointUp(${index})" 
+                                    ${index === 0 ? 'disabled' : ''} title="Subir">▲</button>
+                            <button type="button" class="btn-waypoint btn-down" 
+                                    onclick="moveWaypointDown(${index})" 
+                                    ${index === currentWaypoints.length - 1 ? 'disabled' : ''} title="Bajar">▼</button>
+                            <button type="button" class="btn-waypoint btn-remove" 
+                                    onclick="removeWaypoint(${index})" title="Eliminar">✕</button>
+                        </div>
+                        <input type="text" value="${waypoint.description}" 
+                               class="waypoint-input waypoint-description" placeholder="Descripción (opcional)" 
+                               onchange="updateWaypointCoord(${index}, 'description', this.value)">
+                    </div>
+                </div>
+            `).join('');
+            
+            container.innerHTML = waypointsHTML;
+        }
+
+        // Actualizar coordenada de waypoint
+        function updateWaypointCoord(index, coord, value) {
+            if (coord === 'description') {
+                currentWaypoints[index][coord] = value;
+            } else {
+                currentWaypoints[index][coord] = parseFloat(value) || 0;
+            }
+        }
+
+        // Cargar waypoints de un tour
+        async function loadTourWaypoints(tourId) {
+            if (!tourId) {
+                currentWaypoints = [];
+                renderWaypoints();
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/tours/${tourId}/waypoints`);
+                if (response.ok) {
+                    currentWaypoints = await response.json();
+                    renderWaypoints();
+                } else {
+                    console.log('No hay waypoints para este tour o error al cargar');
+                    currentWaypoints = [];
+                    renderWaypoints();
+                }
+            } catch (error) {
+                console.error('Error al cargar waypoints:', error);
+                currentWaypoints = [];
+                renderWaypoints();
+            }
+        }
+
+        // Guardar waypoints en el servidor
+        async function saveWaypoints(tourId) {
+            if (!tourId) {
+                console.log('No se puede guardar waypoints sin ID de tour');
+                return { success: false };
+            }
+            
+            try {
+                const response = await fetch(`/api/admin/tours/${tourId}/waypoints`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ waypoints: currentWaypoints })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Waypoints guardados:', result.message);
+                    return { success: true, data: result };
+                } else {
+                    const error = await response.json();
+                    console.error('Error al guardar waypoints:', error.error);
+                    return { success: false, error: error.error };
+                }
+            } catch (error) {
+                console.error('Error de conexión al guardar waypoints:', error);
+                return { success: false, error: 'Error de conexión' };
+            }
+        }
+
+        // Abrir modal del mapa
+        function openMapModal() {
+            const modal = document.getElementById('mapModal');
+            modal.style.display = 'block';
+            
+            // Inicializar canvas
+            initMapCanvas();
+            
+            // Conectar a ROS
+            initializeROS();
+            
+            // Limpiar formulario
+            document.getElementById('mapTourName').value = '';
+            document.getElementById('mapTourDescription').value = '';
+            document.getElementById('mapTourDuration').value = '';
+            
+            // Limpiar waypoints
+            mapWaypoints = [];
+            updateMapWaypointsList();
+        }
+
+        // Inicializar canvas del mapa
+        function initMapCanvas() {
+            mapCanvas = document.getElementById('mapCanvas');
+            mapCtx = mapCanvas.getContext('2d');
+            
+            // Ajustar tamaño del canvas
+            resizeMapCanvas();
+            
+            // Eventos del canvas
+            mapCanvas.addEventListener('mousedown', onMapMouseDown);
+            mapCanvas.addEventListener('mousemove', onMapMouseMove);
+            mapCanvas.addEventListener('mouseup', onMapMouseUp);
+            mapCanvas.addEventListener('click', onMapClick);
+            mapCanvas.addEventListener('wheel', onMapWheel);
+            
+            // Redibujar el mapa
+            drawMap();
+        }
+
+        // Redimensionar canvas
+        function resizeMapCanvas() {
+            const container = mapCanvas.parentElement;
+            mapCanvas.width = container.clientWidth;
+            mapCanvas.height = container.clientHeight;
+            drawMap();
+        }
+
+        // Inicializar conexión ROS
+        function initializeROS() {
+            console.log('🔗 Conectando a ROS Bridge...');
+            updateMapStatus('Conectando a ROS Bridge...', false);
+            
+            // Crear conexión ROS
+            ros = new ROSLIB.Ros({
+                url: 'ws://turtlebot-NUC.local:9090'
+            });
+
+            // Eventos de conexión
+            ros.on('connection', function() {
+                console.log('✅ Conectado a ROS Bridge');
+                updateMapStatus('Conectado a ROS Bridge', true);
+                setupMapSubscriptions();
+            });
+
+            ros.on('error', function(error) {
+                console.error('❌ Error de ROS:', error);
+                updateMapStatus('Error de conexión ROS', false);
+            });
+
+            ros.on('close', function() {
+                console.log('❌ Conexión ROS cerrada');
+                updateMapStatus('Conexión ROS cerrada', false);
+            });
+        }
+
+        // Configurar suscripciones a tópicos
+        function setupMapSubscriptions() {
+            if (!ros || !ros.isConnected) {
+                console.log('❌ ROS no conectado, reintentando en 2 segundos...');
+                setTimeout(setupMapSubscriptions, 2000);
+                return;
+            }
+
+            console.log('🔄 Configurando suscripciones a tópicos...');
+
+            // Suscripción al mapa
+            mapTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/map',
+                messageType: 'nav_msgs/OccupancyGrid'
+            });
+
+            mapTopic.subscribe(function(message) {
+                console.log('🗺️ Datos del mapa recibidos');
+                mapData = message;
+                updateMapMetadata();
+                drawMap();
+            });
+
+            // Suscripción a pose AMCL
+            amclTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/amcl_pose',
+                messageType: 'geometry_msgs/PoseWithCovarianceStamped'
+            });
+
+            amclTopic.subscribe(function(message) {
+                console.log('🤖 Posición AMCL recibida');
+                if (!robotPose) robotPose = {};
+                robotPose.amcl = message;
+                updateRobotPoseInfo();
+                drawMap();
+            });
+
+            // Suscripción a pose EKF (fallback)
+            odomTopic = new ROSLIB.Topic({
+                ros: ros,
+                name: '/robot_pose_ekf/odom_combined',
+                messageType: 'geometry_msgs/PoseWithCovarianceStamped'
+            });
+
+            odomTopic.subscribe(function(message) {
+                console.log('🔍 Posición EKF recibida');
+                if (!robotPose) robotPose = {};
+                robotPose.odom = message;
+                updateRobotPoseInfo();
+                drawMap();
+            });
+
+            console.log('✅ Suscripciones configuradas correctamente');
+            updateMapStatus('Suscrito a tópicos ROS', true);
+        }
+
+        // Actualizar estado de conexión
+        function updateMapStatus(text, connected) {
+            const indicator = document.getElementById('mapStatusIndicator');
+            const statusText = document.getElementById('mapStatusText');
+            
+            indicator.style.background = connected ? '#28a745' : '#dc3545';
+            statusText.textContent = text;
+        }
+
+        // Actualizar metadatos del mapa
+        function updateMapMetadata() {
+            if (!mapData || !mapData.info) return;
+            
+            const info = mapData.info;
+            document.getElementById('mapResolution').textContent = info.resolution.toFixed(3);
+            document.getElementById('mapSize').textContent = `${info.width} x ${info.height}`;
+            document.getElementById('mapOrigin').textContent = 
+                `(${info.origin.position.x.toFixed(2)}, ${info.origin.position.y.toFixed(2)})`;
+        }
+
+        // Actualizar información de posición del robot
+        function updateRobotPoseInfo() {
+            if (!robotPose) return;
+            
+            if (robotPose.amcl && robotPose.amcl.pose) {
+                const pos = robotPose.amcl.pose.pose.position;
+                document.getElementById('amclPosition').textContent = 
+                    `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)})`;
+            }
+            
+            if (robotPose.odom && robotPose.odom.pose) {
+                const pos = robotPose.odom.pose.pose.position;
+                document.getElementById('odomPosition').textContent = 
+                    `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)})`;
+            }
+        }
+
+        // Eventos del ratón en el canvas
+        function onMapMouseDown(event) {
+            isDragging = true;
+            const rect = mapCanvas.getBoundingClientRect();
+            lastMousePos = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+        }
+
+        function onMapMouseMove(event) {
+            const rect = mapCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            // Actualizar coordenadas del ratón
+            const worldCoords = canvasToWorld(mouseX, mouseY);
+            document.getElementById('mouseCoords').textContent = 
+                `(${worldCoords.x.toFixed(2)}, ${worldCoords.y.toFixed(2)})`;
+            
+            if (isDragging) {
+                // Arrastrar el mapa
+                const deltaX = mouseX - lastMousePos.x;
+                const deltaY = mouseY - lastMousePos.y;
+                
+                mapOffset.x += deltaX;
+                mapOffset.y += deltaY;
+                
+                lastMousePos = { x: mouseX, y: mouseY };
+                drawMap();
+            }
+        }
+
+        function onMapMouseUp(event) {
+            isDragging = false;
+        }
+
+        function onMapClick(event) {
+            if (isDragging) return;
+            
+            const rect = mapCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            // Convertir coordenadas del canvas a coordenadas del mundo
+            const worldCoords = canvasToWorld(mouseX, mouseY);
+            
+            // Añadir waypoint
+            addMapWaypoint(worldCoords.x, worldCoords.y);
+        }
+
+        function onMapWheel(event) {
+            event.preventDefault();
+            
+            const rect = mapCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            // Zoom hacia el punto del ratón
+            const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = Math.max(0.1, Math.min(5.0, mapScale * scaleFactor));
+            
+            if (newScale !== mapScale) {
+                // Ajustar offset para zoom hacia el punto del ratón
+                mapOffset.x = mouseX - (mouseX - mapOffset.x) * (newScale / mapScale);
+                mapOffset.y = mouseY - (mouseY - mapOffset.y) * (newScale / mapScale);
+                
+                mapScale = newScale;
+                document.getElementById('mapZoom').textContent = mapScale.toFixed(1) + 'x';
+                drawMap();
+            }
+        }
+
+        // Convertir coordenadas del canvas a coordenadas del mundo
+        function canvasToWorld(canvasX, canvasY) {
+            if (!mapData || !mapData.info) return { x: 0, y: 0 };
+            
+            const info = mapData.info;
+            
+            // Convertir de canvas a coordenadas del mapa
+            const mapX = (canvasX - mapOffset.x) / mapScale;
+            const mapY = (canvasY - mapOffset.y) / mapScale;
+            
+            // Convertir de coordenadas del mapa a coordenadas del mundo
+            const worldX = info.origin.position.x + mapX * info.resolution;
+            const worldY = info.origin.position.y + (info.height - mapY) * info.resolution;
+            
+            return { x: worldX, y: worldY };
+        }
+
+        // Convertir coordenadas del mundo a coordenadas del canvas
+        function worldToCanvas(worldX, worldY) {
+            if (!mapData || !mapData.info) return { x: 0, y: 0 };
+            
+            const info = mapData.info;
+            
+            // Convertir de coordenadas del mundo a coordenadas del mapa
+            const mapX = (worldX - info.origin.position.x) / info.resolution;
+            const mapY = info.height - (worldY - info.origin.position.y) / info.resolution;
+            
+            // Convertir de coordenadas del mapa a canvas
+            const canvasX = mapX * mapScale + mapOffset.x;
+            const canvasY = mapY * mapScale + mapOffset.y;
+            
+            return { x: canvasX, y: canvasY };
+        }
+
+        // Dibujar el mapa en el canvas
+        function drawMap() {
+            if (!mapCtx) return;
+            
+            // Limpiar canvas
+            mapCtx.fillStyle = '#f0f0f0';
+            mapCtx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+            
+            if (!mapData || !mapData.data) {
+                // Mostrar mensaje de carga
+                mapCtx.fillStyle = '#666';
+                mapCtx.font = '16px Arial';
+                mapCtx.textAlign = 'center';
+                mapCtx.fillText('Cargando mapa del robot...', mapCanvas.width / 2, mapCanvas.height / 2);
+                return;
+            }
+            
+            // Dibujar mapa de ocupación
+            drawOccupancyGrid();
+            
+            // Dibujar posición del robot
+            drawRobotPose();
+            
+            // Dibujar waypoints
+            drawMapWaypoints();
+        }
+
+        // Dibujar grilla de ocupación
+        function drawOccupancyGrid() {
+            if (!mapData || !mapData.data || !mapData.info) return;
+            
+            const info = mapData.info;
+            const data = mapData.data;
+            
+            // Crear ImageData para dibujo eficiente
+            const imageData = mapCtx.createImageData(info.width, info.height);
+            const pixels = imageData.data;
+            
+            for (let i = 0; i < data.length; i++) {
+                const value = data[i];
+                const pixelIndex = i * 4;
+                
+                if (value === -1) {
+                    // Desconocido - gris
+                    pixels[pixelIndex] = 128;     // R
+                    pixels[pixelIndex + 1] = 128; // G
+                    pixels[pixelIndex + 2] = 128; // B
+                } else if (value === 0) {
+                    // Libre - blanco
+                    pixels[pixelIndex] = 255;     // R
+                    pixels[pixelIndex + 1] = 255; // G
+                    pixels[pixelIndex + 2] = 255; // B
+                } else {
+                    // Ocupado - negro
+                    pixels[pixelIndex] = 0;       // R
+                    pixels[pixelIndex + 1] = 0;   // G
+                    pixels[pixelIndex + 2] = 0;   // B
+                }
+                pixels[pixelIndex + 3] = 255; // Alpha
+            }
+            
+            // Crear canvas temporal para escalar
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = info.width;
+            tempCanvas.height = info.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            // Dibujar en el canvas principal con transformación
+            mapCtx.save();
+            mapCtx.translate(mapOffset.x, mapOffset.y);
+            mapCtx.scale(mapScale, mapScale);
+            mapCtx.drawImage(tempCanvas, 0, 0);
+            mapCtx.restore();
+        }
+
+        // Dibujar posición del robot
+        function drawRobotPose() {
+            if (!robotPose || !robotPose.amcl || !robotPose.amcl.pose) return;
+            
+            const pose = robotPose.amcl.pose.pose;
+            const canvasPos = worldToCanvas(pose.position.x, pose.position.y);
+            
+            mapCtx.save();
+            mapCtx.fillStyle = '#0066cc';
+            mapCtx.strokeStyle = '#004499';
+            mapCtx.lineWidth = 2;
+            
+            // Dibujar robot como círculo
+            mapCtx.beginPath();
+            mapCtx.arc(canvasPos.x, canvasPos.y, 8 * mapScale, 0, 2 * Math.PI);
+            mapCtx.fill();
+            mapCtx.stroke();
+            
+            // Dibujar orientación
+            const orientation = pose.orientation;
+            const yaw = Math.atan2(2 * (orientation.w * orientation.z + orientation.x * orientation.y),
+                                   1 - 2 * (orientation.y * orientation.y + orientation.z * orientation.z));
+            
+            const arrowLength = 15 * mapScale;
+            const arrowX = canvasPos.x + Math.cos(yaw) * arrowLength;
+            const arrowY = canvasPos.y - Math.sin(yaw) * arrowLength; // Invertir Y
+            
+            mapCtx.beginPath();
+            mapCtx.moveTo(canvasPos.x, canvasPos.y);
+            mapCtx.lineTo(arrowX, arrowY);
+            mapCtx.stroke();
+            
+            mapCtx.restore();
+        }
+
+        // Dibujar waypoints del mapa
+        function drawMapWaypoints() {
+            mapWaypoints.forEach((waypoint, index) => {
+                const canvasPos = worldToCanvas(waypoint.x, waypoint.y);
+                
+                mapCtx.save();
+                mapCtx.fillStyle = '#ff6600';
+                mapCtx.strokeStyle = '#cc4400';
+                mapCtx.lineWidth = 2;
+                
+                // Dibujar waypoint como círculo
+                mapCtx.beginPath();
+                mapCtx.arc(canvasPos.x, canvasPos.y, 6 * mapScale, 0, 2 * Math.PI);
+                mapCtx.fill();
+                mapCtx.stroke();
+                
+                // Dibujar número
+                mapCtx.fillStyle = 'white';
+                mapCtx.font = `${Math.max(10, 12 * mapScale)}px Arial`;
+                mapCtx.textAlign = 'center';
+                mapCtx.textBaseline = 'middle';
+                mapCtx.fillText(index + 1, canvasPos.x, canvasPos.y);
+                
+                mapCtx.restore();
+                
+                // Dibujar línea al waypoint anterior
+                if (index > 0) {
+                    const prevPos = worldToCanvas(mapWaypoints[index - 1].x, mapWaypoints[index - 1].y);
+                    mapCtx.save();
+                    mapCtx.strokeStyle = '#ff9933';
+                    mapCtx.lineWidth = 2;
+                    mapCtx.setLineDash([5, 5]);
+                    mapCtx.beginPath();
+                    mapCtx.moveTo(prevPos.x, prevPos.y);
+                    mapCtx.lineTo(canvasPos.x, canvasPos.y);
+                    mapCtx.stroke();
+                    mapCtx.restore();
+                }
+            });
+        }
+
+        // Añadir waypoint desde el mapa
+        function addMapWaypoint(x, y) {
+            mapWaypoints.push({
+                x: x,
+                y: y,
+                z: 0.0,
+                description: `Waypoint ${mapWaypoints.length + 1}`
+            });
+            
+            updateMapWaypointsList();
+            drawMap();
+        }
+
+        // Actualizar lista de waypoints del mapa
+        function updateMapWaypointsList() {
+            const countElement = document.getElementById('mapWaypointCount');
+            const listElement = document.getElementById('mapWaypointsList');
+            
+            countElement.textContent = mapWaypoints.length;
+            
+            if (mapWaypoints.length === 0) {
+                listElement.innerHTML = '<p style="color: #666; font-style: italic;">Haz clic en el mapa para añadir waypoints</p>';
+                return;
+            }
+            
+            const waypointsHTML = mapWaypoints.map((waypoint, index) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid #eee;">
+                    <span>${index + 1}. (${waypoint.x.toFixed(2)}, ${waypoint.y.toFixed(2)})</span>
+                    <button onclick="removeMapWaypoint(${index})" style="background: #dc3545; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer;">×</button>
+                </div>
+            `).join('');
+            
+            listElement.innerHTML = waypointsHTML;
+        }
+
+        // Remover waypoint del mapa
+        function removeMapWaypoint(index) {
+            mapWaypoints.splice(index, 1);
+            updateMapWaypointsList();
+            drawMap();
+        }
+
+        // Limpiar todos los waypoints del mapa
+        function clearMapWaypoints() {
+            mapWaypoints = [];
+            updateMapWaypointsList();
+            drawMap();
+        }
+
+        // Deshacer último waypoint
+        function undoLastMapWaypoint() {
+            if (mapWaypoints.length > 0) {
+                mapWaypoints.pop();
+                updateMapWaypointsList();
+                drawMap();
+            }
+        }
+
+        // Guardar tour con waypoints del mapa
+        async function saveMapTour() {
+            const name = document.getElementById('mapTourName').value.trim();
+            const description = document.getElementById('mapTourDescription').value.trim();
+            const duration = parseInt(document.getElementById('mapTourDuration').value);
+
+            // Validar formulario
+            if (!name || !description || !duration || duration < 1) {
+                showMessage('Por favor, completa todos los campos del tour', 'error');
+                return;
+            }
+
+            if (mapWaypoints.length === 0) {
+                showMessage('Añade al menos un waypoint al tour', 'error');
+                return;
+            }
+
+            try {
+                // Crear el tour
+                const tourData = {
+                    name: name,
+                    description: description,
+                    duration: duration,
+                    icon: '🗺️',
+                    languages: 'Español',
+                    status: 'active'
+                };
+
+                const response = await fetch('/api/admin/tours', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(tourData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Añadir waypoints al tour
+                    const waypointsResponse = await fetch(`/api/admin/tours/${result.tourId}/waypoints`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ waypoints: mapWaypoints })
+                    });
+
+                    const waypointsResult = await waypointsResponse.json();
+
+                    if (waypointsResult.success) {
+                        showMessage('Tour creado exitosamente con waypoints del mapa', 'success');
+                        
+                        // Cerrar modal
+                        document.getElementById('mapModal').style.display = 'none';
+                        if (ros && ros.isConnected) {
+                            ros.close();
+                        }
+                        
+                        // Actualizar tabla de tours
+                        loadTours();
+                    } else {
+                        showMessage('Tour creado pero error al guardar waypoints: ' + waypointsResult.error, 'error');
+                    }
+                } else {
+                    showMessage('Error al crear tour: ' + result.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error de conexión al crear tour', 'error');
+            }
+        }
+
+        // Configurar eventos del modal del mapa
+        function setupMapModal() {
+            const modal = document.getElementById('mapModal');
+            const closeBtn = document.getElementById('closeMapModal');
+            const cancelBtn = document.getElementById('cancelMapTour');
+            const saveBtn = document.getElementById('saveMapTour');
+            const clearBtn = document.getElementById('clearMapWaypoints');
+            const undoBtn = document.getElementById('undoLastWaypoint');
+
+            // Cerrar modal
+            [closeBtn, cancelBtn].forEach(btn => {
+                btn.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                    if (ros && ros.isConnected) {
+                        ros.close();
+                    }
+                });
+            });
+
+            // Limpiar waypoints
+            clearBtn.addEventListener('click', clearMapWaypoints);
+            
+            // Deshacer último waypoint
+            undoBtn.addEventListener('click', undoLastMapWaypoint);
+
+            // Guardar tour
+            saveBtn.addEventListener('click', saveMapTour);
+
+            // Cerrar modal al hacer clic fuera
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                    if (ros && ros.isConnected) {
+                        ros.close();
+                    }
+                }
+            });
+
+            // Redimensionar canvas cuando cambie el tamaño de ventana
+            window.addEventListener('resize', () => {
+                if (modal.style.display === 'block') {
+                    setTimeout(resizeMapCanvas, 100);
+                }
+            });
+        }
     </script>
 </body>
 

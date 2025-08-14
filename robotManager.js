@@ -9,6 +9,9 @@ class RobotManager {
         this.topics = [];
         this.lastPing = null;
         this.subscribers = new Map();
+        this.currentMap = null;
+        this.amclPose = null;
+        this.odomPose = null;
     }
 
     // Conectar a ROS Bridge
@@ -48,6 +51,14 @@ class RobotManager {
         if (message.op === 'publish') {
             // Mensaje de un tópico
             this.lastPing = new Date();
+            
+            // Llamar al callback del suscriptor si existe
+            if (message.topic && this.subscribers.has(message.topic)) {
+                const callback = this.subscribers.get(message.topic);
+                if (callback && typeof callback === 'function') {
+                    callback(message.msg);
+                }
+            }
         } else if (message.op === 'set_level') {
             // Respuesta de configuración
             console.log('ROS configuración aplicada');

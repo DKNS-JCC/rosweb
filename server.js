@@ -8,8 +8,10 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 const robotManager = require('./robotManager');
+const expressWs = require('express-ws');
 
 const app = express();
+const wsInstance = expressWs(app);
 const PORT = 3000;
 
 
@@ -153,6 +155,20 @@ db.run(`CREATE TABLE IF NOT EXISTS tour_history (
     feedback TEXT,
     FOREIGN KEY (user_id) REFERENCES users (id),
     FOREIGN KEY (tour_route_id) REFERENCES tour_routes (id)
+)`);
+
+// Crear tabla de waypoints para los tours
+db.run(`CREATE TABLE IF NOT EXISTS tour_waypoints (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tour_route_id INTEGER NOT NULL,
+    x REAL NOT NULL,
+    y REAL NOT NULL,
+    z REAL DEFAULT 0,
+    sequence_order INTEGER NOT NULL,
+    waypoint_type TEXT DEFAULT 'navigation',
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tour_route_id) REFERENCES tour_routes (id) ON DELETE CASCADE
 )`);
 
 // Middleware para verificar autenticación
@@ -418,46 +434,51 @@ app.put('/api/admin/users/:id/password', requireAdmin, async (req, res) => {
 
 // API para iniciar un tour
 app.post('/api/start-tour', requireAuth, (req, res) => {
-    const { tourType } = req.body;
+    const { tourId } = req.body;
     
-    if (!tourType) {
-        return res.status(400).json({ error: 'Tipo de tour requerido' });
+    if (!tourId) {
+        return res.status(400).json({ error: 'ID de tour requerido' });
     }
 
-    // Integración real con el sistema del robot requerida
-    const tourId = Math.random().toString(36).substr(2, 9);
-    const PIN = Math.floor(10000 + Math.random() * 90000); // Generar un PIN aleatorio de 5 dígitos
-    
-    // Mapear nombres de tours
-    const tourNames = {
-        'da-vinci': 'Obras de Da Vinci',
-        'renacimiento': 'Arte Renacentista',
-        'impresionismo': 'Impresionismo Francés',
-        'contemporaneo': 'Arte Contemporáneo',
-        'arte-espanol': 'Arte Real Español',
-        'familiar': 'Tour Familiar'
-    };
-    
-    const tourName = tourNames[tourType] || tourType;
-    
-    // Guardar en historial de tours
-    db.run(
-        'INSERT INTO tour_history (user_id, tour_type, tour_name, tour_id, pin) VALUES (?, ?, ?, ?, ?)',
-        [req.session.userId, tourType, tourName, tourId, PIN],
-        function(err) {
-            if (err) {
-                console.error('Error al guardar historial de tour:', err);
-                // Continuar aunque no se pueda guardar el historial
-            }
+    // Verificar que el tour existe y está activo
+    db.get('SELECT * FROM tour_routes WHERE id = ? AND is_active = 1', [tourId], (err, tour) => {
+        if (err) {
+            console.error('Error al verificar tour:', err);
+            return res.status(500).json({ error: 'Error al verificar tour' });
         }
-    );
-    
-    res.json({ 
-        success: true, 
-        message: `Tour ${tourType} iniciado exitosamente`,
-        tourId: tourId,
-        PIN: PIN,
-        startTime: new Date().toISOString()
+        
+        if (!tour) {
+            return res.status(404).json({ error: 'Tour no encontrado o no disponible' });
+        }
+
+        // Generar ID único para esta instancia del tour y PIN
+        const tourInstanceId = Math.random().toString(36).substr(2, 9);
+        const PIN = Array.from({ length: 5 }, () => Math.floor(Math.random() * 3)).join('');
+
+        // Guardar en historial de tours
+        db.run(
+            `INSERT INTO tour_history 
+             (user_id, tour_route_id, tour_type, tour_name, tour_id, pin) 
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [req.session.userId, tourId, tour.name.toLowerCase().replace(/\s+/g, '-'), tour.name, tourInstanceId, PIN],
+            function(err) {
+                if (err) {
+                    console.error('Error al guardar historial de tour:', err);
+                    return res.status(500).json({ error: 'Error al iniciar tour' });
+                }
+                
+                res.json({ 
+                    success: true, 
+                    message: `Tour "${tour.name}" iniciado exitosamente`,
+                    tourId: tourInstanceId,
+                    tourName: tour.name,
+                    tourDescription: tour.description,
+                    duration: tour.duration,
+                    PIN: PIN,
+                    startTime: new Date().toISOString()
+                });
+            }
+        );
     });
 });
 
@@ -861,6 +882,227 @@ app.post('/api/tours/:tourId/complete', requireAuth, (req, res) => {
     });
 });
 
+// API para verificar PIN del robot (sin autenticación - para uso del robot)
+app.post('/api/robot/pin', (req, res) => {
+    const { pin } = req.body;
+    
+    // Validar formato del PIN
+    if (!pin || !Array.isArray(pin) || pin.length !== 5) {
+        return res.status(400).json({ 
+            success: false,
+            valido: false,
+            error: 'PIN debe ser un array de 5 dígitos',
+            received: pin 
+        });
+    }
+    
+    // Validar que todos los elementos sean dígitos (0-9)
+    const isValidPin = pin.every(digit => 
+        typeof digit === 'number' && 
+        Number.isInteger(digit) && 
+        digit >= 0 && 
+        digit <= 9
+    );
+    
+    if (!isValidPin) {
+        return res.status(400).json({ 
+            success: false,
+            valido: false,
+            error: 'Todos los elementos del PIN deben ser dígitos entre 0 y 9',
+            received: pin 
+        });
+    }
+    
+    // Convertir array a string para comparación
+    const pinString = pin.join('');
+    
+    // Buscar tours activos con este PIN (sin filtrar por usuario específico para el robot)
+    db.get(`
+        SELECT th.*, tr.name as tour_name, tr.description, tr.duration, u.username
+        FROM tour_history th
+        LEFT JOIN tour_routes tr ON th.tour_route_id = tr.id
+        LEFT JOIN users u ON th.user_id = u.id
+        WHERE th.pin = ? AND th.completed = 0
+        ORDER BY th.started_at DESC
+        LIMIT 1
+    `, [pinString], (err, tour) => {
+        if (err) {
+            console.error('Error al verificar PIN:', err);
+            return res.status(500).json({ 
+                success: false,
+                valido: false,
+                error: 'Error en la base de datos' 
+            });
+        }
+        
+        if (!tour) {
+            return res.json({ 
+                success: false,
+                valido: false,  // Campo para compatibilidad con Python
+                message: 'PIN incorrecto o no hay tours activos con este PIN',
+                pin_received: pin,
+                pin_string: pinString,
+                feedback: {
+                    type: 'invalid_pin',
+                    description: 'El PIN ingresado no corresponde a ningún tour activo'
+                }
+            });
+        }
+        
+        // PIN válido - obtener waypoints del tour
+        const waypointsQuery = `
+            SELECT * FROM tour_waypoints 
+            WHERE tour_route_id = ? 
+            ORDER BY sequence_order ASC
+        `;
+        
+        db.all(waypointsQuery, [tour.tour_route_id], (waypointsErr, waypoints) => {
+            if (waypointsErr) {
+                console.error('Error al obtener waypoints:', waypointsErr);
+                return res.status(500).json({ 
+                    success: false,
+                    valido: false,
+                    error: 'Error al obtener información del tour' 
+                });
+            }
+            
+            // PIN válido - devolver información completa del tour con waypoints
+            res.json({ 
+                success: true,
+                valido: true,  // Campo para compatibilidad con Python
+                message: 'PIN válido - Tour encontrado',
+                pin_received: pin,
+                pin_string: pinString,
+                usuario: tour.username,  // Información del usuario que inició el tour
+                tour: {
+                    id: tour.id,
+                    tour_id: tour.tour_id,
+                    route_id: tour.tour_route_id,
+                    name: tour.tour_name || tour.tour_name,
+                    description: tour.description,
+                    duration: tour.duration,
+                    languages: tour.languages,
+                    icon: tour.icon,
+                    price: tour.price,
+                    started_at: tour.started_at,
+                    type: tour.tour_type,
+                    waypoints: waypoints.map(wp => ({
+                        id: wp.id,
+                        x: wp.x,
+                        y: wp.y,
+                        z: wp.z || 0,
+                        sequence_order: wp.sequence_order,
+                        waypoint_type: wp.waypoint_type || 'navigation',
+                        description: wp.description || ''
+                    })),
+                    waypoint_count: waypoints.length
+                },
+                feedback: {
+                    type: 'valid_pin',
+                    description: `PIN correcto. Tour "${tour.tour_name || tour.tour_name}" encontrado para usuario ${tour.username}`,
+                    action: 'tour_ready',
+                    waypoints_loaded: waypoints.length
+                }
+            });
+        });
+    });
+});
+
+// Función auxiliar para completar tour (reutilizable)
+function completeTour(req, res) {
+    const { tour_id } = req.body;
+    
+    // Validar que se proporcione el tour_id
+    if (!tour_id) {
+        console.log('❌ Error: tour_id no proporcionado');
+        return res.status(400).json({ 
+            success: false,
+            error: 'tour_id es requerido',
+            received: req.body 
+        });
+    }
+    
+    // Buscar el tour activo con este tour_id
+    db.get(`
+        SELECT th.*, tr.name as tour_name, tr.languages, tr.icon, tr.price, u.username
+        FROM tour_history th
+        LEFT JOIN tour_routes tr ON th.tour_route_id = tr.id
+        LEFT JOIN users u ON th.user_id = u.id
+        WHERE th.tour_id = ? AND th.completed = 0
+        LIMIT 1
+    `, [tour_id], (err, tour) => {
+        if (err) {
+            console.error('❌ Error al buscar tour:', err);
+            return res.status(500).json({ 
+                success: false,
+                error: 'Error en la base de datos' 
+            });
+        }
+        
+        if (!tour) {
+            console.log(`❌ Tour no encontrado o ya completado: ${tour_id}`);
+            return res.status(404).json({ 
+                success: false,
+                error: 'Tour no encontrado o ya completado',
+                tour_id: tour_id,
+                message: 'No se encontró un tour activo con este ID'
+            });
+        }
+        
+        // Marcar el tour como completado
+        db.run(`
+            UPDATE tour_history 
+            SET completed = 1 
+            WHERE tour_id = ? AND completed = 0
+        `, [tour_id], function(err) {
+            if (err) {
+                console.error('❌ Error al completar tour:', err);
+                return res.status(500).json({ 
+                    success: false,
+                    error: 'Error al actualizar el tour' 
+                });
+            }
+            
+            if (this.changes === 0) {
+                console.log(`⚠️ No se actualizó ningún registro para tour: ${tour_id}`);
+                return res.status(404).json({ 
+                    success: false,
+                    error: 'No se pudo completar el tour',
+                    tour_id: tour_id,
+                    message: 'El tour no fue encontrado o ya estaba completado'
+                });
+            }
+            
+            console.log(`✅ Tour completado por robot: ${tour.tour_name} (ID: ${tour_id}) para usuario ${tour.username}`);
+            
+            // Respuesta exitosa
+            res.json({ 
+                success: true,
+                message: 'Tour marcado como completado exitosamente',
+                tour_id: tour_id,
+                tour: {
+                    id: tour.id,
+                    name: tour.tour_name,
+                    username: tour.username,
+                    started_at: tour.started_at,
+                    completed_at: new Date().toISOString()
+                },
+                feedback: {
+                    type: 'tour_completed',
+                    description: `Tour "${tour.tour_name}" completado exitosamente para usuario ${tour.username}`,
+                    action: 'tour_finished'
+                }
+            });
+        });
+    });
+}
+
+// API para marcar tour como completado (sin autenticación - para uso del robot)
+app.post('/api/robot/tour/complete', completeTour);
+
+// Alias para compatibilidad con versiones anteriores del robot
+app.post('/tour/complete', completeTour);
+
 // API para logout
 app.post('/api/logout', (req, res) => {
     req.session.destroy((err) => {
@@ -870,6 +1112,402 @@ app.post('/api/logout', (req, res) => {
         // Limpiar la cookie de sesión
         res.clearCookie('connect.sid');
         res.json({ success: true, message: 'Sesión cerrada' });
+    });
+});
+
+// ===== API ENDPOINTS PARA GESTIÓN DE TOURS =====
+
+// API para obtener todos los tours (público - para index.html)
+app.get('/api/tours', (req, res) => {
+    const query = `
+        SELECT tr.id, tr.name, tr.description, tr.duration, tr.languages, tr.icon, tr.price, tr.is_active as status, tr.created_at,
+               ROUND(AVG(th.rating), 1) as average_rating,
+               COUNT(th.rating) as total_ratings,
+               COUNT(DISTINCT tw.id) as waypoint_count
+        FROM tour_routes tr
+        LEFT JOIN tour_history th ON tr.id = th.tour_route_id AND th.rating IS NOT NULL
+        LEFT JOIN tour_waypoints tw ON tr.id = tw.tour_route_id
+        WHERE tr.is_active = 1 
+        GROUP BY tr.id, tr.name, tr.description, tr.duration, tr.languages, tr.icon, tr.price, tr.is_active, tr.created_at
+        ORDER BY tr.created_at DESC
+    `;
+    
+    db.all(query, [], (err, tours) => {
+        if (err) {
+            console.error('Error al obtener tours:', err);
+            return res.status(500).json({ error: 'Error al obtener tours' });
+        }
+        
+        const formattedTours = tours.map(tour => ({
+            ...tour,
+            status: tour.status ? 'active' : 'inactive'
+        }));
+        
+        res.json(formattedTours);
+    });
+});
+
+// API para obtener waypoints de un tour específico (para ejecución del robot)
+app.get('/api/tours/:id/waypoints', (req, res) => {
+    const tourId = req.params.id;
+    
+    const query = `
+        SELECT * FROM tour_waypoints 
+        WHERE tour_route_id = ? 
+        ORDER BY sequence_order ASC
+    `;
+    
+    db.all(query, [tourId], (err, waypoints) => {
+        if (err) {
+            console.error('Error al obtener waypoints:', err);
+            return res.status(500).json({ error: 'Error al obtener waypoints' });
+        }
+        
+        res.json(waypoints);
+    });
+});
+
+// API para obtener todos los tours (admin)
+app.get('/api/admin/tours', requireAdmin, (req, res) => {
+    const query = `
+        SELECT tr.*, u.username as created_by_name,
+               ROUND(AVG(th.rating), 1) as average_rating,
+               COUNT(th.rating) as total_ratings,
+               COUNT(DISTINCT tw.id) as waypoint_count
+        FROM tour_routes tr
+        LEFT JOIN users u ON tr.created_by = u.id
+        LEFT JOIN tour_history th ON tr.id = th.tour_route_id AND th.rating IS NOT NULL
+        LEFT JOIN tour_waypoints tw ON tr.id = tw.tour_route_id
+        GROUP BY tr.id, tr.name, tr.description, tr.duration, tr.languages, tr.icon, tr.price, tr.is_active, tr.created_by, tr.created_at, u.username
+        ORDER BY tr.created_at DESC
+    `;
+    
+    db.all(query, [], (err, tours) => {
+        if (err) {
+            console.error('Error al obtener tours:', err);
+            return res.status(500).json({ error: 'Error al obtener tours' });
+        }
+        
+        const formattedTours = tours.map(tour => ({
+            ...tour,
+            status: tour.is_active ? 'active' : 'inactive'
+        }));
+        
+        res.json(formattedTours);
+    });
+});
+
+// API para obtener un tour específico (admin)
+app.get('/api/admin/tours/:id', requireAdmin, (req, res) => {
+    const tourId = req.params.id;
+    
+    const query = `
+        SELECT tr.*, u.username as created_by_name
+        FROM tour_routes tr
+        LEFT JOIN users u ON tr.created_by = u.id
+        WHERE tr.id = ?
+    `;
+    
+    db.get(query, [tourId], (err, tour) => {
+        if (err) {
+            console.error('Error al obtener tour:', err);
+            return res.status(500).json({ error: 'Error al obtener tour' });
+        }
+        
+        if (!tour) {
+            return res.status(404).json({ error: 'Tour no encontrado' });
+        }
+        
+        const formattedTour = {
+            ...tour,
+            status: tour.is_active ? 'active' : 'inactive'
+        };
+        
+        res.json(formattedTour);
+    });
+});
+
+// API para crear un nuevo tour (admin)
+app.post('/api/admin/tours', requireAdmin, (req, res) => {
+    const { name, description, duration, languages, icon, price, status } = req.body;
+    const createdBy = req.session.userId;
+    
+    // Validaciones
+    if (!name || !description || !duration) {
+        return res.status(400).json({ error: 'Nombre, descripción y duración son obligatorios' });
+    }
+    
+    if (duration < 1) {
+        return res.status(400).json({ error: 'La duración debe ser al menos 1 minuto' });
+    }
+    
+    const isActive = status === 'active' ? 1 : 0;
+    const tourPrice = price || 0;
+    
+    const query = `
+        INSERT INTO tour_routes (name, description, duration, languages, icon, price, is_active, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    db.run(query, [name, description, duration, languages, icon, tourPrice, isActive, createdBy], function(err) {
+        if (err) {
+            console.error('Error al crear tour:', err);
+            return res.status(500).json({ error: 'Error al crear tour' });
+        }
+        
+        res.status(201).json({
+            success: true,
+            message: 'Tour creado exitosamente',
+            tourId: this.lastID
+        });
+    });
+});
+
+// API para actualizar un tour (admin)
+app.put('/api/admin/tours/:id', requireAdmin, (req, res) => {
+    const tourId = req.params.id;
+    const { name, description, duration, languages, icon, price, status } = req.body;
+    
+    // Validaciones
+    if (!name || !description || !duration) {
+        return res.status(400).json({ error: 'Nombre, descripción y duración son obligatorios' });
+    }
+    
+    if (duration < 1) {
+        return res.status(400).json({ error: 'La duración debe ser al menos 1 minuto' });
+    }
+    
+    const isActive = status === 'active' ? 1 : 0;
+    const tourPrice = price || 0;
+    
+    const query = `
+        UPDATE tour_routes 
+        SET name = ?, description = ?, duration = ?, languages = ?, icon = ?, price = ?, is_active = ?
+        WHERE id = ?
+    `;
+    
+    db.run(query, [name, description, duration, languages, icon, tourPrice, isActive, tourId], function(err) {
+        if (err) {
+            console.error('Error al actualizar tour:', err);
+            return res.status(500).json({ error: 'Error al actualizar tour' });
+        }
+        
+        if (this.changes === 0) {
+            return res.status(404).json({ error: 'Tour no encontrado' });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Tour actualizado exitosamente'
+        });
+    });
+});
+
+// API para eliminar un tour (admin)
+app.delete('/api/admin/tours/:id', requireAdmin, (req, res) => {
+    const tourId = req.params.id;
+    
+    // Verificar si hay tours en progreso o historial
+    db.get('SELECT COUNT(*) as count FROM tour_history WHERE tour_route_id = ?', [tourId], (err, result) => {
+        if (err) {
+            console.error('Error al verificar historial:', err);
+            return res.status(500).json({ error: 'Error al verificar historial' });
+        }
+        
+        if (result.count > 0) {
+            // Si hay historial, solo desactivar el tour
+            db.run('UPDATE tour_routes SET is_active = 0 WHERE id = ?', [tourId], function(err) {
+                if (err) {
+                    console.error('Error al desactivar tour:', err);
+                    return res.status(500).json({ error: 'Error al desactivar tour' });
+                }
+                
+                if (this.changes === 0) {
+                    return res.status(404).json({ error: 'Tour no encontrado' });
+                }
+                
+                res.json({
+                    success: true,
+                    message: 'Tour desactivado (no eliminado debido al historial existente)'
+                });
+            });
+        } else {
+            // Si no hay historial, eliminar completamente
+            db.run('DELETE FROM tour_routes WHERE id = ?', [tourId], function(err) {
+                if (err) {
+                    console.error('Error al eliminar tour:', err);
+                    return res.status(500).json({ error: 'Error al eliminar tour' });
+                }
+                
+                if (this.changes === 0) {
+                    return res.status(404).json({ error: 'Tour no encontrado' });
+                }
+                
+                res.json({
+                    success: true,
+                    message: 'Tour eliminado exitosamente'
+                });
+            });
+        }
+    });
+});
+
+// ===== API ENDPOINTS PARA WAYPOINTS =====
+
+// API para obtener waypoints de un tour
+app.get('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
+    const tourId = req.params.id;
+    
+    const query = `
+        SELECT * FROM tour_waypoints 
+        WHERE tour_route_id = ? 
+        ORDER BY sequence_order ASC
+    `;
+    
+    db.all(query, [tourId], (err, waypoints) => {
+        if (err) {
+            console.error('Error al obtener waypoints:', err);
+            return res.status(500).json({ error: 'Error al obtener waypoints' });
+        }
+        
+        res.json(waypoints);
+    });
+});
+
+// API para guardar waypoints de un tour
+app.post('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
+    const tourId = req.params.id;
+    const { waypoints } = req.body;
+    
+    if (!waypoints || !Array.isArray(waypoints)) {
+        return res.status(400).json({ error: 'Waypoints debe ser un array' });
+    }
+    
+    // Validar formato de waypoints
+    for (let i = 0; i < waypoints.length; i++) {
+        const wp = waypoints[i];
+        if (typeof wp.x !== 'number' || typeof wp.y !== 'number') {
+            return res.status(400).json({ 
+                error: `Waypoint ${i + 1}: coordenadas x,y deben ser números` 
+            });
+        }
+    }
+    
+    // Verificar que el tour existe
+    db.get('SELECT id FROM tour_routes WHERE id = ?', [tourId], (err, tour) => {
+        if (err) {
+            console.error('Error al verificar tour:', err);
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
+        
+        if (!tour) {
+            return res.status(404).json({ error: 'Tour no encontrado' });
+        }
+        
+        // Transacción para eliminar waypoints existentes e insertar nuevos
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+            
+            // Eliminar waypoints existentes del tour
+            db.run('DELETE FROM tour_waypoints WHERE tour_route_id = ?', [tourId], (err) => {
+                if (err) {
+                    console.error('Error al eliminar waypoints existentes:', err);
+                    db.run('ROLLBACK');
+                    return res.status(500).json({ error: 'Error al limpiar waypoints' });
+                }
+                
+                // Insertar nuevos waypoints
+                const insertStmt = db.prepare(`
+                    INSERT INTO tour_waypoints (tour_route_id, x, y, z, sequence_order, waypoint_type, description)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                `);
+                
+                let insertCount = 0;
+                let hasError = false;
+                
+                if (waypoints.length === 0) {
+                    // Si no hay waypoints, solo hacer commit
+                    db.run('COMMIT');
+                    return res.json({ 
+                        success: true, 
+                        message: 'Waypoints eliminados exitosamente',
+                        count: 0 
+                    });
+                }
+                
+                waypoints.forEach((waypoint, index) => {
+                    insertStmt.run([
+                        tourId,
+                        waypoint.x,
+                        waypoint.y,
+                        waypoint.z || 0,
+                        index + 1,
+                        waypoint.type || 'navigation',
+                        waypoint.description || ''
+                    ], function(err) {
+                        if (err && !hasError) {
+                            console.error('Error al insertar waypoint:', err);
+                            hasError = true;
+                            db.run('ROLLBACK');
+                            return res.status(500).json({ error: 'Error al guardar waypoints' });
+                        }
+                        
+                        insertCount++;
+                        
+                        // Si todos los waypoints se insertaron correctamente
+                        if (insertCount === waypoints.length && !hasError) {
+                            insertStmt.finalize();
+                            db.run('COMMIT');
+                            res.json({ 
+                                success: true, 
+                                message: `${waypoints.length} waypoints guardados exitosamente`,
+                                count: waypoints.length 
+                            });
+                        }
+                    });
+                });
+            });
+        });
+    });
+});
+
+// API para eliminar todos los waypoints de un tour
+app.delete('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
+    const tourId = req.params.id;
+    
+    db.run('DELETE FROM tour_waypoints WHERE tour_route_id = ?', [tourId], function(err) {
+        if (err) {
+            console.error('Error al eliminar waypoints:', err);
+            return res.status(500).json({ error: 'Error al eliminar waypoints' });
+        }
+        
+        res.json({ 
+            success: true, 
+            message: 'Waypoints eliminados exitosamente',
+            deleted_count: this.changes 
+        });
+    });
+});
+
+// API para obtener reseñas de un tour específico
+app.get('/api/admin/tours/:id/reviews', requireAdmin, (req, res) => {
+    const tourId = req.params.id;
+    
+    const query = `
+        SELECT th.rating, th.feedback, th.started_at, u.username
+        FROM tour_history th
+        JOIN users u ON th.user_id = u.id
+        WHERE th.tour_route_id = ? AND th.rating IS NOT NULL
+        ORDER BY th.started_at DESC
+    `;
+    
+    db.all(query, [tourId], (err, reviews) => {
+        if (err) {
+            console.error('Error al obtener reseñas:', err);
+            return res.status(500).json({ error: 'Error al obtener reseñas' });
+        }
+        
+        res.json(reviews);
     });
 });
 
@@ -1004,6 +1642,179 @@ app.get('/api/robot/topics', requireAuth, (req, res) => {
             message: error.message
         });
     }
+});
+
+// API para obtener datos del mapa
+app.get('/api/robot/map', requireAuth, (req, res) => {
+    if (!robotManager.connected) {
+        return res.status(503).json({ 
+            error: 'Robot no conectado',
+            map: null
+        });
+    }
+
+    try {
+        // Suscribirse al tópico del mapa si no está ya suscrito
+        if (!robotManager.subscribers.has('/map')) {
+            robotManager.subscribe('/map', 'nav_msgs/OccupancyGrid', (mapData) => {
+                robotManager.currentMap = mapData;
+            });
+        }
+
+        res.json({
+            success: true,
+            map: robotManager.currentMap || null,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Error al obtener datos del mapa',
+            message: error.message
+        });
+    }
+});
+
+// API para obtener posición del robot
+app.get('/api/robot/pose', requireAuth, (req, res) => {
+    if (!robotManager.connected) {
+        return res.status(503).json({ 
+            error: 'Robot no conectado',
+            pose: null
+        });
+    }
+
+    try {
+        res.json({
+            success: true,
+            amcl_pose: robotManager.amclPose || null,
+            odom_pose: robotManager.odomPose || null,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Error al obtener posición del robot',
+            message: error.message
+        });
+    }
+});
+
+// WebSocket para datos del mapa en tiempo real
+app.ws('/api/robot/map-stream', (ws, req) => {
+    console.log('Cliente conectado al stream del mapa desde:', req.ip);
+
+    // Verificar autenticación - temporalmente más permisivo para depuración
+    if (!req.session || !req.session.user) {
+        console.log('⚠️ Cliente sin sesión válida, pero permitiendo conexión para depuración');
+    } else {
+        console.log('✅ Cliente autenticado:', req.session.user.username);
+    }
+
+    let mapSubscribed = false;
+    let poseSubscribed = false;
+
+    // Función para enviar datos del mapa
+    const sendMapData = () => {
+        if (robotManager.connected && robotManager.currentMap) {
+            ws.send(JSON.stringify({
+                type: 'map',
+                data: robotManager.currentMap,
+                timestamp: new Date().toISOString()
+            }));
+        }
+    };
+
+    // Función para enviar datos de posición
+    const sendPoseData = () => {
+        if (robotManager.connected && (robotManager.amclPose || robotManager.odomPose)) {
+            ws.send(JSON.stringify({
+                type: 'pose',
+                data: {
+                    amcl: robotManager.amclPose,
+                    odom: robotManager.odomPose
+                },
+                timestamp: new Date().toISOString()
+            }));
+        }
+    };
+
+    // Suscribirse a los tópicos del robot
+    if (robotManager.connected) {
+        console.log('🔗 Robot conectado, suscribiendo a tópicos...');
+        try {
+            // Suscribirse al mapa
+            if (!robotManager.subscribers.has('/map')) {
+                console.log('📍 Suscribiendo al tópico /map');
+                robotManager.subscribe('/map', 'nav_msgs/OccupancyGrid', (mapData) => {
+                    console.log('🗺️ Datos del mapa recibidos');
+                    robotManager.currentMap = mapData;
+                    sendMapData();
+                });
+                mapSubscribed = true;
+            } else {
+                console.log('📍 Ya suscrito al tópico /map');
+            }
+
+            // Suscribirse a la posición AMCL
+            if (!robotManager.subscribers.has('/amcl_pose')) {
+                console.log('🤖 Suscribiendo al tópico /amcl_pose');
+                robotManager.subscribe('/amcl_pose', 'geometry_msgs/PoseWithCovarianceStamped', (poseData) => {
+                    console.log('📍 Posición AMCL recibida');
+                    robotManager.amclPose = poseData;
+                    sendPoseData();
+                });
+                poseSubscribed = true;
+            } else {
+                console.log('🤖 Ya suscrito al tópico /amcl_pose');
+            }
+
+            // Suscribirse a la posición del EKF
+            if (!robotManager.subscribers.has('/robot_pose_ekf/odom_combined')) {
+                console.log('🔍 Suscribiendo al tópico /robot_pose_ekf/odom_combined');
+                robotManager.subscribe('/robot_pose_ekf/odom_combined', 'geometry_msgs/PoseWithCovarianceStamped', (poseData) => {
+                    console.log('📍 Posición EKF recibida');
+                    robotManager.odomPose = poseData;
+                    sendPoseData();
+                });
+            } else {
+                console.log('🔍 Ya suscrito al tópico /robot_pose_ekf/odom_combined');
+            }
+
+            // Enviar datos iniciales si están disponibles
+            console.log('📤 Enviando datos iniciales al cliente...');
+            sendMapData();
+            sendPoseData();
+
+            // Enviar mensaje de estado de conexión exitosa
+            ws.send(JSON.stringify({
+                type: 'status',
+                message: 'Conectado a ROS Bridge exitosamente',
+                connected: true,
+                topics: ['/map', '/amcl_pose', '/robot_pose_ekf/odom_combined']
+            }));
+
+        } catch (error) {
+            console.error('❌ Error al suscribirse a tópicos:', error);
+            ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Error al suscribirse a tópicos: ' + error.message
+            }));
+        }
+    } else {
+        console.log('❌ Robot no conectado');
+        ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Robot no conectado'
+        }));
+    }
+
+    ws.on('close', () => {
+        console.log('Cliente desconectado del stream del mapa');
+        // No desuscribirse de los tópicos ya que otros clientes pueden estar usando
+    });
+
+    ws.on('error', (error) => {
+        console.error('Error en WebSocket del mapa:', error);
+    });
 });
 
 // API para historial de comandos del robot (solo admin)

@@ -40,6 +40,7 @@ yarn.lock
 database.db
 *.db-journal
 uploads/
+.env*
 
 # Respaldos de base de datos
 *.backup
