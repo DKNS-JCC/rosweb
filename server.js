@@ -9,10 +9,59 @@ const multer = require('multer');
 const fs = require('fs');
 const robotManager = require('./robotManager');
 const expressWs = require('express-ws');
+require('dotenv').config();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 const wsInstance = expressWs(app);
 const PORT = 3000;
+
+// Configurar Gemini AI
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+// Función para generar descripción detallada con Gemini AI
+async function generarDescripcionDetallada(waypointName, waypointDescription, tourName, tourDescription) {
+    try {
+        const prompt = `
+Actúa como un guía turístico experto y genera una descripción detallada y atractiva para un waypoint de un tour robótico.
+
+INFORMACIÓN DEL TOUR:
+- Nombre del tour: ${tourName}
+- Descripción del tour: ${tourDescription}
+
+INFORMACIÓN DEL WAYPOINT:
+- Nombre: ${waypointName}
+- Descripción base: ${waypointDescription}
+
+INSTRUCCIONES:
+1. Genera una descripción detallada de 2-3 oraciones que sea informativa y atractiva
+2. La descripción debe ser clara para síntesis de voz
+3. Incluye datos interesantes o curiosidades si es posible
+4. Mantén un tono amigable y educativo
+5. La descripción debe durar aproximadamente 10-15 segundos cuando se lea en voz alta
+6. Si no tienes información específica, crea una descripción general pero atractiva sobre el tipo de lugar
+7. Tu objetivo es explicar que están viendo los usuarios en este momento en el museo
+
+FORMATO DE RESPUESTA: Solo devuelve la descripción mejorada, sin introducciones ni explicaciones adicionales.
+`;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const descripcionMejorada = response.text().trim();
+        
+        console.log(`✨ Gemini generó descripción para "${waypointName}": ${descripcionMejorada.substring(0, 100)}...`);
+        return descripcionMejorada;
+        
+    } catch (error) {
+        console.error('❌ Error con Gemini AI:', error.message);
+        // Fallback a descripción original
+        return waypointDescription || `Bienvenido a ${waypointName}. Este es un punto de interés importante en nuestro recorrido.`;
+    }
+}
+
+// Cache para descripciones generadas (opcional - evita regenerar las mismas)
+const descripcionesCache = new Map();
 
 
 // Configuración de middleware
@@ -166,10 +215,57 @@ db.run(`CREATE TABLE IF NOT EXISTS tour_waypoints (
     z REAL DEFAULT 0,
     sequence_order INTEGER NOT NULL,
     waypoint_type TEXT DEFAULT 'navigation',
+    name TEXT NOT NULL DEFAULT '',
     description TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (tour_route_id) REFERENCES tour_routes (id) ON DELETE CASCADE
 )`);
+
+// Añadir columna name a waypoints existentes (si no existe)
+db.run(`ALTER TABLE tour_waypoints ADD COLUMN name TEXT DEFAULT ''`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error al añadir columna name a tour_waypoints:', err.message);
+    } else {
+        console.log('✅ Columna name añadida/verificada en tour_waypoints');
+        
+        // Migrar datos existentes: extraer nombres de descriptions que tengan formato "Nombre: Descripción"
+        db.all('SELECT id, description FROM tour_waypoints WHERE name IS NULL OR name = ""', [], (err, waypoints) => {
+            if (err) {
+                console.error('Error al obtener waypoints para migración:', err);
+                return;
+            }
+            
+            if (waypoints.length > 0) {
+                console.log(`🔄 Migrando ${waypoints.length} waypoints existentes...`);
+                
+                waypoints.forEach(wp => {
+                    let name = '';
+                    let description = wp.description || '';
+                    
+                    if (description.includes(': ')) {
+                        const parts = description.split(': ');
+                        name = parts[0].trim();
+                        description = parts.slice(1).join(': ').trim();
+                    } else {
+                        name = description || `Waypoint ${wp.id}`;
+                        description = '';
+                    }
+                    
+                    db.run('UPDATE tour_waypoints SET name = ?, description = ? WHERE id = ?', 
+                        [name, description, wp.id], 
+                        function(updateErr) {
+                            if (updateErr) {
+                                console.error(`Error al migrar waypoint ${wp.id}:`, updateErr);
+                            }
+                        }
+                    );
+                });
+                
+                console.log('✅ Migración de waypoints completada');
+            }
+        });
+    }
+});
 
 // Middleware para verificar autenticación
 function requireAuth(req, res, next) {
@@ -956,7 +1052,7 @@ app.post('/api/robot/pin', (req, res) => {
             ORDER BY sequence_order ASC
         `;
         
-        db.all(waypointsQuery, [tour.tour_route_id], (waypointsErr, waypoints) => {
+        db.all(waypointsQuery, [tour.tour_route_id], async (waypointsErr, waypoints) => {
             if (waypointsErr) {
                 console.error('Error al obtener waypoints:', waypointsErr);
                 return res.status(500).json({ 
@@ -966,7 +1062,58 @@ app.post('/api/robot/pin', (req, res) => {
                 });
             }
             
-            // PIN válido - devolver información completa del tour con waypoints
+            console.log(`🔄 Procesando ${waypoints.length} waypoints con Gemini AI...`);
+            
+            // Procesar waypoints con Gemini AI para generar descripciones detalladas
+            const waypointsConDescripciones = await Promise.all(
+                waypoints.map(async (wp) => {
+                    const waypointName = wp.name || `Waypoint ${wp.sequence_order}`;
+                    const waypointDescription = wp.description || '';
+                    
+                    // Crear clave de cache
+                    const cacheKey = `${tour.tour_route_id}-${wp.id}-${waypointName}-${waypointDescription}`;
+                    
+                    let descripcionDetallada;
+                    if (descripcionesCache.has(cacheKey)) {
+                        descripcionDetallada = descripcionesCache.get(cacheKey);
+                        console.log(`📋 Usando descripción cacheada para "${waypointName}"`);
+                    } else {
+                        // Generar descripción con Gemini AI
+                        descripcionDetallada = await generarDescripcionDetallada(
+                            waypointName, 
+                            waypointDescription, 
+                            tour.tour_name || tour.tour_name,
+                            tour.description || 'Un interesante recorrido turístico'
+                        );
+                        
+                        // Guardar en cache
+                        descripcionesCache.set(cacheKey, descripcionDetallada);
+                    }
+                    
+                    return {
+                        id: wp.id,
+                        x: wp.x,
+                        y: wp.y,
+                        z: wp.z || 0,
+                        sequence_order: wp.sequence_order,
+                        waypoint_type: wp.waypoint_type || 'navigation',
+                        name: waypointName,
+                        description: waypointDescription,
+                        description_detailed: descripcionDetallada,
+                        context: waypointDescription || '',
+                        context_detailed: descripcionDetallada,
+                        full_info: `${waypointName}: ${waypointDescription}`,
+                        full_info_detailed: `${waypointName}: ${descripcionDetallada}`,
+                        speech_text: descripcionDetallada,
+                        speech_text_arrival: `Llegamos a ${waypointName}. ${descripcionDetallada}`,
+                        speech_text_navigation: `Ahora nos dirigimos hacia ${waypointName}.`
+                    };
+                })
+            );
+            
+            console.log(`✅ Waypoints procesados con Gemini AI`);
+            
+            // PIN válido - devolver información completa del tour con waypoints mejorados
             res.json({ 
                 success: true,
                 valido: true,  // Campo para compatibilidad con Python
@@ -986,22 +1133,21 @@ app.post('/api/robot/pin', (req, res) => {
                     price: tour.price,
                     started_at: tour.started_at,
                     type: tour.tour_type,
-                    waypoints: waypoints.map(wp => ({
-                        id: wp.id,
-                        x: wp.x,
-                        y: wp.y,
-                        z: wp.z || 0,
-                        sequence_order: wp.sequence_order,
-                        waypoint_type: wp.waypoint_type || 'navigation',
-                        description: wp.description || ''
-                    })),
-                    waypoint_count: waypoints.length
+                    waypoints: waypointsConDescripciones,
+                    waypoint_count: waypointsConDescripciones.length
                 },
                 feedback: {
                     type: 'valid_pin',
                     description: `PIN correcto. Tour "${tour.tour_name || tour.tour_name}" encontrado para usuario ${tour.username}`,
                     action: 'tour_ready',
-                    waypoints_loaded: waypoints.length
+                    waypoints_loaded: waypointsConDescripciones.length,
+                    waypoints_info: waypointsConDescripciones.map(wp => ({
+                        order: wp.sequence_order,
+                        name: wp.name,
+                        has_description: !!(wp.description && wp.description.length > 0),
+                        has_detailed_description: !!(wp.description_detailed && wp.description_detailed.length > 0),
+                        gemini_enhanced: true
+                    }))
                 }
             });
         });
@@ -1103,6 +1249,217 @@ app.post('/api/robot/tour/complete', completeTour);
 // Alias para compatibilidad con versiones anteriores del robot
 app.post('/tour/complete', completeTour);
 
+// API para obtener información detallada de un waypoint específico (para uso del robot)
+app.get('/api/robot/waypoint/:id', (req, res) => {
+    const waypointId = req.params.id;
+    
+    const query = `
+        SELECT tw.*, tr.name as tour_name, tr.description as tour_description
+        FROM tour_waypoints tw
+        LEFT JOIN tour_routes tr ON tw.tour_route_id = tr.id
+        WHERE tw.id = ?
+    `;
+    
+    db.get(query, [waypointId], (err, waypoint) => {
+        if (err) {
+            console.error('Error al obtener waypoint:', err);
+            return res.status(500).json({ 
+                success: false,
+                error: 'Error en la base de datos' 
+            });
+        }
+        
+        if (!waypoint) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Waypoint no encontrado',
+                waypoint_id: waypointId
+            });
+        }
+        
+        res.json({
+            success: true,
+            waypoint: {
+                id: waypoint.id,
+                tour_route_id: waypoint.tour_route_id,
+                tour_name: waypoint.tour_name,
+                tour_description: waypoint.tour_description,
+                x: waypoint.x,
+                y: waypoint.y,
+                z: waypoint.z || 0,
+                sequence_order: waypoint.sequence_order,
+                waypoint_type: waypoint.waypoint_type || 'navigation',
+                name: waypoint.name || `Waypoint ${waypoint.sequence_order}`,
+                description: waypoint.description || '',
+                context: waypoint.description || '',
+                full_info: `${waypoint.name || `Waypoint ${waypoint.sequence_order}`}: ${waypoint.description || 'Sin descripción'}`,
+                speech_text: `Llegamos a ${waypoint.name || `Waypoint ${waypoint.sequence_order}`}. ${waypoint.description || 'Sin información adicional.'}`
+            },
+            message: `Información del waypoint "${waypoint.name || `Waypoint ${waypoint.sequence_order}`}" obtenida exitosamente`
+        });
+        
+        // Log del acceso del robot
+        console.log(`🤖 Robot accedió a waypoint: ${waypoint.name || `Waypoint ${waypoint.sequence_order}`} (ID: ${waypoint.id}) - Tour: ${waypoint.tour_name}`);
+    });
+});
+
+// API para obtener el siguiente waypoint en la secuencia (para uso del robot)
+app.get('/api/robot/tour/:tourId/waypoint/next/:currentSequence', (req, res) => {
+    const { tourId, currentSequence } = req.params;
+    const nextSequence = parseInt(currentSequence) + 1;
+    
+    // Primero obtener el tour_route_id desde el tour_id
+    db.get(`
+        SELECT tour_route_id 
+        FROM tour_history 
+        WHERE tour_id = ?
+    `, [tourId], (err, tour) => {
+        if (err) {
+            console.error('Error al obtener tour:', err);
+            return res.status(500).json({ 
+                success: false,
+                error: 'Error en la base de datos' 
+            });
+        }
+        
+        if (!tour) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Tour no encontrado',
+                tour_id: tourId
+            });
+        }
+        
+        // Obtener el siguiente waypoint
+        db.get(`
+            SELECT * FROM tour_waypoints 
+            WHERE tour_route_id = ? AND sequence_order = ?
+        `, [tour.tour_route_id, nextSequence], (err, waypoint) => {
+            if (err) {
+                console.error('Error al obtener siguiente waypoint:', err);
+                return res.status(500).json({ 
+                    success: false,
+                    error: 'Error en la base de datos' 
+                });
+            }
+            
+            if (!waypoint) {
+                return res.json({ 
+                    success: true,
+                    waypoint: null,
+                    message: 'No hay más waypoints en el tour',
+                    tour_completed: true
+                });
+            }
+            
+            res.json({
+                success: true,
+                waypoint: {
+                    id: waypoint.id,
+                    x: waypoint.x,
+                    y: waypoint.y,
+                    z: waypoint.z || 0,
+                    sequence_order: waypoint.sequence_order,
+                    waypoint_type: waypoint.waypoint_type || 'navigation',
+                    name: waypoint.name || `Waypoint ${waypoint.sequence_order}`,
+                    description: waypoint.description || '',
+                    context: waypoint.description || '',
+                    full_info: `${waypoint.name || `Waypoint ${waypoint.sequence_order}`}: ${waypoint.description || 'Sin descripción'}`,
+                    speech_text: `Siguiente destino: ${waypoint.name || `Waypoint ${waypoint.sequence_order}`}. ${waypoint.description || ''}`
+                },
+                message: `Siguiente waypoint "${waypoint.name || `Waypoint ${waypoint.sequence_order}`}" obtenido exitosamente`,
+                tour_completed: false
+            });
+        });
+    });
+});
+
+// API para que el robot reporte llegada a un waypoint específico
+app.post('/api/robot/waypoint/arrived', (req, res) => {
+    const { tour_id, waypoint_id, sequence_order, timestamp } = req.body;
+    
+    if (!tour_id || (!waypoint_id && !sequence_order)) {
+        return res.status(400).json({ 
+            success: false,
+            error: 'tour_id y (waypoint_id o sequence_order) son requeridos' 
+        });
+    }
+    
+    // Obtener información del waypoint
+    let waypointQuery = '';
+    let waypointParams = [];
+    
+    if (waypoint_id) {
+        waypointQuery = `
+            SELECT tw.*, th.user_id, u.username, tr.name as tour_name
+            FROM tour_waypoints tw
+            JOIN tour_history th ON tw.tour_route_id = th.tour_route_id
+            JOIN users u ON th.user_id = u.id
+            JOIN tour_routes tr ON tw.tour_route_id = tr.id
+            WHERE tw.id = ? AND th.tour_id = ?
+        `;
+        waypointParams = [waypoint_id, tour_id];
+    } else {
+        waypointQuery = `
+            SELECT tw.*, th.user_id, u.username, tr.name as tour_name
+            FROM tour_waypoints tw
+            JOIN tour_history th ON tw.tour_route_id = th.tour_route_id
+            JOIN users u ON th.user_id = u.id
+            JOIN tour_routes tr ON tw.tour_route_id = tr.id
+            WHERE tw.sequence_order = ? AND th.tour_id = ?
+        `;
+        waypointParams = [sequence_order, tour_id];
+    }
+    
+    db.get(waypointQuery, waypointParams, (err, waypoint) => {
+        if (err) {
+            console.error('Error al obtener waypoint arrival:', err);
+            return res.status(500).json({ 
+                success: false,
+                error: 'Error en la base de datos' 
+            });
+        }
+        
+        if (!waypoint) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Waypoint o tour no encontrado' 
+            });
+        }
+        
+        // Log del evento
+        const waypointName = waypoint.name || `Waypoint ${waypoint.sequence_order}`;
+        const logMessage = `🤖 Robot llegó a "${waypointName}" - Tour: ${waypoint.tour_name} - Usuario: ${waypoint.username}`;
+        console.log(logMessage);
+        
+        // Respuesta exitosa con información del waypoint
+        res.json({
+            success: true,
+            message: 'Llegada a waypoint registrada exitosamente',
+            waypoint: {
+                id: waypoint.id,
+                name: waypointName,
+                description: waypoint.description || '',
+                sequence_order: waypoint.sequence_order,
+                coordinates: {
+                    x: waypoint.x,
+                    y: waypoint.y,
+                    z: waypoint.z || 0
+                }
+            },
+            tour: {
+                tour_id: tour_id,
+                tour_name: waypoint.tour_name,
+                username: waypoint.username
+            },
+            timestamp: timestamp || new Date().toISOString(),
+            next_action: waypoint.sequence_order === 1 ? 
+                'start_tour_speech' : 
+                'continue_tour'
+        });
+    });
+});
+
 // API para logout
 app.post('/api/logout', (req, res) => {
     req.session.destroy((err) => {
@@ -1148,22 +1505,77 @@ app.get('/api/tours', (req, res) => {
 });
 
 // API para obtener waypoints de un tour específico (para ejecución del robot)
-app.get('/api/tours/:id/waypoints', (req, res) => {
+app.get('/api/tours/:id/waypoints', async (req, res) => {
     const tourId = req.params.id;
     
     const query = `
-        SELECT * FROM tour_waypoints 
-        WHERE tour_route_id = ? 
-        ORDER BY sequence_order ASC
+        SELECT tw.*, tr.name as tour_name, tr.description as tour_description
+        FROM tour_waypoints tw
+        LEFT JOIN tour_routes tr ON tw.tour_route_id = tr.id
+        WHERE tw.tour_route_id = ? 
+        ORDER BY tw.sequence_order ASC
     `;
     
-    db.all(query, [tourId], (err, waypoints) => {
+    db.all(query, [tourId], async (err, waypoints) => {
         if (err) {
             console.error('Error al obtener waypoints:', err);
             return res.status(500).json({ error: 'Error al obtener waypoints' });
         }
         
-        res.json(waypoints);
+        if (waypoints.length === 0) {
+            return res.json([]);
+        }
+        
+        const tourName = waypoints[0].tour_name || 'Tour';
+        const tourDescription = waypoints[0].tour_description || 'Un recorrido interesante';
+        
+        console.log(`🔄 Procesando ${waypoints.length} waypoints con Gemini AI para tour ${tourName}...`);
+        
+        // Formatear waypoints con información completa mejorada por Gemini
+        const formattedWaypoints = await Promise.all(
+            waypoints.map(async (wp) => {
+                const waypointName = wp.name || `Waypoint ${wp.sequence_order}`;
+                const waypointDescription = wp.description || '';
+                
+                // Crear clave de cache
+                const cacheKey = `${tourId}-${wp.id}-${waypointName}-${waypointDescription}`;
+                
+                let descripcionDetallada;
+                if (descripcionesCache.has(cacheKey)) {
+                    descripcionDetallada = descripcionesCache.get(cacheKey);
+                } else {
+                    descripcionDetallada = await generarDescripcionDetallada(
+                        waypointName, 
+                        waypointDescription, 
+                        tourName,
+                        tourDescription
+                    );
+                    descripcionesCache.set(cacheKey, descripcionDetallada);
+                }
+                
+                return {
+                    id: wp.id,
+                    x: wp.x,
+                    y: wp.y,
+                    z: wp.z || 0,
+                    sequence_order: wp.sequence_order,
+                    waypoint_type: wp.waypoint_type || 'navigation',
+                    name: waypointName,
+                    description: waypointDescription,
+                    description_detailed: descripcionDetallada,
+                    context: waypointDescription || '',
+                    context_detailed: descripcionDetallada,
+                    full_info: `${waypointName}: ${waypointDescription}`,
+                    full_info_detailed: `${waypointName}: ${descripcionDetallada}`,
+                    speech_text: descripcionDetallada,
+                    speech_text_arrival: `Llegamos a ${waypointName}. ${descripcionDetallada}`,
+                    speech_text_navigation: `Ahora nos dirigimos hacia ${waypointName}.`
+                };
+            })
+        );
+        
+        console.log(`✅ Waypoints procesados con Gemini AI`);
+        res.json(formattedWaypoints);
     });
 });
 
@@ -1370,7 +1782,23 @@ app.get('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
             return res.status(500).json({ error: 'Error al obtener waypoints' });
         }
         
-        res.json(waypoints);
+        // Formatear waypoints para el panel de administración
+        const formattedWaypoints = waypoints.map(wp => ({
+            id: wp.id,
+            x: wp.x,
+            y: wp.y,
+            z: wp.z || 0,
+            sequence_order: wp.sequence_order,
+            waypoint_type: wp.waypoint_type || 'navigation',
+            name: wp.name || `Waypoint ${wp.sequence_order}`,
+            description: wp.description || '',
+            // Para compatibilidad con el formato anterior
+            description_legacy: wp.description && wp.name ? 
+                `${wp.name}: ${wp.description}` : 
+                wp.description || wp.name || ''
+        }));
+        
+        res.json(formattedWaypoints);
     });
 });
 
@@ -1418,8 +1846,8 @@ app.post('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
                 
                 // Insertar nuevos waypoints
                 const insertStmt = db.prepare(`
-                    INSERT INTO tour_waypoints (tour_route_id, x, y, z, sequence_order, waypoint_type, description)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO tour_waypoints (tour_route_id, x, y, z, sequence_order, waypoint_type, name, description)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 `);
                 
                 let insertCount = 0;
@@ -1427,6 +1855,7 @@ app.post('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
                 
                 if (waypoints.length === 0) {
                     // Si no hay waypoints, solo hacer commit
+                    insertStmt.finalize();
                     db.run('COMMIT');
                     return res.json({ 
                         success: true, 
@@ -1436,6 +1865,28 @@ app.post('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
                 }
                 
                 waypoints.forEach((waypoint, index) => {
+                    // Parsear nombre y descripción si vienen en el formato "Nombre: Descripción"
+                    let waypointName = '';
+                    let waypointDescription = '';
+                    
+                    if (waypoint.name) {
+                        waypointName = waypoint.name;
+                        waypointDescription = waypoint.description || '';
+                    } else if (waypoint.description) {
+                        // Si viene en formato "Nombre: Descripción"
+                        const parts = waypoint.description.split(': ');
+                        if (parts.length >= 2) {
+                            waypointName = parts[0].trim();
+                            waypointDescription = parts.slice(1).join(': ').trim();
+                        } else {
+                            waypointName = `Waypoint ${index + 1}`;
+                            waypointDescription = waypoint.description;
+                        }
+                    } else {
+                        waypointName = `Waypoint ${index + 1}`;
+                        waypointDescription = '';
+                    }
+                    
                     insertStmt.run([
                         tourId,
                         waypoint.x,
@@ -1443,25 +1894,38 @@ app.post('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
                         waypoint.z || 0,
                         index + 1,
                         waypoint.type || 'navigation',
-                        waypoint.description || ''
+                        waypointName,
+                        waypointDescription
                     ], function(err) {
                         if (err && !hasError) {
-                            console.error('Error al insertar waypoint:', err);
                             hasError = true;
+                            console.error('Error al insertar waypoint:', err);
+                            insertStmt.finalize();
                             db.run('ROLLBACK');
                             return res.status(500).json({ error: 'Error al guardar waypoints' });
                         }
                         
                         insertCount++;
-                        
-                        // Si todos los waypoints se insertaron correctamente
                         if (insertCount === waypoints.length && !hasError) {
                             insertStmt.finalize();
-                            db.run('COMMIT');
-                            res.json({ 
-                                success: true, 
-                                message: `${waypoints.length} waypoints guardados exitosamente`,
-                                count: waypoints.length 
+                            db.run('COMMIT', (err) => {
+                                if (err) {
+                                    console.error('Error al hacer commit:', err);
+                                    return res.status(500).json({ error: 'Error al finalizar operación' });
+                                }
+                                
+                                res.json({ 
+                                    success: true, 
+                                    message: 'Waypoints guardados exitosamente',
+                                    count: insertCount,
+                                    waypoints: waypoints.map((wp, idx) => ({
+                                        ...wp,
+                                        name: wp.name || (wp.description && wp.description.includes(': ') ? 
+                                            wp.description.split(': ')[0].trim() : 
+                                            `Waypoint ${idx + 1}`),
+                                        sequence_order: idx + 1
+                                    }))
+                                });
                             });
                         }
                     });

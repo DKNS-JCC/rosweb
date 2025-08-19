@@ -2569,15 +2569,146 @@
 
         // Añadir waypoint desde el mapa
         function addMapWaypoint(x, y) {
+            showWaypointInputModal(x, y);
+        }
+
+        // Mostrar modal para ingresar datos del waypoint
+        function showWaypointInputModal(x, y) {
+            const modal = document.createElement('div');
+            modal.className = 'waypoint-input-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 3000;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 8px; min-width: 400px; max-width: 500px;">
+                    <h3 style="margin-top: 0; color: #4129ca;">Nuevo Waypoint</h3>
+                    <p style="margin-bottom: 15px; color: #666;">
+                        Posición: (${x.toFixed(2)}, ${y.toFixed(2)})
+                    </p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">
+                            Nombre del waypoint: <span style="color: red;">*</span>
+                        </label>
+                        <input type="text" id="waypointNameInput" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" 
+                               placeholder="Ej: Recepción, Sala de conferencias, etc."
+                               maxlength="100">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">
+                            Descripción/Contexto: <span style="color: red;">*</span>
+                        </label>
+                        <textarea id="waypointDescriptionInput" 
+                                  style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 80px; resize: vertical;" 
+                                  placeholder="Describe qué se puede encontrar en este punto, información relevante para el tour, etc."
+                                  maxlength="500"></textarea>
+                        <small style="color: #666;">Máximo 500 caracteres</small>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button onclick="this.closest('.waypoint-input-modal').remove()" 
+                                style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">
+                            Cancelar
+                        </button>
+                        <button onclick="confirmAddWaypoint(${x}, ${y})" 
+                                style="padding: 8px 16px; border: none; background: #4129ca; color: white; border-radius: 4px; cursor: pointer;">
+                            Añadir Waypoint
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Cerrar modal al hacer clic fuera
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+
+            // Manejar Enter para confirmar y Escape para cancelar
+            modal.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    confirmAddWaypoint(x, y);
+                } else if (e.key === 'Escape') {
+                    modal.remove();
+                }
+            });
+
+            document.body.appendChild(modal);
+            
+            // Enfocar el primer input
+            setTimeout(() => {
+                document.getElementById('waypointNameInput').focus();
+            }, 100);
+        }
+
+        // Confirmar y añadir waypoint con datos validados
+        function confirmAddWaypoint(x, y) {
+            const nameInput = document.getElementById('waypointNameInput');
+            const descriptionInput = document.getElementById('waypointDescriptionInput');
+            
+            const name = nameInput.value.trim();
+            const description = descriptionInput.value.trim();
+            
+            // Validar campos obligatorios
+            if (!name) {
+                nameInput.style.borderColor = '#dc3545';
+                nameInput.focus();
+                showMessage('El nombre del waypoint es obligatorio', 'error');
+                return;
+            }
+            
+            if (!description) {
+                descriptionInput.style.borderColor = '#dc3545';
+                descriptionInput.focus();
+                showMessage('La descripción del waypoint es obligatoria', 'error');
+                return;
+            }
+            
+            if (name.length < 3) {
+                nameInput.style.borderColor = '#dc3545';
+                nameInput.focus();
+                showMessage('El nombre debe tener al menos 3 caracteres', 'error');
+                return;
+            }
+            
+            if (description.length < 10) {
+                descriptionInput.style.borderColor = '#dc3545';
+                descriptionInput.focus();
+                showMessage('La descripción debe tener al menos 10 caracteres', 'error');
+                return;
+            }
+            
+            // Crear waypoint con datos completos
             mapWaypoints.push({
                 x: x,
                 y: y,
                 z: 0.0,
-                description: `Waypoint ${mapWaypoints.length + 1}`
+                name: name,
+                description: description
             });
             
+            // Cerrar modal
+            document.querySelector('.waypoint-input-modal').remove();
+            
+            // Actualizar interfaz
             updateMapWaypointsList();
             drawMap();
+            
+            showMessage(`Waypoint "${name}" añadido exitosamente`, 'success');
         }
 
         // Actualizar lista de waypoints del mapa
@@ -2593,9 +2724,29 @@
             }
             
             const waypointsHTML = mapWaypoints.map((waypoint, index) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px; border-bottom: 1px solid #eee;">
-                    <span>${index + 1}. (${waypoint.x.toFixed(2)}, ${waypoint.y.toFixed(2)})</span>
-                    <button onclick="removeMapWaypoint(${index})" style="background: #dc3545; color: white; border: none; border-radius: 3px; padding: 2px 6px; cursor: pointer;">×</button>
+                <div style="display: flex; flex-direction: column; padding: 10px; border-bottom: 1px solid #eee; background: ${index % 2 === 0 ? '#f9f9f9' : 'white'};">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px;">
+                        <div style="flex: 1;">
+                            <strong style="color: #4129ca;">${index + 1}. ${waypoint.name}</strong>
+                            <br>
+                            <small style="color: #666;">Posición: (${waypoint.x.toFixed(2)}, ${waypoint.y.toFixed(2)})</small>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="editMapWaypoint(${index})" 
+                                    style="background: #28a745; color: white; border: none; border-radius: 3px; padding: 3px 8px; cursor: pointer; font-size: 12px;"
+                                    title="Editar waypoint">
+                                ✏️
+                            </button>
+                            <button onclick="removeMapWaypoint(${index})" 
+                                    style="background: #dc3545; color: white; border: none; border-radius: 3px; padding: 3px 8px; cursor: pointer; font-size: 12px;"
+                                    title="Eliminar waypoint">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                    <div style="font-size: 14px; color: #555; line-height: 1.4;">
+                        ${waypoint.description}
+                    </div>
                 </div>
             `).join('');
             
@@ -2604,9 +2755,148 @@
 
         // Remover waypoint del mapa
         function removeMapWaypoint(index) {
-            mapWaypoints.splice(index, 1);
+            if (confirm(`¿Eliminar el waypoint "${mapWaypoints[index].name}"?`)) {
+                mapWaypoints.splice(index, 1);
+                updateMapWaypointsList();
+                drawMap();
+            }
+        }
+
+        // Editar waypoint del mapa
+        function editMapWaypoint(index) {
+            const waypoint = mapWaypoints[index];
+            
+            const modal = document.createElement('div');
+            modal.className = 'waypoint-input-modal';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 3000;
+            `;
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 20px; border-radius: 8px; min-width: 400px; max-width: 500px;">
+                    <h3 style="margin-top: 0; color: #4129ca;">Editar Waypoint</h3>
+                    <p style="margin-bottom: 15px; color: #666;">
+                        Posición: (${waypoint.x.toFixed(2)}, ${waypoint.y.toFixed(2)})
+                    </p>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">
+                            Nombre del waypoint: <span style="color: red;">*</span>
+                        </label>
+                        <input type="text" id="editWaypointNameInput" 
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" 
+                               placeholder="Ej: Recepción, Sala de conferencias, etc."
+                               maxlength="100"
+                               value="${waypoint.name}">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">
+                            Descripción/Contexto: <span style="color: red;">*</span>
+                        </label>
+                        <textarea id="editWaypointDescriptionInput" 
+                                  style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 80px; resize: vertical;" 
+                                  placeholder="Describe qué se puede encontrar en este punto, información relevante para el tour, etc."
+                                  maxlength="500">${waypoint.description}</textarea>
+                        <small style="color: #666;">Máximo 500 caracteres</small>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button onclick="this.closest('.waypoint-input-modal').remove()" 
+                                style="padding: 8px 16px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">
+                            Cancelar
+                        </button>
+                        <button onclick="confirmEditWaypoint(${index})" 
+                                style="padding: 8px 16px; border: none; background: #28a745; color: white; border-radius: 4px; cursor: pointer;">
+                            Guardar Cambios
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Cerrar modal al hacer clic fuera
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+
+            // Manejar Enter para confirmar y Escape para cancelar
+            modal.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    confirmEditWaypoint(index);
+                } else if (e.key === 'Escape') {
+                    modal.remove();
+                }
+            });
+
+            document.body.appendChild(modal);
+            
+            // Enfocar el primer input
+            setTimeout(() => {
+                document.getElementById('editWaypointNameInput').focus();
+            }, 100);
+        }
+
+        // Confirmar edición de waypoint
+        function confirmEditWaypoint(index) {
+            const nameInput = document.getElementById('editWaypointNameInput');
+            const descriptionInput = document.getElementById('editWaypointDescriptionInput');
+            
+            const name = nameInput.value.trim();
+            const description = descriptionInput.value.trim();
+            
+            // Validar campos obligatorios
+            if (!name) {
+                nameInput.style.borderColor = '#dc3545';
+                nameInput.focus();
+                showMessage('El nombre del waypoint es obligatorio', 'error');
+                return;
+            }
+            
+            if (!description) {
+                descriptionInput.style.borderColor = '#dc3545';
+                descriptionInput.focus();
+                showMessage('La descripción del waypoint es obligatoria', 'error');
+                return;
+            }
+            
+            if (name.length < 3) {
+                nameInput.style.borderColor = '#dc3545';
+                nameInput.focus();
+                showMessage('El nombre debe tener al menos 3 caracteres', 'error');
+                return;
+            }
+            
+            if (description.length < 10) {
+                descriptionInput.style.borderColor = '#dc3545';
+                descriptionInput.focus();
+                showMessage('La descripción debe tener al menos 10 caracteres', 'error');
+                return;
+            }
+            
+            // Actualizar waypoint
+            mapWaypoints[index].name = name;
+            mapWaypoints[index].description = description;
+            
+            // Cerrar modal
+            document.querySelector('.waypoint-input-modal').remove();
+            
+            // Actualizar interfaz
             updateMapWaypointsList();
             drawMap();
+            
+            showMessage(`Waypoint "${name}" actualizado exitosamente`, 'success');
         }
 
         // Limpiar todos los waypoints del mapa
@@ -2664,25 +2954,38 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    // Convertir waypoints del mapa al formato requerido por el backend
+                    const waypoints = mapWaypoints.map(waypoint => ({
+                        x: waypoint.x,
+                        y: waypoint.y,
+                        z: waypoint.z,
+                        description: `${waypoint.name}: ${waypoint.description}`
+                    }));
+
                     // Añadir waypoints al tour
                     const waypointsResponse = await fetch(`/api/admin/tours/${result.tourId}/waypoints`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({ waypoints: mapWaypoints })
+                        body: JSON.stringify({ waypoints: waypoints })
                     });
 
                     const waypointsResult = await waypointsResponse.json();
 
                     if (waypointsResult.success) {
-                        showMessage('Tour creado exitosamente con waypoints del mapa', 'success');
+                        showMessage(`Tour "${name}" creado exitosamente con ${waypoints.length} waypoints`, 'success');
                         
-                        // Cerrar modal
+                        // Cerrar modal y limpiar datos
                         document.getElementById('mapModal').style.display = 'none';
                         if (ros && ros.isConnected) {
                             ros.close();
                         }
+                        
+                        // Limpiar waypoints del mapa
+                        mapWaypoints = [];
+                        updateMapWaypointsList();
+                        drawMap();
                         
                         // Actualizar tabla de tours
                         loadTours();

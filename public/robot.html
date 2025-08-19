@@ -436,6 +436,109 @@
             cursor: crosshair;
             display: block;
         }
+
+        /* Estilos para la sección de cámara */
+        .camera-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-top: 4px solid #4129ca;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .camera-stream {
+            width: 100%;
+            height: 450px;
+            object-fit: cover;
+            border-radius: 10px;
+            display: block;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .camera-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .camera-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+        }
+
+        .camera-indicator.disconnected {
+            background: #dc3545;
+        }
+
+        .camera-error {
+            display: none;
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 60px 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .camera-controls {
+            margin-top: 15px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .camera-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            background: #4129ca;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .camera-btn:hover {
+            background: #3a23b8;
+        }
+
+        .camera-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -633,6 +736,24 @@
             </div>
         </div>
 
+        <!-- Cámara del Robot -->
+        <div class="camera-section">
+            <h2>Cámara del Robot</h2>
+            <div class="camera-container">
+                <img id="cameraStream" class="camera-stream" 
+                     src="http://turtlebot-nuc.local:8080/stream?topic=/camera/color/image_raw" 
+                     alt="Transmisión de la cámara del robot">
+                <div class="camera-status">
+                    <div class="camera-indicator" id="cameraIndicator"></div>
+                    <span id="cameraStatusText">Conectando...</span>
+                </div>
+                <div class="camera-error" id="cameraError">
+                    ❌ No se pudo conectar a la transmisión de la cámara<br>
+                    Verifica que el robot esté encendido y conectado
+                </div>
+            </div>
+        </div>
+
         <!-- Log del Sistema -->
         <div class="robot-section">
             <h2>Log del Sistema</h2>
@@ -701,6 +822,12 @@
         let mapTopic = null;
         let currentUser = null;
         
+        // Variables de la cámara
+        let cameraStream = null;
+        let cameraConnected = false;
+        let cameraRetryCount = 0;
+        let maxCameraRetries = 5;
+        
         // Variables del sistema de waypoints 3D
         let scene3D, camera3D, renderer3D;
         let waypoints3D = [];
@@ -749,6 +876,7 @@
         window.addEventListener('load', async () => {
             await checkUserAccess();
             initializeROS();
+            initializeCamera();
             setTimeout(() => {
                 initialize3DWaypoints();
             }, 1000);
@@ -920,6 +1048,66 @@
             }
         }
 
+        // ===== SISTEMA DE CÁMARA =====
+
+        // Inicializar cámara
+        function initializeCamera() {
+            addLog('Inicializando transmisión de cámara...');
+            
+            cameraStream = document.getElementById('cameraStream');
+            
+            // Configurar eventos de la imagen
+            cameraStream.onload = function() {
+                cameraConnected = true;
+                cameraRetryCount = 0;
+                updateCameraStatus(true, 'Conectada');
+            };
+            
+            cameraStream.onerror = function() {
+                cameraConnected = false;
+                updateCameraStatus(false, 'Error de conexión');
+                addLog('Error al conectar con la cámara');
+                
+                // Mostrar mensaje de error
+                document.getElementById('cameraError').style.display = 'block';
+                cameraStream.style.display = 'none';
+                
+                // Reintentar conexión
+                if (cameraRetryCount < maxCameraRetries) {
+                    cameraRetryCount++;
+                    addLog(`Reintentando conexión de cámara (${cameraRetryCount}/${maxCameraRetries})...`);
+                    setTimeout(() => {
+                        reloadCamera();
+                    }, 3000);
+                }
+            };
+            
+            // Verificar estado de la cámara periódicamente
+            setInterval(checkCameraStatus, 10000); // Cada 10 segundos
+        }
+
+        // Actualizar estado visual de la cámara
+        function updateCameraStatus(connected, statusText) {
+            const indicator = document.getElementById('cameraIndicator');
+            const statusElement = document.getElementById('cameraStatusText');
+            
+            if (connected) {
+                indicator.classList.remove('disconnected');
+                indicator.style.background = '#28a745';
+            } else {
+                indicator.classList.add('disconnected');
+                indicator.style.background = '#dc3545';
+            }
+            
+            statusElement.textContent = statusText;
+        }
+
+        // Verificar estado de la cámara
+        function checkCameraStatus() {
+            if (!cameraConnected && cameraRetryCount >= maxCameraRetries) {
+                updateCameraStatus(false, 'Sin conexión');
+            }
+        }
         // Inicializar conexión ROS
         function initializeROS() {
             addLog('Conectando a ROS Bridge...');
