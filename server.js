@@ -1582,15 +1582,33 @@ app.get('/api/tours/:id/waypoints', async (req, res) => {
 // API para obtener todos los tours (admin)
 app.get('/api/admin/tours', requireAdmin, (req, res) => {
     const query = `
-        SELECT tr.*, u.username as created_by_name,
-               ROUND(AVG(th.rating), 1) as average_rating,
-               COUNT(th.rating) as total_ratings,
-               COUNT(DISTINCT tw.id) as waypoint_count
+        SELECT 
+            tr.*,
+            u.username as created_by_name,
+            ratings.average_rating,
+            ratings.total_ratings,
+            COALESCE(waypoint_counts.waypoint_count, 0) as waypoint_count,
+            COALESCE(history_counts.history_count, 0) as history_count
         FROM tour_routes tr
         LEFT JOIN users u ON tr.created_by = u.id
-        LEFT JOIN tour_history th ON tr.id = th.tour_route_id AND th.rating IS NOT NULL
-        LEFT JOIN tour_waypoints tw ON tr.id = tw.tour_route_id
-        GROUP BY tr.id, tr.name, tr.description, tr.duration, tr.languages, tr.icon, tr.price, tr.is_active, tr.created_by, tr.created_at, u.username
+        LEFT JOIN (
+            SELECT tour_route_id, 
+                   ROUND(AVG(rating), 1) as average_rating,
+                   COUNT(rating) as total_ratings
+            FROM tour_history 
+            WHERE rating IS NOT NULL
+            GROUP BY tour_route_id
+        ) ratings ON tr.id = ratings.tour_route_id
+        LEFT JOIN (
+            SELECT tour_route_id, COUNT(*) as waypoint_count
+            FROM tour_waypoints
+            GROUP BY tour_route_id
+        ) waypoint_counts ON tr.id = waypoint_counts.tour_route_id
+        LEFT JOIN (
+            SELECT tour_route_id, COUNT(*) as history_count
+            FROM tour_history
+            GROUP BY tour_route_id
+        ) history_counts ON tr.id = history_counts.tour_route_id
         ORDER BY tr.created_at DESC
     `;
     
@@ -1602,7 +1620,8 @@ app.get('/api/admin/tours', requireAdmin, (req, res) => {
         
         const formattedTours = tours.map(tour => ({
             ...tour,
-            status: tour.is_active ? 'active' : 'inactive'
+            status: tour.is_active ? 'active' : 'inactive',
+            history_count: tour.history_count || 0
         }));
         
         res.json(formattedTours);
@@ -1719,32 +1738,23 @@ app.put('/api/admin/tours/:id', requireAdmin, (req, res) => {
 app.delete('/api/admin/tours/:id', requireAdmin, (req, res) => {
     const tourId = req.params.id;
     
-    // Verificar si hay tours en progreso o historial
+    // Verificar si hay historial de tours para mostrar información relevante
     db.get('SELECT COUNT(*) as count FROM tour_history WHERE tour_route_id = ?', [tourId], (err, result) => {
         if (err) {
             console.error('Error al verificar historial:', err);
             return res.status(500).json({ error: 'Error al verificar historial' });
         }
         
-        if (result.count > 0) {
-            // Si hay historial, solo desactivar el tour
-            db.run('UPDATE tour_routes SET is_active = 0 WHERE id = ?', [tourId], function(err) {
-                if (err) {
-                    console.error('Error al desactivar tour:', err);
-                    return res.status(500).json({ error: 'Error al desactivar tour' });
-                }
-                
-                if (this.changes === 0) {
-                    return res.status(404).json({ error: 'Tour no encontrado' });
-                }
-                
-                res.json({
-                    success: true,
-                    message: 'Tour desactivado (no eliminado debido al historial existente)'
-                });
-            });
-        } else {
-            // Si no hay historial, eliminar completamente
+        const hasHistory = result && result.count > 0;
+        
+        // Eliminar waypoints asociados primero
+        db.run('DELETE FROM tour_waypoints WHERE tour_route_id = ?', [tourId], function(waypointErr) {
+            if (waypointErr) {
+                console.error('Error al eliminar waypoints:', waypointErr);
+                return res.status(500).json({ error: 'Error al eliminar waypoints del tour' });
+            }
+            
+            // Eliminar la ruta completamente (el histórico se mantiene intacto)
             db.run('DELETE FROM tour_routes WHERE id = ?', [tourId], function(err) {
                 if (err) {
                     console.error('Error al eliminar tour:', err);
@@ -1755,12 +1765,18 @@ app.delete('/api/admin/tours/:id', requireAdmin, (req, res) => {
                     return res.status(404).json({ error: 'Tour no encontrado' });
                 }
                 
+                const message = hasHistory 
+                    ? `Tour eliminado exitosamente. El historial de ${result.count} tour(s) realizado(s) se mantiene para estadísticas.`
+                    : 'Tour eliminado exitosamente.';
+                
                 res.json({
                     success: true,
-                    message: 'Tour eliminado exitosamente'
+                    message: message,
+                    historyPreserved: hasHistory,
+                    historyCount: result.count
                 });
             });
-        }
+        });
     });
 });
 
@@ -2158,6 +2174,58 @@ app.get('/api/robot/pose', requireAuth, (req, res) => {
         res.status(500).json({
             error: 'Error al obtener posición del robot',
             message: error.message
+        });
+    }
+});
+
+// API para hacer que el robot hable
+app.post('/api/robot/speak', requireAuth, (req, res) => {
+    if (!robotManager.connected) {
+        return res.status(503).json({ 
+            error: 'Robot no conectado'
+        });
+    }
+
+    const { text } = req.body;
+
+    // Validar que se proporcione texto
+    if (!text || typeof text !== 'string' || text.trim().length === 0) {
+        return res.status(400).json({
+            error: 'Se requiere un texto válido para que el robot hable'
+        });
+    }
+
+    // Limitar longitud del texto (máximo 500 caracteres)
+    const cleanText = text.trim();
+    if (cleanText.length > 500) {
+        return res.status(400).json({
+            error: 'El texto es demasiado largo (máximo 500 caracteres)'
+        });
+    }
+
+    try {
+        // Enviar mensaje al tópico /voice del robot
+        const voiceMessage = {
+            data: cleanText
+        };
+
+        robotManager.publish('/voice', 'std_msgs/String', voiceMessage);
+        console.log(`🗣️ Mensaje de voz enviado al robot: "${cleanText.substring(0, 50)}${cleanText.length > 50 ? '...' : ''}"`);
+
+        res.json({
+            success: true,
+            message: 'Comando de voz enviado al robot',
+            text: cleanText,
+            topic: '/voice',
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Error enviando comando de voz al robot:', error);
+        res.status(500).json({
+            error: 'Error al enviar comando de voz al robot',
+            message: error.message,
+            details: 'Verifica que el robot esté conectado y el tópico /voice esté disponible'
         });
     }
 });

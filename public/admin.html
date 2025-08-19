@@ -8,6 +8,7 @@
     <link rel="icon" type="image/x-icon" href="icon.ico">
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/roslib@1.3.0/build/roslib.min.js"></script>
+    <script src="https://unpkg.com/three@0.145.0/build/three.min.js"></script>
     <style>
         /* Estilos para menú móvil de usuario y autenticación */
         .nav-mobile-user,
@@ -1063,7 +1064,6 @@
 
             <div class="tours-controls" style="margin-bottom: 20px;">
                 <button id="createTourBtn" class="btn btn-primary">Crear Nuevo Tour</button>
-                <button id="refreshTours" class="btn btn-secondary" style="margin-left: 10px;">Actualizar</button>
             </div>
 
             <table class="routes-table">
@@ -1098,7 +1098,7 @@
                     <span class="close" id="closeMapModal">&times;</span>
                 </div>
                 <div class="map-container" style="display: flex; height: calc(100% - 120px);">
-                    <!-- Panel de control del mapa -->
+                    <!-- Panel de control del mapa rotado 180 grados -->
                     <div class="map-controls" style="width: 300px; padding: 20px; border-right: 1px solid #ddd; background: #f8f9fa; overflow-y: auto;">
                         <div class="connection-status" id="mapConnectionStatus">
                             <div class="status-indicator" id="mapStatusIndicator" style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dc3545; margin-right: 8px;"></div>
@@ -1689,7 +1689,13 @@
                     <td>${formatDate(tour.created_at)}</td>
                     <td>
                         <button onclick="editTour(${tour.id})" class="btn btn-sm btn-outline">Editar</button>
-                        <button onclick="deleteTour(${tour.id}, '${tour.name}')" class="btn btn-sm btn-danger">Eliminar</button>
+                        <button onclick="deleteTour(${tour.id}, '${tour.name}')" 
+                                class="btn btn-sm btn-danger"
+                                title="${tour.history_count > 0 ? 
+                                    'Este tour será eliminado completamente, pero su historial de ' + tour.history_count + ' realización(es) se mantendrá para estadísticas.' : 
+                                    'Este tour será eliminado completamente.'}">
+                            Eliminar
+                        </button>
                     </td>
                 </tr>
             `).join('');
@@ -1701,7 +1707,6 @@
             const createBtn = document.getElementById('createTourBtn');
             const closeBtn = document.getElementById('closeTourModal');
             const cancelBtn = document.getElementById('cancelTour');
-            const refreshBtn = document.getElementById('refreshTours');
             const form = document.getElementById('tourForm');
 
             // Configurar eventos de waypoints
@@ -1725,9 +1730,6 @@
                     modal.style.display = 'none';
                 }
             });
-
-            // Refrescar tours
-            refreshBtn.addEventListener('click', loadTours);
 
             // Manejar envío del formulario
             form.addEventListener('submit', async (e) => {
@@ -1852,7 +1854,17 @@
 
         // Eliminar tour
         async function deleteTour(tourId, tourName) {
-            if (!confirm(`¿Estás seguro de que quieres eliminar el tour "${tourName}"?\n\nEsta acción no se puede deshacer.`)) {
+            const confirmMessage = `¿Estás seguro de que quieres eliminar el tour "${tourName}"?
+
+⚠️  INFORMACIÓN IMPORTANTE:
+• La ruta será eliminada COMPLETAMENTE de la base de datos
+• Se eliminarán todos los waypoints asociados
+• El histórico de tours realizados SE MANTENDRÁ para estadísticas
+• Los conteos de tours completados no se perderán
+
+Esta acción no se puede deshacer.`;
+
+            if (!confirm(confirmMessage)) {
                 return;
             }
 
@@ -1862,8 +1874,11 @@
                 });
 
                 if (response.ok) {
+                    const result = await response.json();
                     showMessage('Tour eliminado exitosamente', 'success');
+                    
                     await loadTours();
+                    await loadStats();
                 } else {
                     const error = await response.json();
                     showMessage(error.error || 'Error al eliminar el tour', 'error');
@@ -2387,13 +2402,17 @@
             
             const info = mapData.info;
             
-            // Convertir de canvas a coordenadas del mapa
+            // Convertir de canvas a coordenadas del mapa (píxeles del mapa)
             const mapX = (canvasX - mapOffset.x) / mapScale;
             const mapY = (canvasY - mapOffset.y) / mapScale;
             
-            // Convertir de coordenadas del mapa a coordenadas del mundo
+            // CORRECCIÓN: Invertir Y para coincidir con el sistema de coordenadas ROS
+            // Ya que en drawOccupancyGrid volteamos la imagen verticalmente
+            const correctedMapY = info.height - 1 - mapY;
+            
+            // Convertir de coordenadas del mapa a coordenadas del mundo (metros)
             const worldX = info.origin.position.x + mapX * info.resolution;
-            const worldY = info.origin.position.y + (info.height - mapY) * info.resolution;
+            const worldY = info.origin.position.y + correctedMapY * info.resolution;
             
             return { x: worldX, y: worldY };
         }
@@ -2404,13 +2423,16 @@
             
             const info = mapData.info;
             
-            // Convertir de coordenadas del mundo a coordenadas del mapa
+            // Convertir de coordenadas del mundo (metros) a coordenadas del mapa (píxeles)
             const mapX = (worldX - info.origin.position.x) / info.resolution;
-            const mapY = info.height - (worldY - info.origin.position.y) / info.resolution;
+            const mapY = (worldY - info.origin.position.y) / info.resolution;
+            
+            // CORRECCIÓN: Invertir Y para coincidir con el volteo que hacemos en drawOccupancyGrid
+            const correctedMapY = info.height - 1 - mapY;
             
             // Convertir de coordenadas del mapa a canvas
             const canvasX = mapX * mapScale + mapOffset.x;
-            const canvasY = mapY * mapScale + mapOffset.y;
+            const canvasY = correctedMapY * mapScale + mapOffset.y;
             
             return { x: canvasX, y: canvasY };
         }
@@ -2453,27 +2475,37 @@
             const imageData = mapCtx.createImageData(info.width, info.height);
             const pixels = imageData.data;
             
-            for (let i = 0; i < data.length; i++) {
-                const value = data[i];
-                const pixelIndex = i * 4;
-                
-                if (value === -1) {
-                    // Desconocido - gris
-                    pixels[pixelIndex] = 128;     // R
-                    pixels[pixelIndex + 1] = 128; // G
-                    pixels[pixelIndex + 2] = 128; // B
-                } else if (value === 0) {
-                    // Libre - blanco
-                    pixels[pixelIndex] = 255;     // R
-                    pixels[pixelIndex + 1] = 255; // G
-                    pixels[pixelIndex + 2] = 255; // B
-                } else {
-                    // Ocupado - negro
-                    pixels[pixelIndex] = 0;       // R
-                    pixels[pixelIndex + 1] = 0;   // G
-                    pixels[pixelIndex + 2] = 0;   // B
+            // Corregir la orientación del mapa - ROS usa coordenadas diferentes al canvas
+            for (let y = 0; y < info.height; y++) {
+                for (let x = 0; x < info.width; x++) {
+                    // Índice original en el array de datos ROS (fila mayor)
+                    const rosIndex = y * info.width + x;
+                    
+                    // Índice corregido para el canvas (voltear verticalmente)
+                    const canvasY = info.height - 1 - y;
+                    const canvasIndex = canvasY * info.width + x;
+                    const pixelIndex = canvasIndex * 4;
+                    
+                    const value = data[rosIndex];
+                    
+                    if (value === -1) {
+                        // Desconocido - gris
+                        pixels[pixelIndex] = 128;     // R
+                        pixels[pixelIndex + 1] = 128; // G
+                        pixels[pixelIndex + 2] = 128; // B
+                    } else if (value === 0) {
+                        // Libre - blanco
+                        pixels[pixelIndex] = 255;     // R
+                        pixels[pixelIndex + 1] = 255; // G
+                        pixels[pixelIndex + 2] = 255; // B
+                    } else {
+                        // Ocupado - negro
+                        pixels[pixelIndex] = 0;       // R
+                        pixels[pixelIndex + 1] = 0;   // G
+                        pixels[pixelIndex + 2] = 0;   // B
+                    }
+                    pixels[pixelIndex + 3] = 255; // Alpha
                 }
-                pixels[pixelIndex + 3] = 255; // Alpha
             }
             
             // Crear canvas temporal para escalar
@@ -2515,8 +2547,9 @@
                                    1 - 2 * (orientation.y * orientation.y + orientation.z * orientation.z));
             
             const arrowLength = 15 * mapScale;
+            // CORRECCIÓN: Ajustar la dirección de la flecha para coincidir con el sistema corregido
             const arrowX = canvasPos.x + Math.cos(yaw) * arrowLength;
-            const arrowY = canvasPos.y - Math.sin(yaw) * arrowLength; // Invertir Y
+            const arrowY = canvasPos.y + Math.sin(yaw) * arrowLength; // Cambio: removido el signo negativo
             
             mapCtx.beginPath();
             mapCtx.moveTo(canvasPos.x, canvasPos.y);
