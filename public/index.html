@@ -342,16 +342,11 @@
                     </div>
                     <div class="step">
                         <div class="step-number">2</div>
-                        <h3>Reserva tu Horario</h3>
-                        <p>Escoge el día y la hora que mejor te convenga. Los tours están disponibles todos los días.</p>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">3</div>
-                        <h3>Conoce a tu Guía</h3>
+                        <h3>Introduce el PIN</h3>
                         <p>Tu guía robótico personal te estará esperando en la entrada del museo con toda la información.</p>
                     </div>
                     <div class="step">
-                        <div class="step-number">4</div>
+                        <div class="step-number">3</div>
                         <h3>Disfruta la Experiencia</h3>
                         <p>Sumérgete en el arte con explicaciones detalladas, curiosidades y una experiencia única.</p>
                     </div>
@@ -519,32 +514,52 @@
                 navUserAvatar.src = user.profile_picture || '/favicon.ico';
             }
             
-            // Mostrar enlaces de admin si es administrador
+            // Mostrar enlaces según el rol del usuario
+            const navStats = document.getElementById('navStats');
+            
             if (user.role === 'admin') {
+                // Admin: todos los botones visibles
                 if (navRobotControl) navRobotControl.style.display = 'block';
                 if (navAdmin) navAdmin.style.display = 'block';
-                const navStats = document.getElementById('navStats');
                 if (navStats) navStats.style.display = 'block';
+            } else if (user.role === 'tecnico') {
+                // Técnico: Inicio, Tours, Cómo Funciona, Control Robot
+                if (navRobotControl) navRobotControl.style.display = 'block';
+                if (navAdmin) navAdmin.style.display = 'none';
+                if (navStats) navStats.style.display = 'none';
+                console.log('Rol técnico: Control Robot habilitado, botones admin ocultos');
+            } else {
+                // Usuario normal: solo Inicio, Tours, Cómo Funciona
+                if (navRobotControl) navRobotControl.style.display = 'none';
+                if (navAdmin) navAdmin.style.display = 'none';
+                if (navStats) navStats.style.display = 'none';
+                console.log('Rol usuario normal: Solo menú básico disponible');
             }
             
             console.log('Usuario logueado:', user.username, 'Rol:', user.role);
             
-            // Manejar botones específicos de la página
+            // Manejar botones específicos de la página según el rol
             const adminBtn = document.getElementById('adminBtn');
             const controlRobotBtn = document.querySelector('a[href="/robot"]');
             
             if (user.role === 'admin') {
+                // Admin: todos los botones disponibles
                 if (adminBtn) {
                     adminBtn.style.display = 'inline-block';
                     adminBtn.onclick = () => window.location.href = '/admin';
                 }
-                // Mostrar botón de control de robot solo para administradores
+                if (controlRobotBtn) {
+                    controlRobotBtn.style.display = 'inline-block';
+                }
+            } else if (user.role === 'tecnico') {
+                // Técnico: solo control de robot
+                if (adminBtn) adminBtn.style.display = 'none';
                 if (controlRobotBtn) {
                     controlRobotBtn.style.display = 'inline-block';
                 }
             } else {
+                // Usuario normal: ningún botón especial
                 if (adminBtn) adminBtn.style.display = 'none';
-                // Ocultar botón de control de robot para usuarios no administradores
                 if (controlRobotBtn) {
                     controlRobotBtn.style.display = 'none';
                 }
@@ -929,6 +944,12 @@
             return stars;
         }
 
+        // Cargar script de navegación y actualizar al cargar la página
+        document.addEventListener('DOMContentLoaded', async () => {
+            await updateNavigationByRole();
+        });
+
     </script>
+    <script src="navigation.js"></script>
 </body>
 </html>

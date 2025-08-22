@@ -589,6 +589,11 @@
             color: white;
         }
 
+        .role-tecnico {
+            background: #fd7e14;
+            color: white;
+        }
+
         .role-user {
             background: #28a745;
             color: white;
@@ -1382,6 +1387,12 @@
                 if (response.ok) {
                     const userData = await response.json();
                     if (userData.role !== 'admin') {
+                        // Si es técnico, redirigir al control del robot
+                        if (userData.role === 'tecnico') {
+                            window.location.href = '/robot';
+                            return;
+                        }
+                        // Si no es admin ni técnico, ir al inicio
                         window.location.href = '/';
                         return;
                     }
@@ -1496,9 +1507,58 @@
 
         // Cambiar rol de usuario
         async function changeUserRole(userId, currentRole) {
-            const newRole = currentRole === 'admin' ? 'user' : 'admin';
+            // Crear opciones de roles
+            let roleOptions = '';
+            const roles = [
+                { value: 'user', label: 'Usuario' },
+                { value: 'tecnico', label: 'Técnico' },
+                { value: 'admin', label: 'Administrador' }
+            ];
 
-            if (!confirm(`¿Cambiar el rol de este usuario a "${newRole}"?`)) {
+            roles.forEach(role => {
+                const selected = role.value === currentRole ? 'selected' : '';
+                roleOptions += `<option value="${role.value}" ${selected}>${role.label}</option>`;
+            });
+
+            // Crear modal para seleccionar rol
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.style.display = 'block';
+            modal.style.zIndex = '2000';
+
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 400px; text-align: center;">
+                    <h2>Cambiar Rol de Usuario</h2>
+                    <p>Selecciona el nuevo rol para este usuario:</p>
+                    <select id="newRoleSelect" style="width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ddd; border-radius: 5px;">
+                        ${roleOptions}
+                    </select>
+                    <div style="margin-top: 20px;">
+                        <button onclick="this.closest('.modal').remove()" class="btn btn-secondary" style="margin-right: 10px;">Cancelar</button>
+                        <button onclick="confirmRoleChange(${userId}, '${currentRole}')" class="btn btn-primary">Cambiar Rol</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        // Confirmar cambio de rol
+        async function confirmRoleChange(userId, currentRole) {
+            const newRole = document.getElementById('newRoleSelect').value;
+            
+            if (newRole === currentRole) {
+                document.querySelector('.modal').remove();
+                return;
+            }
+
+            const roleNames = {
+                'user': 'Usuario',
+                'tecnico': 'Técnico', 
+                'admin': 'Administrador'
+            };
+
+            if (!confirm(`¿Cambiar el rol de este usuario a "${roleNames[newRole]}"?`)) {
                 return;
             }
 
@@ -1513,6 +1573,7 @@
                     showMessage('Rol actualizado exitosamente', 'success');
                     await loadUsers();
                     await loadStats();
+                    document.querySelector('.modal').remove();
                 } else {
                     const error = await response.json();
                     showMessage(error.error || 'Error al cambiar rol', 'error');

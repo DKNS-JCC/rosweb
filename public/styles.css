@@ -75,7 +75,7 @@ body {
     text-decoration: none;
     color: #333;
     font-weight: 500;
-    padding: 10px 15px;
+    padding: 10px;
     border-radius: 8px;
     transition: all 0.3s ease;
     position: relative;
@@ -667,7 +667,7 @@ body {
 
 .hero-section {
     background: linear-gradient(135deg, #145db1 0%, #c2b1d3 100%);
-    min-height: 100vh;
+    min-height: 70vh;
     display: flex;
     align-items: center;
     justify-content: center;

@@ -175,6 +175,33 @@ db.get('SELECT * FROM users WHERE role = ?', ['admin'], async (err, admin) => {
     }
 });
 
+// Crear usuario técnico por defecto si no existe
+db.get('SELECT * FROM users WHERE role = ?', ['tecnico'], async (err, tecnico) => {
+    if (err) {
+        console.error('Error al verificar técnico:', err);
+        return;
+    }
+    
+    if (!tecnico) {
+        try {
+            const bcrypt = require('bcrypt');
+            const tecnicoPassword = await bcrypt.hash('tecnico123', 10);
+            db.run('INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', 
+                ['tecnico', 'tecnico@arttec.com', tecnicoPassword, 'tecnico'], 
+                function(err) {
+                    if (err) {
+                        console.error('Error al crear técnico:', err);
+                    } else {
+                        console.log('✅ Usuario técnico creado - User: tecnico, Pass: tecnico123');
+                    }
+                }
+            );
+        } catch (error) {
+            console.error('Error al crear contraseña técnico:', error);
+        }
+    }
+});
+
 // Crear tabla de rutas de tours
 db.run(`CREATE TABLE IF NOT EXISTS tour_routes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -306,6 +333,58 @@ function requireAdmin(req, res, next) {
     });
 }
 
+// Middleware para verificar permisos de técnico o administrador
+function requireTechOrAdmin(req, res, next) {
+    if (!req.session.userId) {
+        if (req.path.startsWith('/api/')) {
+            return res.status(401).json({ error: 'No autorizado' });
+        }
+        return res.redirect('/login');
+    }
+    
+    // Verificar que el usuario sea técnico o admin
+    db.get('SELECT role FROM users WHERE id = ?', [req.session.userId], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
+        
+        if (!user || (user.role !== 'admin' && user.role !== 'tecnico')) {
+            if (req.path.startsWith('/api/')) {
+                return res.status(403).json({ error: 'Acceso denegado - Se requieren permisos de técnico o administrador' });
+            }
+            return res.status(403).send('Acceso denegado - Se requieren permisos de técnico o administrador');
+        }
+        
+        next();
+    });
+}
+
+// Middleware específico solo para administradores (excluye técnicos)
+function requireAdminOnly(req, res, next) {
+    if (!req.session.userId) {
+        if (req.path.startsWith('/api/')) {
+            return res.status(401).json({ error: 'No autorizado' });
+        }
+        return res.redirect('/login');
+    }
+    
+    // Verificar que el usuario sea admin (excluyendo técnico)
+    db.get('SELECT role FROM users WHERE id = ?', [req.session.userId], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error en la base de datos' });
+        }
+        
+        if (!user || user.role !== 'admin') {
+            if (req.path.startsWith('/api/')) {
+                return res.status(403).json({ error: 'Acceso denegado - Se requieren permisos exclusivos de administrador' });
+            }
+            return res.status(403).send('Acceso denegado - Se requieren permisos exclusivos de administrador');
+        }
+        
+        next();
+    });
+}
+
 // Rutas
 
 // Página principal (índice)
@@ -325,23 +404,23 @@ app.get('/register', (req, res) => {
 
 // ========== RUTAS ADMINISTRATIVAS (OCULTAS) ==========
 
-// Panel de administración (ruta oculta)
-app.get('/admin', requireAdmin, (req, res) => {
+// Panel de administración (solo admin - gestión de usuarios y protección de datos)
+app.get('/admin', requireAdminOnly, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// Página de estadísticas (solo admin)
-app.get('/stats', requireAdmin, (req, res) => {
+// Página de estadísticas (solo admin - protección de datos)
+app.get('/stats', requireAdminOnly, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'stats.html'));
 });
 
-// Panel de notificaciones (solo admin)
-app.get('/notifications', requireAdmin, (req, res) => {
+// Panel de notificaciones (acceso para técnicos y admins)
+app.get('/notifications', requireTechOrAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'notifications.html'));
 });
 
 // API para obtener todas las rutas (solo admin)
-app.get('/api/admin/routes', requireAdmin, (req, res) => {
+app.get('/api/admin/routes', requireTechOrAdmin, (req, res) => {
     db.all('SELECT * FROM tour_routes ORDER BY created_at DESC', (err, routes) => {
         if (err) {
             return res.status(500).json({ error: 'Error al obtener rutas' });
@@ -351,7 +430,7 @@ app.get('/api/admin/routes', requireAdmin, (req, res) => {
 });
 
 // API para crear nueva ruta (solo admin)
-app.post('/api/admin/routes', requireAdmin, (req, res) => {
+app.post('/api/admin/routes', requireTechOrAdmin, (req, res) => {
     const { name, description, duration, languages, icon, price } = req.body;
     
     if (!name || !duration) {
@@ -387,7 +466,7 @@ app.post('/api/admin/routes', requireAdmin, (req, res) => {
 });
 
 // API para eliminar ruta (solo admin)
-app.delete('/api/admin/routes/:id', requireAdmin, (req, res) => {
+app.delete('/api/admin/routes/:id', requireTechOrAdmin, (req, res) => {
     const routeId = req.params.id;
     
     // Obtener información de la ruta antes de eliminarla
@@ -428,8 +507,8 @@ app.delete('/api/admin/routes/:id', requireAdmin, (req, res) => {
     });
 });
 
-// API para obtener estadísticas generales del admin
-app.get('/api/admin/stats', requireAdmin, (req, res) => {
+// API para obtener estadísticas generales del admin (Solo Administradores)
+app.get('/api/admin/stats', requireAdminOnly, (req, res) => {
     const stats = {};
     
     // Estadísticas de usuarios
@@ -497,8 +576,8 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
     });
 });
 
-// API para obtener estadísticas detalladas por período
-app.get('/api/admin/stats/monthly', requireAdmin, (req, res) => {
+// API para obtener estadísticas detalladas por período (Solo Administradores)
+app.get('/api/admin/stats/monthly', requireAdminOnly, (req, res) => {
     const queries = {
         // Registros de usuarios por mes
         userRegistrations: `
@@ -567,7 +646,7 @@ app.get('/api/admin/stats/monthly', requireAdmin, (req, res) => {
 });
 
 // API para obtener análisis de rendimiento de rutas
-app.get('/api/admin/stats/routes-performance', requireAdmin, (req, res) => {
+app.get('/api/admin/stats/routes-performance', requireAdminOnly, (req, res) => {
     const query = `
         SELECT 
             tr.id,
@@ -600,7 +679,7 @@ app.get('/api/admin/stats/routes-performance', requireAdmin, (req, res) => {
 });
 
 // API para obtener análisis de comportamiento de usuarios
-app.get('/api/admin/stats/user-behavior', requireAdmin, (req, res) => {
+app.get('/api/admin/stats/user-behavior', requireAdminOnly, (req, res) => {
     const queries = {
         // Distribución de usuarios por número de tours completados
         userDistribution: `
@@ -691,7 +770,7 @@ app.get('/api/admin/stats/user-behavior', requireAdmin, (req, res) => {
 });
 
 // API para obtener análisis de satisfacción y ratings
-app.get('/api/admin/stats/satisfaction', requireAdmin, (req, res) => {
+app.get('/api/admin/stats/satisfaction', requireAdminOnly, (req, res) => {
     const queries = {
         // Distribución de ratings
         ratingDistribution: `
@@ -760,7 +839,7 @@ app.get('/api/admin/stats/satisfaction', requireAdmin, (req, res) => {
 });
 
 // API para obtener métricas de tiempo real y tendencias
-app.get('/api/admin/stats/realtime', requireAdmin, (req, res) => {
+app.get('/api/admin/stats/realtime', requireAdminOnly, (req, res) => {
     const queries = {
         // Actividad hoy
         todayActivity: `
@@ -834,8 +913,8 @@ app.get('/api/admin/stats/realtime', requireAdmin, (req, res) => {
     });
 });
 
-// API para obtener lista de usuarios
-app.get('/api/admin/users', requireAdmin, (req, res) => {
+// API para obtener lista de usuarios (Solo Administradores)
+app.get('/api/admin/users', requireAdminOnly, (req, res) => {
     const query = `
         SELECT u.id, u.username, u.email, u.role, u.created_at,
                COUNT(th.id) as tours_completed,
@@ -855,7 +934,7 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
 });
 
 // API para obtener historial de tours de un usuario
-app.get('/api/admin/users/:id/tours', requireAdmin, (req, res) => {
+app.get('/api/admin/users/:id/tours', requireAdminOnly, (req, res) => {
     const userId = req.params.id;
     
     const query = `
@@ -875,11 +954,11 @@ app.get('/api/admin/users/:id/tours', requireAdmin, (req, res) => {
 });
 
 // API para cambiar rol de usuario
-app.put('/api/admin/users/:id/role', requireAdmin, (req, res) => {
+app.put('/api/admin/users/:id/role', requireAdminOnly, (req, res) => {
     const userId = req.params.id;
     const { role } = req.body;
     
-    if (!['user', 'admin'].includes(role)) {
+    if (!['user', 'tecnico', 'admin'].includes(role)) {
         return res.status(400).json({ error: 'Rol inválido' });
     }
     
@@ -897,7 +976,7 @@ app.put('/api/admin/users/:id/role', requireAdmin, (req, res) => {
 });
 
 // API para eliminar usuario
-app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+app.delete('/api/admin/users/:id', requireAdminOnly, (req, res) => {
     const userId = req.params.id;
     
     // No permitir eliminar el propio usuario admin
@@ -944,7 +1023,7 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
 });
 
 // API para resetear contraseña de usuario
-app.put('/api/admin/users/:id/password', requireAdmin, async (req, res) => {
+app.put('/api/admin/users/:id/password', requireAdminOnly, async (req, res) => {
     const userId = req.params.id;
     const { newPassword } = req.body;
     
@@ -2057,7 +2136,7 @@ app.get('/api/tours/:id/waypoints', async (req, res) => {
 });
 
 // API para obtener todos los tours (admin)
-app.get('/api/admin/tours', requireAdmin, (req, res) => {
+app.get('/api/admin/tours', requireTechOrAdmin, (req, res) => {
     const query = `
         SELECT 
             tr.*,
@@ -2106,7 +2185,7 @@ app.get('/api/admin/tours', requireAdmin, (req, res) => {
 });
 
 // API para obtener un tour específico (admin)
-app.get('/api/admin/tours/:id', requireAdmin, (req, res) => {
+app.get('/api/admin/tours/:id', requireTechOrAdmin, (req, res) => {
     const tourId = req.params.id;
     
     const query = `
@@ -2136,7 +2215,7 @@ app.get('/api/admin/tours/:id', requireAdmin, (req, res) => {
 });
 
 // API para crear un nuevo tour (admin)
-app.post('/api/admin/tours', requireAdmin, (req, res) => {
+app.post('/api/admin/tours', requireTechOrAdmin, (req, res) => {
     const { name, description, duration, languages, icon, price, status } = req.body;
     const createdBy = req.session.userId;
     
@@ -2172,7 +2251,7 @@ app.post('/api/admin/tours', requireAdmin, (req, res) => {
 });
 
 // API para actualizar un tour (admin)
-app.put('/api/admin/tours/:id', requireAdmin, (req, res) => {
+app.put('/api/admin/tours/:id', requireTechOrAdmin, (req, res) => {
     const tourId = req.params.id;
     const { name, description, duration, languages, icon, price, status } = req.body;
     
@@ -2212,7 +2291,7 @@ app.put('/api/admin/tours/:id', requireAdmin, (req, res) => {
 });
 
 // API para eliminar un tour (admin)
-app.delete('/api/admin/tours/:id', requireAdmin, (req, res) => {
+app.delete('/api/admin/tours/:id', requireTechOrAdmin, (req, res) => {
     const tourId = req.params.id;
     
     // Verificar si hay historial de tours para mostrar información relevante
@@ -2260,7 +2339,7 @@ app.delete('/api/admin/tours/:id', requireAdmin, (req, res) => {
 // ===== API ENDPOINTS PARA WAYPOINTS =====
 
 // API para obtener waypoints de un tour
-app.get('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
+app.get('/api/admin/tours/:id/waypoints', requireTechOrAdmin, (req, res) => {
     const tourId = req.params.id;
     
     const query = `
@@ -2296,7 +2375,7 @@ app.get('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
 });
 
 // API para guardar waypoints de un tour
-app.post('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
+app.post('/api/admin/tours/:id/waypoints', requireTechOrAdmin, (req, res) => {
     const tourId = req.params.id;
     const { waypoints } = req.body;
     
@@ -2429,7 +2508,7 @@ app.post('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
 });
 
 // API para eliminar todos los waypoints de un tour
-app.delete('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
+app.delete('/api/admin/tours/:id/waypoints', requireTechOrAdmin, (req, res) => {
     const tourId = req.params.id;
     
     db.run('DELETE FROM tour_waypoints WHERE tour_route_id = ?', [tourId], function(err) {
@@ -2447,7 +2526,7 @@ app.delete('/api/admin/tours/:id/waypoints', requireAdmin, (req, res) => {
 });
 
 // API para obtener reseñas de un tour específico
-app.get('/api/admin/tours/:id/reviews', requireAdmin, (req, res) => {
+app.get('/api/admin/tours/:id/reviews', requireTechOrAdmin, (req, res) => {
     const tourId = req.params.id;
     
     const query = `
@@ -2470,8 +2549,8 @@ app.get('/api/admin/tours/:id/reviews', requireAdmin, (req, res) => {
 
 // ===== RUTAS DEL ROBOT =====
 
-// Servir la página de control del robot
-app.get('/robot', requireAuth, (req, res) => {
+// Servir la página de control del robot (acceso para técnicos y admins)
+app.get('/robot', requireTechOrAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'robot.html'));
 });
 
@@ -2827,7 +2906,7 @@ app.ws('/api/robot/map-stream', (ws, req) => {
 });
 
 // API para historial de comandos del robot (solo admin)
-app.get('/api/admin/robot/commands', requireAuth, requireAdmin, (req, res) => {
+app.get('/api/admin/robot/commands', requireAuth, requireTechOrAdmin, (req, res) => {
     const query = `
         SELECT rc.*, u.username 
         FROM robot_commands rc
@@ -2880,7 +2959,7 @@ app.post('/api/tour/abandon', requireAuth, (req, res) => {
 });
 
 // API para probar el sistema de notificaciones (solo admin)
-app.post('/api/admin/test-notification', requireAdmin, (req, res) => {
+app.post('/api/admin/test-notification', requireTechOrAdmin, (req, res) => {
     const { type, testData } = req.body;
     
     if (!type) {
@@ -2968,7 +3047,7 @@ app.post('/api/admin/test-notification', requireAdmin, (req, res) => {
 });
 
 // API para obtener estado del sistema de notificaciones (solo admin)
-app.get('/api/admin/notification-status', requireAdmin, async (req, res) => {
+app.get('/api/admin/notification-status', requireTechOrAdmin, async (req, res) => {
     try {
         const status = await emailNotifier.testConnection();
         res.json({
@@ -2986,7 +3065,7 @@ app.get('/api/admin/notification-status', requireAdmin, async (req, res) => {
 });
 
 // API para activar/desactivar notificaciones (solo admin)
-app.post('/api/admin/notifications/toggle', requireAdmin, (req, res) => {
+app.post('/api/admin/notifications/toggle', requireTechOrAdmin, (req, res) => {
     const { enabled } = req.body;
     
     if (enabled === true) {

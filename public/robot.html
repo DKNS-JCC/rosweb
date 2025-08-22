@@ -1209,6 +1209,71 @@
             navMobileUser.forEach(element => {
                 if (element) element.style.display = 'block';
             });
+
+            // Control de visibilidad de botones según el rol del usuario
+            const navAdmin = document.getElementById('navAdmin');
+            const navStats = document.getElementById('navStats');
+            const navNotifications = document.getElementById('navNotifications');
+            const navRobotControl = document.getElementById('navRobotControl');
+            
+            if (userData.role === 'admin') {
+                // Admin: todos los botones visibles
+                if (navRobotControl) {
+                    navRobotControl.style.display = 'block';
+                    navRobotControl.parentElement.style.display = 'block';
+                }
+                if (navAdmin) {
+                    navAdmin.style.display = 'block';
+                    navAdmin.parentElement.style.display = 'block';
+                }
+                if (navStats) {
+                    navStats.style.display = 'block';
+                    navStats.parentElement.style.display = 'block';
+                }
+                if (navNotifications) {
+                    navNotifications.style.display = 'block';
+                    navNotifications.parentElement.style.display = 'block';
+                }
+                addLog('Acceso de administrador: Todos los botones disponibles');
+            } else if (userData.role === 'tecnico') {
+                // Técnico: Inicio, Tours, Cómo Funciona, Control Robot
+                if (navRobotControl) {
+                    navRobotControl.style.display = 'block';
+                    navRobotControl.parentElement.style.display = 'block';
+                }
+                if (navAdmin) {
+                    navAdmin.style.display = 'none';
+                    navAdmin.parentElement.style.display = 'none';
+                }
+                if (navStats) {
+                    navStats.style.display = 'none';
+                    navStats.parentElement.style.display = 'none';
+                }
+                if (navNotifications) {
+                    navNotifications.style.display = 'none';
+                    navNotifications.parentElement.style.display = 'none';
+                }
+                addLog('Acceso de técnico: Control Robot disponible, botones admin ocultos');
+            } else {
+                // Usuario normal: solo Inicio, Tours, Cómo Funciona
+                if (navRobotControl) {
+                    navRobotControl.style.display = 'none';
+                    navRobotControl.parentElement.style.display = 'none';
+                }
+                if (navAdmin) {
+                    navAdmin.style.display = 'none';
+                    navAdmin.parentElement.style.display = 'none';
+                }
+                if (navStats) {
+                    navStats.style.display = 'none';
+                    navStats.parentElement.style.display = 'none';
+                }
+                if (navNotifications) {
+                    navNotifications.style.display = 'none';
+                    navNotifications.parentElement.style.display = 'none';
+                }
+                addLog('Acceso de usuario normal: Solo menú básico disponible');
+            }
         }
 
         // Función unificada de logout
@@ -2497,5 +2562,6 @@
         });
 
     </script>
+    <script src="navigation.js"></script>
 </body>
 </html>

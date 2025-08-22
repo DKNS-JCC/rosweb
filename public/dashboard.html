@@ -974,9 +974,6 @@
                 <li class="nav-item">
                     <a href="/stats" class="nav-link" id="navStats" style="display: none;">Estadísticas</a>
                 </li>
-                <li class="nav-item">
-                    <a href="/dashboard.html" class="nav-link" id="navDashboard">Mi Perfil</a>
-                </li>
             </ul>
             
             <!-- Sección de usuario -->
@@ -1284,11 +1281,25 @@
             // Actualizar foto de perfil en navegación
             updateNavProfilePicture(user.profile_picture || '/favicon.ico');
             
-            // Mostrar enlaces de admin si es administrador
+            // Control de visibilidad de botones según el rol del usuario
             if (user.role === 'admin') {
+                // Admin: todos los botones visibles
                 if (navRobotControl) navRobotControl.style.display = 'block';
                 if (navAdmin) navAdmin.style.display = 'block';
                 if (navStats) navStats.style.display = 'block';
+                console.log('Dashboard - Rol admin: Todos los botones disponibles');
+            } else if (user.role === 'tecnico') {
+                // Técnico: Inicio, Tours, Cómo Funciona, Control Robot
+                if (navRobotControl) navRobotControl.style.display = 'block';
+                if (navAdmin) navAdmin.style.display = 'none';
+                if (navStats) navStats.style.display = 'none';
+                console.log('Dashboard - Rol técnico: Control Robot disponible, botones admin ocultos');
+            } else {
+                // Usuario normal: solo Inicio, Tours, Cómo Funciona
+                if (navRobotControl) navRobotControl.style.display = 'none';
+                if (navAdmin) navAdmin.style.display = 'none';
+                if (navStats) navStats.style.display = 'none';
+                console.log('Dashboard - Rol usuario normal: Solo menú básico disponible');
             }
         }
 
@@ -2270,5 +2281,6 @@
             headerLogoutBtn.addEventListener('click', performLogout);
         }
     </script>
+    <script src="navigation.js"></script>
 </body>
 </html>
