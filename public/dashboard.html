@@ -971,6 +971,12 @@
                 <li class="nav-item">
                     <a href="/admin" class="nav-link" id="navAdmin" style="display: none;">Administración</a>
                 </li>
+                <li class="nav-item">
+                    <a href="/stats" class="nav-link" id="navStats" style="display: none;">Estadísticas</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/dashboard.html" class="nav-link" id="navDashboard">Mi Perfil</a>
+                </li>
             </ul>
             
             <!-- Sección de usuario -->
@@ -1268,6 +1274,7 @@
             const headerUsername = document.getElementById('headerUsername');
             const navRobotControl = document.getElementById('navRobotControl');
             const navAdmin = document.getElementById('navAdmin');
+            const navStats = document.getElementById('navStats');
             
             if (navAuthMenu) navAuthMenu.style.display = 'none';
             if (navUserMenu) navUserMenu.style.display = 'flex';
@@ -1281,6 +1288,7 @@
             if (user.role === 'admin') {
                 if (navRobotControl) navRobotControl.style.display = 'block';
                 if (navAdmin) navAdmin.style.display = 'block';
+                if (navStats) navStats.style.display = 'block';
             }
         }
 

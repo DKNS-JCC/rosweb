@@ -99,6 +99,7 @@ $RECYCLE.BIN/
 .fuse_hidden*
 .directory
 .Trash-*
+secrets/
 
 # =====================================
 # ARCHIVOS ESPECÍFICOS DEL PROYECTO

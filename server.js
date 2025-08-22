@@ -8,6 +8,7 @@ const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 const robotManager = require('./robotManager');
+const emailNotifier = require('./emailNotifier');
 const expressWs = require('express-ws');
 require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -226,8 +227,6 @@ db.run(`ALTER TABLE tour_waypoints ADD COLUMN name TEXT DEFAULT ''`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
         console.error('Error al añadir columna name a tour_waypoints:', err.message);
     } else {
-        console.log('✅ Columna name añadida/verificada en tour_waypoints');
-        
         // Migrar datos existentes: extraer nombres de descriptions que tengan formato "Nombre: Descripción"
         db.all('SELECT id, description FROM tour_waypoints WHERE name IS NULL OR name = ""', [], (err, waypoints) => {
             if (err) {
@@ -331,6 +330,16 @@ app.get('/admin', requireAdmin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+// Página de estadísticas (solo admin)
+app.get('/stats', requireAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'stats.html'));
+});
+
+// Panel de notificaciones (solo admin)
+app.get('/notifications', requireAdmin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'notifications.html'));
+});
+
 // API para obtener todas las rutas (solo admin)
 app.get('/api/admin/routes', requireAdmin, (req, res) => {
     db.all('SELECT * FROM tour_routes ORDER BY created_at DESC', (err, routes) => {
@@ -356,6 +365,22 @@ app.post('/api/admin/routes', requireAdmin, (req, res) => {
             if (err) {
                 return res.status(500).json({ error: 'Error al crear ruta' });
             }
+            
+            // Obtener información del admin que creó la ruta
+            db.get('SELECT username FROM users WHERE id = ?', [req.session.userId], (err, user) => {
+                if (!err && user) {
+                    // Contar waypoints si hay información adicional
+                    const waypointCount = 0; // Aquí podrías contar waypoints reales si tienes esa información
+                    
+                    // Enviar notificación de ruta creada
+                    emailNotifier.sendNotification('ROUTE_CREATED', {
+                        routeName: name,
+                        waypointCount: waypointCount,
+                        createdBy: user.username
+                    });
+                }
+            });
+            
             res.json({ success: true, routeId: this.lastID });
         }
     );
@@ -365,43 +390,446 @@ app.post('/api/admin/routes', requireAdmin, (req, res) => {
 app.delete('/api/admin/routes/:id', requireAdmin, (req, res) => {
     const routeId = req.params.id;
     
-    db.run('DELETE FROM tour_routes WHERE id = ?', [routeId], function(err) {
+    // Obtener información de la ruta antes de eliminarla
+    db.get('SELECT name FROM tour_routes WHERE id = ?', [routeId], (err, route) => {
         if (err) {
-            return res.status(500).json({ error: 'Error al eliminar ruta' });
+            return res.status(500).json({ error: 'Error al obtener ruta' });
         }
-        res.json({ success: true });
+        
+        if (!route) {
+            return res.status(404).json({ error: 'Ruta no encontrada' });
+        }
+        
+        // Contar tours afectados
+        db.get('SELECT COUNT(*) as count FROM tour_history WHERE tour_route_id = ?', [routeId], (err, countResult) => {
+            const toursCount = countResult ? countResult.count : 0;
+            
+            // Eliminar la ruta
+            db.run('DELETE FROM tour_routes WHERE id = ?', [routeId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Error al eliminar ruta' });
+                }
+                
+                // Obtener información del admin que eliminó la ruta
+                db.get('SELECT username FROM users WHERE id = ?', [req.session.userId], (err, user) => {
+                    if (!err && user) {
+                        // Enviar notificación de ruta eliminada
+                        emailNotifier.sendNotification('ROUTE_DELETED', {
+                            routeName: route.name,
+                            toursCount: toursCount,
+                            deletedBy: user.username
+                        });
+                    }
+                });
+                
+                res.json({ success: true });
+            });
+        });
     });
 });
 
-// API para obtener estadísticas del admin
+// API para obtener estadísticas generales del admin
 app.get('/api/admin/stats', requireAdmin, (req, res) => {
     const stats = {};
     
-    // Contar usuarios
-    db.get('SELECT COUNT(*) as count FROM users', (err, userCount) => {
+    // Estadísticas de usuarios
+    db.get(`
+        SELECT 
+            COUNT(*) as total_users,
+            COUNT(CASE WHEN created_at >= date('now', '-30 days') THEN 1 END) as new_users_month,
+            COUNT(CASE WHEN created_at >= date('now', '-7 days') THEN 1 END) as new_users_week,
+            COUNT(CASE WHEN role = 'admin' THEN 1 END) as admin_users,
+            COUNT(CASE WHEN role = 'user' THEN 1 END) as regular_users
+        FROM users
+    `, (err, userStats) => {
         if (err) {
-            return res.status(500).json({ error: 'Error al obtener estadísticas' });
+            return res.status(500).json({ error: 'Error al obtener estadísticas de usuarios' });
         }
         
-        stats.totalUsers = userCount.count;
+        stats.users = userStats;
         
-        // Contar rutas
-        db.get('SELECT COUNT(*) as count FROM tour_routes', (err, routeCount) => {
+        // Estadísticas de tours
+        db.get(`
+            SELECT 
+                COUNT(*) as total_tours,
+                COUNT(CASE WHEN completed = 1 THEN 1 END) as completed_tours,
+                COUNT(CASE WHEN completed = 0 THEN 1 END) as active_tours,
+                COUNT(CASE WHEN started_at >= date('now', '-30 days') THEN 1 END) as tours_this_month,
+                COUNT(CASE WHEN started_at >= date('now', '-7 days') THEN 1 END) as tours_this_week,
+                AVG(CASE WHEN rating IS NOT NULL THEN rating END) as avg_rating,
+                COUNT(CASE WHEN rating IS NOT NULL THEN 1 END) as total_ratings
+            FROM tour_history
+        `, (err, tourStats) => {
             if (err) {
-                return res.status(500).json({ error: 'Error al obtener estadísticas' });
+                return res.status(500).json({ error: 'Error al obtener estadísticas de tours' });
             }
             
-            stats.totalRoutes = routeCount.count;
+            stats.tours = tourStats;
             
-            // Contar tours realizados
-            db.get('SELECT COUNT(*) as count FROM tour_history', (err, tourCount) => {
+            // Estadísticas de rutas disponibles
+            db.get(`
+                SELECT COUNT(*) as total_routes
+                FROM tour_routes
+            `, (err, routeStats) => {
                 if (err) {
-                    return res.status(500).json({ error: 'Error al obtener estadísticas' });
+                    return res.status(500).json({ error: 'Error al obtener estadísticas de rutas' });
                 }
                 
-                stats.totalToursCompleted = tourCount.count;
-                res.json(stats);
+                stats.routes = routeStats;
+                
+                // Estadísticas de engagement (usuarios que han completado al menos un tour)
+                db.get(`
+                    SELECT 
+                        COUNT(DISTINCT user_id) as active_users,
+                        COUNT(DISTINCT CASE WHEN started_at >= date('now', '-30 days') THEN user_id END) as active_users_month
+                    FROM tour_history
+                    WHERE completed = 1
+                `, (err, engagementStats) => {
+                    if (err) {
+                        return res.status(500).json({ error: 'Error al obtener estadísticas de engagement' });
+                    }
+                    
+                    stats.engagement = engagementStats;
+                    res.json(stats);
+                });
             });
+        });
+    });
+});
+
+// API para obtener estadísticas detalladas por período
+app.get('/api/admin/stats/monthly', requireAdmin, (req, res) => {
+    const queries = {
+        // Registros de usuarios por mes
+        userRegistrations: `
+            SELECT 
+                strftime('%Y-%m', created_at) as month,
+                COUNT(*) as count
+            FROM users 
+            WHERE created_at >= date('now', '-12 months')
+            GROUP BY strftime('%Y-%m', created_at)
+            ORDER BY month ASC
+        `,
+        
+        // Tours iniciados por mes
+        toursStarted: `
+            SELECT 
+                strftime('%Y-%m', started_at) as month,
+                COUNT(*) as count
+            FROM tour_history 
+            WHERE started_at >= date('now', '-12 months')
+            GROUP BY strftime('%Y-%m', started_at)
+            ORDER BY month ASC
+        `,
+        
+        // Tours completados por mes
+        toursCompleted: `
+            SELECT 
+                strftime('%Y-%m', started_at) as month,
+                COUNT(*) as count
+            FROM tour_history 
+            WHERE completed = 1 AND started_at >= date('now', '-12 months')
+            GROUP BY strftime('%Y-%m', started_at)
+            ORDER BY month ASC
+        `,
+        
+        // Ratings promedio por mes
+        monthlyRatings: `
+            SELECT 
+                strftime('%Y-%m', started_at) as month,
+                AVG(rating) as avg_rating,
+                COUNT(rating) as total_ratings
+            FROM tour_history 
+            WHERE rating IS NOT NULL AND started_at >= date('now', '-12 months')
+            GROUP BY strftime('%Y-%m', started_at)
+            ORDER BY month ASC
+        `
+    };
+    
+    const results = {};
+    let completedQueries = 0;
+    const totalQueries = Object.keys(queries).length;
+    
+    Object.entries(queries).forEach(([key, query]) => {
+        db.all(query, (err, data) => {
+            if (err) {
+                return res.status(500).json({ error: `Error al obtener ${key}` });
+            }
+            
+            results[key] = data;
+            completedQueries++;
+            
+            if (completedQueries === totalQueries) {
+                res.json(results);
+            }
+        });
+    });
+});
+
+// API para obtener análisis de rendimiento de rutas
+app.get('/api/admin/stats/routes-performance', requireAdmin, (req, res) => {
+    const query = `
+        SELECT 
+            tr.id,
+            tr.name,
+            tr.icon,
+            tr.description,
+            COUNT(th.id) as total_tours,
+            COUNT(CASE WHEN th.completed = 1 THEN 1 END) as completed_tours,
+            COUNT(CASE WHEN th.completed = 0 THEN 1 END) as abandoned_tours,
+            ROUND(
+                (COUNT(CASE WHEN th.completed = 1 THEN 1 END) * 100.0) / 
+                NULLIF(COUNT(th.id), 0), 2
+            ) as completion_rate,
+            AVG(CASE WHEN th.rating IS NOT NULL THEN th.rating END) as avg_rating,
+            COUNT(CASE WHEN th.rating IS NOT NULL THEN 1 END) as total_ratings,
+            COUNT(CASE WHEN th.started_at >= date('now', '-30 days') THEN 1 END) as tours_last_month,
+            COUNT(CASE WHEN th.started_at >= date('now', '-7 days') THEN 1 END) as tours_last_week
+        FROM tour_routes tr
+        LEFT JOIN tour_history th ON tr.id = th.tour_route_id
+        GROUP BY tr.id, tr.name, tr.icon, tr.description
+        ORDER BY total_tours DESC
+    `;
+    
+    db.all(query, (err, routesPerformance) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error al obtener rendimiento de rutas' });
+        }
+        res.json(routesPerformance);
+    });
+});
+
+// API para obtener análisis de comportamiento de usuarios
+app.get('/api/admin/stats/user-behavior', requireAdmin, (req, res) => {
+    const queries = {
+        // Distribución de usuarios por número de tours completados
+        userDistribution: `
+            SELECT 
+                CASE 
+                    WHEN tour_count = 0 THEN 'Sin tours'
+                    WHEN tour_count = 1 THEN '1 tour'
+                    WHEN tour_count <= 3 THEN '2-3 tours'
+                    WHEN tour_count <= 5 THEN '4-5 tours'
+                    WHEN tour_count <= 10 THEN '6-10 tours'
+                    ELSE 'Más de 10 tours'
+                END as category,
+                COUNT(*) as user_count
+            FROM (
+                SELECT 
+                    u.id,
+                    COUNT(CASE WHEN th.completed = 1 THEN 1 END) as tour_count
+                FROM users u
+                LEFT JOIN tour_history th ON u.id = th.user_id
+                GROUP BY u.id
+            ) user_tours
+            GROUP BY category
+            ORDER BY 
+                CASE category
+                    WHEN 'Sin tours' THEN 1
+                    WHEN '1 tour' THEN 2
+                    WHEN '2-3 tours' THEN 3
+                    WHEN '4-5 tours' THEN 4
+                    WHEN '6-10 tours' THEN 5
+                    ELSE 6
+                END
+        `,
+        
+        // Usuarios más activos
+        topUsers: `
+            SELECT 
+                u.username,
+                u.email,
+                u.created_at,
+                COUNT(th.id) as total_tours,
+                COUNT(CASE WHEN th.completed = 1 THEN 1 END) as completed_tours,
+                AVG(CASE WHEN th.rating IS NOT NULL THEN th.rating END) as avg_rating,
+                MAX(th.started_at) as last_tour_date
+            FROM users u
+            LEFT JOIN tour_history th ON u.id = th.user_id
+            WHERE u.role != 'admin'
+            GROUP BY u.id, u.username, u.email, u.created_at
+            HAVING total_tours > 0
+            ORDER BY completed_tours DESC, total_tours DESC
+            LIMIT 20
+        `,
+        
+        // Análisis de retención (usuarios que volvieron después de su primer tour)
+        retention: `
+            SELECT 
+                COUNT(DISTINCT CASE WHEN tour_count = 1 THEN user_id END) as single_tour_users,
+                COUNT(DISTINCT CASE WHEN tour_count > 1 THEN user_id END) as returning_users,
+                COUNT(DISTINCT user_id) as total_active_users
+            FROM (
+                SELECT 
+                    user_id,
+                    COUNT(*) as tour_count
+                FROM tour_history
+                WHERE completed = 1
+                GROUP BY user_id
+            ) user_activity
+        `
+    };
+    
+    const results = {};
+    let completedQueries = 0;
+    const totalQueries = Object.keys(queries).length;
+    
+    Object.entries(queries).forEach(([key, query]) => {
+        db.all(query, (err, data) => {
+            if (err) {
+                return res.status(500).json({ error: `Error al obtener ${key}` });
+            }
+            
+            results[key] = data;
+            completedQueries++;
+            
+            if (completedQueries === totalQueries) {
+                res.json(results);
+            }
+        });
+    });
+});
+
+// API para obtener análisis de satisfacción y ratings
+app.get('/api/admin/stats/satisfaction', requireAdmin, (req, res) => {
+    const queries = {
+        // Distribución de ratings
+        ratingDistribution: `
+            SELECT 
+                rating,
+                COUNT(*) as count,
+                ROUND((COUNT(*) * 100.0) / (SELECT COUNT(*) FROM tour_history WHERE rating IS NOT NULL), 1) as percentage
+            FROM tour_history
+            WHERE rating IS NOT NULL
+            GROUP BY rating
+            ORDER BY rating DESC
+        `,
+        
+        // Ratings por ruta
+        ratingsByRoute: `
+            SELECT 
+                tr.name as route_name,
+                tr.icon,
+                COUNT(th.rating) as total_ratings,
+                AVG(th.rating) as avg_rating,
+                COUNT(CASE WHEN th.rating = 5 THEN 1 END) as five_stars,
+                COUNT(CASE WHEN th.rating = 4 THEN 1 END) as four_stars,
+                COUNT(CASE WHEN th.rating <= 3 THEN 1 END) as low_ratings
+            FROM tour_routes tr
+            LEFT JOIN tour_history th ON tr.id = th.tour_route_id AND th.rating IS NOT NULL
+            GROUP BY tr.id, tr.name, tr.icon
+            HAVING total_ratings > 0
+            ORDER BY avg_rating DESC, total_ratings DESC
+        `,
+        
+        // Comentarios recientes (últimos 50)
+        recentFeedback: `
+            SELECT 
+                u.username,
+                tr.name as route_name,
+                th.rating,
+                th.feedback,
+                th.started_at
+            FROM tour_history th
+            JOIN users u ON th.user_id = u.id
+            JOIN tour_routes tr ON th.tour_route_id = tr.id
+            WHERE th.feedback IS NOT NULL AND th.feedback != ''
+            ORDER BY th.started_at DESC
+            LIMIT 50
+        `
+    };
+    
+    const results = {};
+    let completedQueries = 0;
+    const totalQueries = Object.keys(queries).length;
+    
+    Object.entries(queries).forEach(([key, query]) => {
+        db.all(query, (err, data) => {
+            if (err) {
+                return res.status(500).json({ error: `Error al obtener ${key}` });
+            }
+            
+            results[key] = data;
+            completedQueries++;
+            
+            if (completedQueries === totalQueries) {
+                res.json(results);
+            }
+        });
+    });
+});
+
+// API para obtener métricas de tiempo real y tendencias
+app.get('/api/admin/stats/realtime', requireAdmin, (req, res) => {
+    const queries = {
+        // Actividad hoy
+        todayActivity: `
+            SELECT 
+                COUNT(CASE WHEN created_at >= date('now', 'localtime') THEN 1 END) as new_users_today,
+                COUNT(CASE WHEN started_at >= date('now', 'localtime') THEN 1 END) as tours_started_today,
+                COUNT(CASE WHEN completed = 1 AND started_at >= date('now', 'localtime') THEN 1 END) as tours_completed_today
+            FROM users u
+            FULL OUTER JOIN tour_history th ON 1=1
+        `,
+        
+        // Actividad de la semana
+        weekActivity: `
+            SELECT 
+                strftime('%w', started_at) as day_of_week,
+                CASE strftime('%w', started_at)
+                    WHEN '0' THEN 'Domingo'
+                    WHEN '1' THEN 'Lunes'
+                    WHEN '2' THEN 'Martes'
+                    WHEN '3' THEN 'Miércoles'
+                    WHEN '4' THEN 'Jueves'
+                    WHEN '5' THEN 'Viernes'
+                    WHEN '6' THEN 'Sábado'
+                END as day_name,
+                COUNT(*) as tour_count
+            FROM tour_history
+            WHERE started_at >= date('now', '-7 days')
+            GROUP BY strftime('%w', started_at)
+            ORDER BY day_of_week
+        `,
+        
+        // Tours activos (no completados)
+        activeTours: `
+            SELECT 
+                COUNT(*) as active_tours_count,
+                COUNT(CASE WHEN started_at >= date('now', '-1 days') THEN 1 END) as started_today,
+                COUNT(CASE WHEN started_at < date('now', '-1 days') THEN 1 END) as older_tours
+            FROM tour_history
+            WHERE completed = 0
+        `,
+        
+        // Tendencia de crecimiento (comparación con período anterior)
+        growthTrends: `
+            SELECT 
+                COUNT(CASE WHEN created_at >= date('now', '-30 days') THEN 1 END) as users_this_month,
+                COUNT(CASE WHEN created_at >= date('now', '-60 days') AND created_at < date('now', '-30 days') THEN 1 END) as users_last_month,
+                COUNT(CASE WHEN started_at >= date('now', '-30 days') THEN 1 END) as tours_this_month,
+                COUNT(CASE WHEN started_at >= date('now', '-60 days') AND started_at < date('now', '-30 days') THEN 1 END) as tours_last_month
+            FROM users u
+            FULL OUTER JOIN tour_history th ON 1=1
+        `
+    };
+    
+    const results = {};
+    let completedQueries = 0;
+    const totalQueries = Object.keys(queries).length;
+    
+    Object.entries(queries).forEach(([key, query]) => {
+        db.all(query, (err, data) => {
+            if (err) {
+                return res.status(500).json({ error: `Error al obtener ${key}` });
+            }
+            
+            results[key] = key === 'todayActivity' || key === 'activeTours' || key === 'growthTrends' ? data[0] : data;
+            completedQueries++;
+            
+            if (completedQueries === totalQueries) {
+                res.json(results);
+            }
         });
     });
 });
@@ -477,23 +905,40 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
         return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
     }
     
-    // Primero eliminar historial de tours
-    db.run('DELETE FROM tour_history WHERE user_id = ?', [userId], (err) => {
+    // Obtener datos del usuario antes de eliminarlo
+    db.get('SELECT username, email FROM users WHERE id = ?', [userId], (err, user) => {
         if (err) {
-            return res.status(500).json({ error: 'Error al eliminar historial' });
+            return res.status(500).json({ error: 'Error al obtener usuario' });
         }
         
-        // Luego eliminar usuario
-        db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
+        if (!user) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        
+        // Primero eliminar historial de tours
+        db.run('DELETE FROM tour_history WHERE user_id = ?', [userId], (err) => {
             if (err) {
-                return res.status(500).json({ error: 'Error al eliminar usuario' });
+                return res.status(500).json({ error: 'Error al eliminar historial' });
             }
             
-            if (this.changes === 0) {
-                return res.status(404).json({ error: 'Usuario no encontrado' });
-            }
-            
-            res.json({ success: true, message: 'Usuario eliminado exitosamente' });
+            // Luego eliminar usuario
+            db.run('DELETE FROM users WHERE id = ?', [userId], function(err) {
+                if (err) {
+                    return res.status(500).json({ error: 'Error al eliminar usuario' });
+                }
+                
+                if (this.changes === 0) {
+                    return res.status(404).json({ error: 'Usuario no encontrado' });
+                }
+                
+                // Enviar notificación de eliminación de usuario
+                emailNotifier.sendNotification('USER_DELETED', {
+                    username: user.username,
+                    email: user.email
+                });
+                
+                res.json({ success: true, message: 'Usuario eliminado exitosamente' });
+            });
         });
     });
 });
@@ -562,6 +1007,18 @@ app.post('/api/start-tour', requireAuth, (req, res) => {
                     console.error('Error al guardar historial de tour:', err);
                     return res.status(500).json({ error: 'Error al iniciar tour' });
                 }
+                
+                // Obtener información del usuario para la notificación
+                db.get('SELECT username FROM users WHERE id = ?', [req.session.userId], (err, user) => {
+                    if (!err && user) {
+                        // Enviar notificación de tour iniciado
+                        emailNotifier.sendNotification('TOUR_STARTED', {
+                            tourName: tour.name,
+                            username: user.username,
+                            routeName: tour.name
+                        });
+                    }
+                });
                 
                 res.json({ 
                     success: true, 
@@ -647,6 +1104,12 @@ app.post('/api/register', async (req, res) => {
                     res.status(500).json({ error: 'Error al crear usuario' });
                 }
             } else {
+                // Enviar notificación de nuevo usuario
+                emailNotifier.sendNotification('USER_CREATED', {
+                    username: username,
+                    email: email,
+                    role: 'user'
+                });
                 res.json({ success: true, message: 'Usuario creado exitosamente' });
             }
         });
@@ -1220,6 +1683,20 @@ function completeTour(req, res) {
             }
             
             console.log(`✅ Tour completado por robot: ${tour.tour_name} (ID: ${tour_id}) para usuario ${tour.username}`);
+            
+            // Calcular duración del tour
+            const startTime = new Date(tour.started_at);
+            const endTime = new Date();
+            const durationMs = endTime - startTime;
+            const durationMin = Math.round(durationMs / (1000 * 60));
+            
+            // Enviar notificación de tour completado
+            emailNotifier.sendNotification('TOUR_COMPLETED', {
+                tourName: tour.tour_name,
+                username: tour.username,
+                duration: durationMin,
+                rating: tour.rating || 'N/A'
+            });
             
             // Respuesta exitosa
             res.json({ 
@@ -2366,6 +2843,164 @@ app.get('/api/admin/robot/commands', requireAuth, requireAdmin, (req, res) => {
         res.json(rows);
     });
 });
+
+// ========== ENDPOINTS DE NOTIFICACIONES POR EMAIL ==========
+
+// API para enviar notificación de tour abandonado
+app.post('/api/tour/abandon', requireAuth, (req, res) => {
+    const { tour_id, progress } = req.body;
+    
+    if (!tour_id) {
+        return res.status(400).json({ error: 'tour_id requerido' });
+    }
+    
+    // Obtener información del tour
+    db.get(`
+        SELECT th.*, tr.name as tour_name, u.username
+        FROM tour_history th
+        LEFT JOIN tour_routes tr ON th.tour_route_id = tr.id
+        LEFT JOIN users u ON th.user_id = u.id
+        WHERE th.tour_id = ? AND th.completed = 0
+    `, [tour_id], (err, tour) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error al obtener tour' });
+        }
+        
+        if (tour) {
+            // Enviar notificación de tour abandonado
+            emailNotifier.sendNotification('TOUR_ABANDONED', {
+                tourName: tour.tour_name,
+                username: tour.username,
+                progress: progress || 0
+            });
+        }
+        
+        res.json({ success: true, message: 'Notificación de abandono enviada' });
+    });
+});
+
+// API para probar el sistema de notificaciones (solo admin)
+app.post('/api/admin/test-notification', requireAdmin, (req, res) => {
+    const { type, testData } = req.body;
+    
+    if (!type) {
+        return res.status(400).json({ error: 'Tipo de notificación requerido' });
+    }
+    
+    const sampleData = {
+        USER_CREATED: {
+            username: 'usuario_prueba',
+            email: 'prueba@test.com',
+            role: 'user'
+        },
+        USER_DELETED: {
+            username: 'usuario_eliminado',
+            email: 'eliminado@test.com'
+        },
+        TOUR_STARTED: {
+            tourName: 'Tour de Prueba',
+            username: 'usuario_test',
+            routeName: 'Ruta de Prueba'
+        },
+        TOUR_COMPLETED: {
+            tourName: 'Tour de Prueba',
+            username: 'usuario_test',
+            duration: 15,
+            rating: 5
+        },
+        TOUR_ABANDONED: {
+            tourName: 'Tour de Prueba',
+            username: 'usuario_test',
+            progress: 50
+        },
+        BATTERY_LOW: {
+            batteryLevel: 15,
+            location: 'Sala Principal'
+        },
+        BATTERY_CRITICAL: {
+            batteryLevel: 5,
+            location: 'Entrada'
+        },
+        ROBOT_ERROR: {
+            error: 'Error de navegación',
+            details: 'No se puede alcanzar el objetivo'
+        },
+        ROBOT_DISCONNECTED: {
+            lastLocation: 'Sala 2'
+        },
+        ROBOT_RECONNECTED: {
+            location: 'Base de carga'
+        },
+        ROUTE_CREATED: {
+            routeName: 'Nueva Ruta de Prueba',
+            waypointCount: 5,
+            createdBy: 'admin'
+        },
+        ROUTE_DELETED: {
+            routeName: 'Ruta Eliminada',
+            toursCount: 3,
+            deletedBy: 'admin'
+        },
+        SYSTEM_ERROR: {
+            error: 'Error de base de datos',
+            component: 'SQLite',
+            details: 'Conexión perdida'
+        }
+    };
+    
+    const data = testData || sampleData[type];
+    
+    if (!data) {
+        return res.status(400).json({ error: 'Tipo de notificación no válido' });
+    }
+    
+    emailNotifier.sendNotification(type, data)
+        .then(success => {
+            if (success) {
+                res.json({ success: true, message: `Notificación de prueba ${type} enviada` });
+            } else {
+                res.status(500).json({ error: 'Error al enviar notificación' });
+            }
+        })
+        .catch(error => {
+            res.status(500).json({ error: 'Error al enviar notificación: ' + error.message });
+        });
+});
+
+// API para obtener estado del sistema de notificaciones (solo admin)
+app.get('/api/admin/notification-status', requireAdmin, async (req, res) => {
+    try {
+        const status = await emailNotifier.testConnection();
+        res.json({
+            enabled: emailNotifier.isEnabled,
+            connectionStatus: status,
+            robotStatus: robotManager.getStatus()
+        });
+    } catch (error) {
+        res.json({
+            enabled: false,
+            connectionStatus: { success: false, message: error.message },
+            robotStatus: robotManager.getStatus()
+        });
+    }
+});
+
+// API para activar/desactivar notificaciones (solo admin)
+app.post('/api/admin/notifications/toggle', requireAdmin, (req, res) => {
+    const { enabled } = req.body;
+    
+    if (enabled === true) {
+        emailNotifier.enable();
+        res.json({ success: true, message: 'Notificaciones habilitadas' });
+    } else if (enabled === false) {
+        emailNotifier.disable();
+        res.json({ success: true, message: 'Notificaciones deshabilitadas' });
+    } else {
+        res.status(400).json({ error: 'Parámetro enabled requerido (true/false)' });
+    }
+});
+
+// ========== FIN ENDPOINTS DE NOTIFICACIONES ==========
 
 // Iniciar servidor
 app.listen(PORT, () => {

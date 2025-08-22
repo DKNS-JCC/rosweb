@@ -12,6 +12,17 @@ class RobotManager {
         this.currentMap = null;
         this.amclPose = null;
         this.odomPose = null;
+        this.batteryLevel = 100;
+        this.lowBatteryNotified = false;
+        this.criticalBatteryNotified = false;
+        this.emailNotifier = null;
+        
+        // Intentar cargar el notificador de email
+        try {
+            this.emailNotifier = require('./emailNotifier');
+        } catch (error) {
+            console.log('⚠️  EmailNotifier no disponible');
+        }
     }
 
     // Conectar a ROS Bridge
@@ -24,6 +35,7 @@ class RobotManager {
                 this.connected = true;
                 this.lastPing = new Date();
                 this.getTopics();
+                this.setupBatteryMonitoring();
             });
 
             this.connection.on('message', (data) => {
@@ -32,12 +44,28 @@ class RobotManager {
 
             this.connection.on('close', () => {
                 console.log('🔌 Conexión ROS cerrada');
+                const wasConnected = this.connected;
                 this.connected = false;
+                
+                // Enviar notificación de desconexión
+                if (wasConnected && this.emailNotifier) {
+                    this.emailNotifier.sendNotification('ROBOT_DISCONNECTED', {
+                        lastLocation: 'Sistema'
+                    });
+                }
             });
 
             this.connection.on('error', (error) => {
                 console.error('❌ Error de ROS:', error.message);
                 this.connected = false;
+                
+                // Enviar notificación de error
+                if (this.emailNotifier) {
+                    this.emailNotifier.sendNotification('ROBOT_ERROR', {
+                        error: 'Error de conexión ROS',
+                        details: error.message
+                    });
+                }
             });
 
         } catch (error) {
@@ -114,7 +142,6 @@ class RobotManager {
 
         this.connection.send(JSON.stringify(subscribeMsg));
         this.subscribers.set(topic, callback);
-        console.log(`👂 Suscrito a tópico ${topic}`);
     }
 
     // Desuscribirse de un tópico
@@ -151,6 +178,13 @@ class RobotManager {
             this.publish('/mobile_base/commands/velocity', 'geometry_msgs/Twist', velocityMsg);
             return { success: true, message: 'Comando de velocidad enviado a TurtleBot' };
         } catch (error) {
+            // Enviar notificación de error si falla el comando
+            if (this.emailNotifier) {
+                this.emailNotifier.sendNotification('ROBOT_ERROR', {
+                    error: 'Error enviando comando de velocidad',
+                    details: error.message
+                });
+            }
             return { success: false, error: error.message };
         }
     }
@@ -180,6 +214,93 @@ class RobotManager {
         return this.sendVelocityCommand(0, -speed);
     }
 
+    // Configurar monitoreo de batería
+    setupBatteryMonitoring() {
+        if (!this.connected || !this.connection) return;
+        
+        // Suscribirse al tópico de batería del TurtleBot (si está disponible)
+        try {
+            this.subscribe('/mobile_base/sensors/core', 'kobuki_msgs/SensorState', (msg) => {
+                this.handleBatteryData(msg);
+            });
+        } catch (error) {
+            console.log('⚠️  Tópico de batería no disponible, usando simulación');
+            // Simulación de batería para pruebas
+            this.simulateBatteryLevel();
+        }
+    }
+
+    // Manejar datos de batería
+    handleBatteryData(sensorData) {
+        if (sensorData && sensorData.battery !== undefined) {
+            // Los datos de batería del Kobuki van de 0-164 aproximadamente
+            this.batteryLevel = Math.max(0, Math.min(100, (sensorData.battery / 164) * 100));
+            this.checkBatteryLevel();
+        }
+    }
+
+    // Verificar nivel de batería y enviar notificaciones
+    checkBatteryLevel() {
+        const level = Math.round(this.batteryLevel);
+        
+        // Batería crítica (menos del 10%)
+        if (level <= 10 && !this.criticalBatteryNotified && this.emailNotifier) {
+            this.emailNotifier.sendNotification('BATTERY_CRITICAL', {
+                batteryLevel: level,
+                location: this.getCurrentLocation()
+            });
+            this.criticalBatteryNotified = true;
+            this.lowBatteryNotified = true; // También marcar low battery como notificado
+            
+            // Parar el robot por seguridad
+            this.stopRobot();
+            console.log('🚨 Batería crítica - Robot detenido por seguridad');
+        }
+        // Batería baja (menos del 20%)
+        else if (level <= 20 && !this.lowBatteryNotified && this.emailNotifier) {
+            this.emailNotifier.sendNotification('BATTERY_LOW', {
+                batteryLevel: level,
+                location: this.getCurrentLocation()
+            });
+            this.lowBatteryNotified = true;
+        }
+        // Resetear notificaciones si la batería se recupera
+        else if (level > 25) {
+            this.lowBatteryNotified = false;
+            this.criticalBatteryNotified = false;
+        }
+    }
+
+    // Obtener ubicación actual del robot
+    getCurrentLocation() {
+        if (this.amclPose) {
+            return `X: ${this.amclPose.pose.pose.position.x.toFixed(2)}, Y: ${this.amclPose.pose.pose.position.y.toFixed(2)}`;
+        } else if (this.odomPose) {
+            return `Odometría X: ${this.odomPose.pose.pose.position.x.toFixed(2)}, Y: ${this.odomPose.pose.pose.position.y.toFixed(2)}`;
+        }
+        return 'Desconocida';
+    }
+
+    // Simulación de batería para pruebas (cuando no hay sensor real)
+    simulateBatteryLevel() {
+        // Simular descarga gradual de batería para pruebas
+        setInterval(() => {
+            if (this.connected) {
+                this.batteryLevel = Math.max(5, this.batteryLevel - 0.1); // Descarga muy lenta
+                this.checkBatteryLevel();
+            }
+        }, 60000); // Verificar cada minuto
+    }
+
+    // Método para obtener estado de batería
+    getBatteryStatus() {
+        return {
+            level: Math.round(this.batteryLevel),
+            lowBatteryNotified: this.lowBatteryNotified,
+            criticalBatteryNotified: this.criticalBatteryNotified
+        };
+    }
+
     // Obtener estado de la conexión
     getStatus() {
         return {
@@ -187,7 +308,9 @@ class RobotManager {
             rosbridge_url: this.rosbridge_url,
             last_ping: this.lastPing,
             topics_count: this.topics.length,
-            active_subscribers: this.subscribers.size
+            active_subscribers: this.subscribers.size,
+            battery: this.getBatteryStatus(),
+            location: this.getCurrentLocation()
         };
     }
 

@@ -207,6 +207,9 @@
                 <li class="nav-item">
                     <a href="/admin" class="nav-link" id="navAdmin" style="display: none;">Administración</a>
                 </li>
+                <li class="nav-item">
+                    <a href="/stats" class="nav-link" id="navStats" style="display: none;">Estadísticas</a>
+                </li>
                 
                 <!-- Sección móvil de usuario (solo visible en móvil cuando está logueado) -->
                 <li class="nav-item nav-mobile-user" id="navMobileUser" style="display: none;">
@@ -520,6 +523,8 @@
             if (user.role === 'admin') {
                 if (navRobotControl) navRobotControl.style.display = 'block';
                 if (navAdmin) navAdmin.style.display = 'block';
+                const navStats = document.getElementById('navStats');
+                if (navStats) navStats.style.display = 'block';
             }
             
             console.log('Usuario logueado:', user.username, 'Rol:', user.role);
@@ -645,6 +650,8 @@
             if (navUserMenu) navUserMenu.style.display = 'none';
             if (navRobotControl) navRobotControl.style.display = 'none';
             if (navAdmin) navAdmin.style.display = 'none';
+            const navStats = document.getElementById('navStats');
+            if (navStats) navStats.style.display = 'none';
             
             // Ocultar elementos móviles de usuario y mostrar autenticación
             if (navMobileUser) navMobileUser.style.display = 'none';

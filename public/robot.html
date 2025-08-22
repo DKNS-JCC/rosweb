@@ -542,8 +542,6 @@
 
         /* Estilos para la sección de síntesis de voz */
         .speech-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
             gap: 30px;
             align-items: start;
         }
@@ -639,7 +637,7 @@
             cursor: pointer;
             font-size: 12px;
             transition: all 0.2s;
-            text-align: left;
+            text-align: center;
         }
 
         .preset-btn:hover {
@@ -761,6 +759,9 @@
                 <li class="nav-item">
                     <a href="/admin" class="nav-link" id="navAdmin">Administración</a>
                 </li>
+                <li class="nav-item">
+                    <a href="/stats" class="nav-link" id="navStats">Estadísticas</a>
+                </li>
                 
                 <!-- Sección móvil de usuario (solo visible en móvil cuando está logueado) -->
                 <li class="nav-item nav-mobile-user" id="navMobileUser" style="display: none;">
@@ -865,10 +866,6 @@
                     <div id="robotStatusText">Desconectado</div>
                 </div>
                 <div class="status-card">
-                    <div><strong>Tópicos Activos</strong></div>
-                    <div class="status-value" id="topicCount">0</div>
-                </div>
-                <div class="status-card">
                     <div><strong>Último Mensaje</strong></div>
                     <div id="lastMessage">-</div>
                 </div>
@@ -952,11 +949,11 @@
 
         <!-- Sistema de Síntesis de Voz -->
         <div class="robot-section">
-            <h2>🗣️ Síntesis de Voz del Robot</h2>
+            <h2>Voz del Robot</h2>
             <div class="speech-container">
                 <div class="speech-controls">
                     <div class="speech-input-group">
-                        <label for="speechText" class="speech-label">Texto para que el robot hable:</label>
+                        <label for="speechText" class="speech-label">Texto para que el robot diga:</label>
                         <textarea id="speechText" 
                                   class="speech-textarea" 
                                   placeholder="Escribe aquí lo que quieres que diga el robot... (máximo 500 caracteres)"
@@ -969,43 +966,19 @@
                     
                     <div class="speech-buttons">
                         <button id="speakBtn" class="btn btn-primary speech-btn" onclick="speakText()">
-                            🔊 Hacer Hablar al Robot
-                        </button>
-                        <button id="clearTextBtn" class="btn btn-secondary speech-btn" onclick="clearSpeechText()">
-                            🗑️ Limpiar Texto
+                            🔊 Hablar
                         </button>
                     </div>
                     
                     <div class="speech-presets">
                         <label class="speech-label">Frases predefinidas para tours:</label>
                         <div class="preset-buttons">
-                            <button class="preset-btn" onclick="setSpeechText('Hola, soy artTEC, su robot guía del museo.')">👋 Saludo</button>
-                            <button class="preset-btn" onclick="setSpeechText('Bienvenidos al tour del museo. Síganme, por favor.')">🏛️ Bienvenida</button>
-                            <button class="preset-btn" onclick="setSpeechText('Aquí pueden ver una importante obra de arte.')">🎨 Arte</button>
-                            <button class="preset-btn" onclick="setSpeechText('Por favor, manténganse cerca del robot durante el recorrido.')">⚠️ Instrucción</button>
-                            <button class="preset-btn" onclick="setSpeechText('¿Tienen alguna pregunta sobre esta exposición?')">❓ Pregunta</button>
-                            <button class="preset-btn" onclick="setSpeechText('Gracias por acompañarme en este recorrido. ¡Hasta luego!')">👋 Despedida</button>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="speech-status">
-                    <div class="speech-info">
-                        <h4>Estado de Síntesis de Voz</h4>
-                        <div class="status-indicator-container">
-                            <div class="status-indicator" id="speechStatus">⭕</div>
-                            <span id="speechStatusText">Listo para hablar</span>
-                        </div>
-                        <div class="speech-topic-info">
-                            <small><strong>Tópico:</strong> /voice</small><br>
-                            <small><strong>Tipo:</strong> std_msgs/String</small>
-                        </div>
-                    </div>
-                    
-                    <div class="speech-history">
-                        <h4>Últimas frases enviadas:</h4>
-                        <div id="speechHistory" class="speech-history-list">
-                            <p class="speech-history-empty">No hay frases enviadas aún</p>
+                            <button class="preset-btn" onclick="setSpeechText('Hola, soy artTEC, su robot guía del museo.')"> Saludo</button>
+                            <button class="preset-btn" onclick="setSpeechText('Síganme, por favor.')"> Seguir</button>
+                            <button class="preset-btn" onclick="setSpeechText('Cuidado, robot en movimiento.')"> Cuidado</button>
+                            <button class="preset-btn" onclick="setSpeechText('Por favor, manténganse cerca del robot durante el recorrido.')"> Instrucción</button>
+                            <button class="preset-btn" onclick="setSpeechText('Atención, se detectó un impacto. Por favor eviten el área.')"> Colision</button>
+                            <button class="preset-btn" onclick="setSpeechText('Gracias por acompañarme en este recorrido. ¡Hasta luego!')"> Despedida</button>
                         </div>
                     </div>
                 </div>
@@ -1507,7 +1480,6 @@
                     }
                     
                     displayTopics(topics);
-                    document.getElementById('topicCount').textContent = topics.length;
                     addLog(`${topics.length} topicos encontrados directamente desde ROS`);
                 }, function(error) {
                     addLog(`Error obteniendo topicos desde ROS: ${error}`);
@@ -1526,7 +1498,6 @@
                 if (response.ok) {
                     const data = await response.json();
                     displayTopics(data.topics);
-                    document.getElementById('topicCount').textContent = data.topic_count;
                     addLog(`${data.topic_count} topicos obtenidos desde API`);
                 } else {
                     addLog('Error obteniendo topicos desde API');
@@ -1832,11 +1803,11 @@
 
         // Controles de movimiento
         document.getElementById('moveForward').addEventListener('click', () => {
-            sendVelocityCommand(0.2, 0.0);
+            sendVelocityCommand(0.6, 0.0);
         });
 
         document.getElementById('moveBackward').addEventListener('click', () => {
-            sendVelocityCommand(-0.2, 0.0);
+            sendVelocityCommand(-0.6, 0.0);
         });
 
         document.getElementById('turnLeft').addEventListener('click', () => {
@@ -1857,28 +1828,20 @@
             
             switch(event.code) {
                 case 'ArrowUp':
-                case 'KeyW':
                     event.preventDefault();
                     sendVelocityCommand(0.2, 0.0);
                     break;
                 case 'ArrowDown':
-                case 'KeyS':
                     event.preventDefault();
                     sendVelocityCommand(-0.2, 0.0);
                     break;
                 case 'ArrowLeft':
-                case 'KeyA':
                     event.preventDefault();
                     sendVelocityCommand(0.0, 0.5);
                     break;
                 case 'ArrowRight':
-                case 'KeyD':
                     event.preventDefault();
                     sendVelocityCommand(0.0, -0.5);
-                    break;
-                case 'Space':
-                    event.preventDefault();
-                    sendVelocityCommand(0.0, 0.0);
                     break;
             }
         });
@@ -1994,11 +1957,7 @@
                 
                 if (response.ok && result.success) {
                     updateSpeechStatus('✅', 'Mensaje enviado al robot', '#28a745');
-                    addLog(`🗣️ Robot hablando: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
-                    addLog(`📡 Enviado al tópico /voice`);
-                    
-                    // Agregar al historial
-                    addToSpeechHistory(text);
+                
                     
                     // Limpiar textarea
                     speechTextarea.value = '';
@@ -2043,72 +2002,6 @@
                 statusText.textContent = message;
                 statusText.style.color = color;
             }
-        }
-        
-        // Agregar frase al historial
-        function addToSpeechHistory(text) {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString();
-            
-            // Agregar al principio del array (más reciente primero)
-            speechHistory.unshift({
-                text: text,
-                timestamp: now,
-                timeString: timeString
-            });
-            
-            // Mantener solo las últimas 10 frases
-            if (speechHistory.length > 10) {
-                speechHistory = speechHistory.slice(0, 10);
-            }
-            
-            updateSpeechHistoryDisplay();
-        }
-        
-        // Actualizar visualización del historial
-        function updateSpeechHistoryDisplay() {
-            const historyContainer = document.getElementById('speechHistory');
-            
-            if (!historyContainer) return;
-            
-            if (speechHistory.length === 0) {
-                historyContainer.innerHTML = '<p class="speech-history-empty">No hay frases enviadas aún</p>';
-                return;
-            }
-            
-            const historyHTML = speechHistory.map(item => {
-                // Limitar texto mostrado a 80 caracteres
-                const displayText = item.text.length > 80 
-                    ? item.text.substring(0, 80) + '...' 
-                    : item.text;
-                    
-                return `
-                    <div class="speech-history-item">
-                        <div>${displayText}</div>
-                        <div class="speech-history-time">${item.timeString}</div>
-                    </div>
-                `;
-            }).join('');
-            
-            historyContainer.innerHTML = historyHTML;
-        }
-        
-        // Limpiar texto del textarea
-        function clearSpeechText() {
-            const speechTextarea = document.getElementById('speechText');
-            const charCount = document.getElementById('charCount');
-            
-            if (speechTextarea) {
-                speechTextarea.value = '';
-                speechTextarea.focus();
-            }
-            
-            if (charCount) {
-                charCount.textContent = '0';
-                charCount.style.color = '#666';
-            }
-            
-            updateSpeechStatus('⭕', 'Listo para hablar', '#666');
         }
         
         // Establecer texto predefinido en el textarea

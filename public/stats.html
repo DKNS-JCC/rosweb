@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Estadísticas - artTEC</title>
+    <link rel="icon" type="image/x-icon" href="icon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Estilos específicos para el dashboard de estadísticas */
+        
+        .stats-container {
+            min-width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            min-height: 100vh;
+        }
+
+        .stats-header {
+            background: #4129ca;
+            color: rgb(255, 255, 255);
+            padding: 20px;
+            margin: 40px -20px 30px -20px;
+            border-radius: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stats-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .stats-title h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .stats-header p {
+            margin: 0;
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .overview-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--card-color, #4129ca);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .overview-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+
+        .overview-card h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--card-color, #4129ca);
+            margin-bottom: 10px;
+        }
+
+        .card-subtitle {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin: 5px 0;
+        }
+
+        .card-trend {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .trend-up {
+            color: #28a745;
+        }
+
+        .trend-down {
+            color: #dc3545;
+        }
+
+        .trend-neutral {
+            color: #6c757d;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .chart-container h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-canvas {
+            max-height: 400px;
+        }
+
+        .data-tables {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .table-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .table-container h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .rating-stars {
+            color: #ffc107;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #4129ca;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 40px;
+            color: #dc3545;
+            background: #f8d7da;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .refresh-btn {
+            background: gray;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+            justify-content: right;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(65, 41, 202, 0.4);
+        }
+
+        .stats-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .stats-tab {
+            background: none;
+            border: none;
+            padding: 15px 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #6c757d;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .stats-tab.active {
+            color: #4129ca;
+            border-bottom-color: #4129ca;
+        }
+
+        .stats-tab:hover {
+            color: #4129ca;
+            background: rgba(65, 41, 202, 0.05);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-tables {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-overview {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+            
+            .stats-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .stats-header h1 {
+                font-size: 2rem;
+                margin-top: 70px;
+            }
+        }
+
+        /* Colores para diferentes tipos de tarjetas */
+        .card-users { --card-color: #4129ca; }
+        .card-tours { --card-color: #28a745; }
+        .card-engagement { --card-color: #ffc107; }
+        .card-satisfaction { --card-color: #dc3545; }
+        .card-growth { --card-color: #17a2b8; }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar (usando la estructura estándar) -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="/favicon.ico" alt="artTEC Logo" class="nav-logo-img">
+                <span class="nav-logo-text">artTEC</span>
+            </div>
+            <ul class="nav-menu" id="navMenu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/#tours" class="nav-link">Tours</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/#how-it-works" class="nav-link">Cómo Funciona</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/robot" class="nav-link" id="navRobotControl" style="display: none;">Control Robot</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link" id="navAdmin" style="display: none;">Administración</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/stats" class="nav-link" id="navStats" style="display: none;">Estadísticas</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/notifications" class="nav-link" id="navNotifications" style="display: none;">Notificaciones</a>
+                </li>
+            
+            <!-- Sección de usuario -->
+            <div class="nav-user-section">
+                <!-- Menú para usuarios autenticados -->
+                <div class="nav-user-menu" id="navUserMenu" style="display: none;">
+                    <div class="nav-user-info">
+                        <span class="nav-username" id="navUsername">Usuario</span>
+                    </div>
+                    <div class="nav-user-dropdown">
+                        <button class="nav-user-toggle" id="navUserToggle">
+                            <img src="/favicon.ico" alt="Usuario" class="nav-user-avatar">
+                            <svg class="nav-dropdown-arrow" width="12" height="12" viewBox="0 0 12 12">
+                                <path d="M3 5L6 8L9 5" stroke="currentColor" fill="none" stroke-width="1.5"/>
+                            </svg>
+                        </button>
+                        <div class="nav-dropdown-menu" id="navDropdownMenu">
+                            <a href="/dashboard.html" class="nav-dropdown-item">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+                                </svg>
+                                Mi Perfil
+                            </a>
+                            <button class="nav-dropdown-item" id="navLogoutBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <path d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.59L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z" fill="currentColor"/>
+                                </svg>
+                                Cerrar Sesión
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menú de autenticación -->
+                <div class="nav-auth-menu" id="navAuthMenu">
+                    <a href="/login" class="nav-auth-btn login-btn">Iniciar Sesión</a>
+                    <a href="/register" class="nav-auth-btn register-btn">Registrarse</a>
+                </div>
+            </div>
+            
+            <div class="nav-toggle" id="navToggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="stats-container">
+        <div class="stats-header">
+            <div class="stats-title">
+                <img src="icon.ico" alt="Logo" style="width: 40px; height: 40px;">
+                <h1>Estadísticas</h1>
+                <button class="refresh-btn" onclick="refreshAllStats()">
+                    Refrescar
+                </button>
+            </div>
+        </div>
+
+
+        <!-- Tabs de navegación -->
+        <div class="stats-tabs">
+            <button class="stats-tab active" data-tab="overview">📈 Resumen General</button>
+            <button class="stats-tab" data-tab="users">👥 Análisis de Usuarios</button>
+            <button class="stats-tab" data-tab="tours">🎨 Rendimiento Tours</button>
+            <button class="stats-tab" data-tab="satisfaction">⭐ Satisfacción</button>
+            <button class="stats-tab" data-tab="realtime">⚡ Tiempo Real</button>
+        </div>
+
+        <!-- Tab: Resumen General -->
+        <div class="tab-content active" id="overview">
+            <!-- Tarjetas de resumen -->
+            <div class="stats-overview" id="overviewCards">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Cargando estadísticas generales...</p>
+                </div>
+            </div>
+
+            <!-- Gráficos principales -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>📊 Tendencia Mensual - Usuarios y Tours</h3>
+                    <canvas id="monthlyTrendChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>🎯 Rendimiento de Rutas</h3>
+                    <canvas id="routesChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Análisis de Usuarios -->
+        <div class="tab-content" id="users">
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>👥 Distribución de Usuarios por Actividad</h3>
+                    <canvas id="userDistributionChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>🔄 Análisis de Retención</h3>
+                    <canvas id="retentionChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <h3>🏆 Usuarios Más Activos</h3>
+                <div id="topUsersTable">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Cargando usuarios activos...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Rendimiento de Tours -->
+        <div class="tab-content" id="tours">
+            <div class="table-container">
+                <h3>🎨 Análisis Detallado de Rutas</h3>
+                <div id="routesPerformanceTable">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Cargando análisis de rutas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Satisfacción -->
+        <div class="tab-content" id="satisfaction">
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>⭐ Distribución de Calificaciones</h3>
+                    <canvas id="ratingsChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>📊 Calificaciones por Ruta</h3>
+                    <canvas id="routeRatingsChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <h3>💬 Comentarios Recientes</h3>
+                <div id="recentFeedbackTable">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Cargando comentarios...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Tiempo Real -->
+        <div class="tab-content" id="realtime">
+            <div class="stats-overview" id="realtimeCards">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Cargando datos en tiempo real...</p>
+                </div>
+            </div>
+            
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3>📅 Actividad por Día de la Semana</h3>
+                    <canvas id="weeklyActivityChart" class="chart-canvas"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>📈 Tendencias de Crecimiento</h3>
+                    <canvas id="growthTrendChart" class="chart-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales para los gráficos
+        let charts = {};
+        let statsData = {};
+
+        // Verificar autenticación y permisos de admin
+        async function checkAdminAccess() {
+            try {
+                const response = await fetch('/api/user');
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                const userData = await response.json();
+                if (userData.role !== 'admin') {
+                    alert('No tienes permisos para acceder a esta página');
+                    window.location.href = '/';
+                    return false;
+                }
+                
+                // Actualizar navegación
+                updateNavForLoggedInUser(userData);
+                return true;
+            } catch (error) {
+                console.error('Error verificando acceso:', error);
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        // Función para actualizar navegación cuando usuario está logueado
+        function updateNavForLoggedInUser(user) {
+            const navAuthMenu = document.getElementById('navAuthMenu');
+            const navUserMenu = document.getElementById('navUserMenu');
+            const navUsername = document.getElementById('navUsername');
+            const navDashboard = document.getElementById('navDashboard');
+            const navRobotControl = document.getElementById('navRobotControl');
+            const navAdmin = document.getElementById('navAdmin');
+            const navStats = document.getElementById('navStats');
+            
+            if (navAuthMenu) navAuthMenu.style.display = 'none';
+            if (navUserMenu) navUserMenu.style.display = 'flex';
+            if (navUsername) navUsername.textContent = user.username;
+            if (navDashboard) navDashboard.style.display = 'block';
+            
+            // Mostrar enlaces de admin si es administrador
+            if (user.role === 'admin') {
+                if (navRobotControl) navRobotControl.style.display = 'block';
+                if (navAdmin) navAdmin.style.display = 'block';
+                if (navStats) navStats.style.display = 'block';
+                
+                const navNotifications = document.getElementById('navNotifications');
+                if (navNotifications) navNotifications.style.display = 'block';
+            }
+        }
+
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', async function() {
+            const hasAccess = await checkAdminAccess();
+            if (!hasAccess) return;
+
+            // Configurar tabs
+            setupTabs();
+            
+            // Cargar datos iniciales
+            await loadAllStats();
+            
+            // Configurar navegación
+            setupNavigation();
+        });
+
+        // Configurar sistema de tabs
+        function setupTabs() {
+            const tabButtons = document.querySelectorAll('.stats-tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetTab = button.getAttribute('data-tab');
+                    
+                    // Remover active de todos los tabs
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Activar tab seleccionado
+                    button.classList.add('active');
+                    document.getElementById(targetTab).classList.add('active');
+                    
+                    // Cargar datos específicos del tab si es necesario
+                    loadTabData(targetTab);
+                });
+            });
+        }
+
+        // Cargar datos específicos de cada tab
+        async function loadTabData(tabName) {
+            switch(tabName) {
+                case 'overview':
+                    if (!statsData.overview) await loadOverviewData();
+                    break;
+                case 'users':
+                    if (!statsData.users) await loadUserData();
+                    break;
+                case 'tours':
+                    if (!statsData.tours) await loadTourData();
+                    break;
+                case 'satisfaction':
+                    if (!statsData.satisfaction) await loadSatisfactionData();
+                    break;
+                case 'realtime':
+                    await loadRealtimeData(); // Siempre recargar tiempo real
+                    break;
+            }
+        }
+
+        // Cargar todas las estadísticas
+        async function loadAllStats() {
+            await Promise.all([
+                loadOverviewData(),
+                loadUserData(),
+                loadTourData(),
+                loadSatisfactionData(),
+                loadRealtimeData()
+            ]);
+        }
+
+        // Cargar datos de resumen general
+        async function loadOverviewData() {
+            try {
+                const [generalStats, monthlyStats, routesStats] = await Promise.all([
+                    fetch('/api/admin/stats').then(r => r.json()),
+                    fetch('/api/admin/stats/monthly').then(r => r.json()),
+                    fetch('/api/admin/stats/routes-performance').then(r => r.json())
+                ]);
+
+                statsData.overview = { generalStats, monthlyStats, routesStats };
+                
+                // Renderizar tarjetas de resumen
+                renderOverviewCards(generalStats);
+                
+                // Renderizar gráficos
+                renderMonthlyTrendChart(monthlyStats);
+                renderRoutesChart(routesStats);
+                
+            } catch (error) {
+                console.error('Error cargando datos de resumen:', error);
+                showErrorState('overviewCards', 'Error al cargar datos de resumen');
+            }
+        }
+
+        // Cargar datos de usuarios
+        async function loadUserData() {
+            try {
+                const userBehavior = await fetch('/api/admin/stats/user-behavior').then(r => r.json());
+                statsData.users = userBehavior;
+                
+                renderUserDistributionChart(userBehavior.userDistribution);
+                renderRetentionChart(userBehavior.retention[0]);
+                renderTopUsersTable(userBehavior.topUsers);
+                
+            } catch (error) {
+                console.error('Error cargando datos de usuarios:', error);
+                showErrorState('topUsersTable', 'Error al cargar datos de usuarios');
+            }
+        }
+
+        // Cargar datos de tours
+        async function loadTourData() {
+            try {
+                const routesPerformance = await fetch('/api/admin/stats/routes-performance').then(r => r.json());
+                statsData.tours = routesPerformance;
+                
+                renderRoutesPerformanceTable(routesPerformance);
+                
+            } catch (error) {
+                console.error('Error cargando datos de tours:', error);
+                showErrorState('routesPerformanceTable', 'Error al cargar datos de tours');
+            }
+        }
+
+        // Cargar datos de satisfacción
+        async function loadSatisfactionData() {
+            try {
+                const satisfaction = await fetch('/api/admin/stats/satisfaction').then(r => r.json());
+                statsData.satisfaction = satisfaction;
+                
+                renderRatingsChart(satisfaction.ratingDistribution);
+                renderRouteRatingsChart(satisfaction.ratingsByRoute);
+                renderRecentFeedbackTable(satisfaction.recentFeedback);
+                
+            } catch (error) {
+                console.error('Error cargando datos de satisfacción:', error);
+                showErrorState('recentFeedbackTable', 'Error al cargar datos de satisfacción');
+            }
+        }
+
+        // Cargar datos en tiempo real
+        async function loadRealtimeData() {
+            try {
+                const realtime = await fetch('/api/admin/stats/realtime').then(r => r.json());
+                statsData.realtime = realtime;
+                
+                renderRealtimeCards(realtime);
+                renderWeeklyActivityChart(realtime.weekActivity);
+                renderGrowthTrendChart(realtime.growthTrends);
+                
+            } catch (error) {
+                console.error('Error cargando datos en tiempo real:', error);
+                showErrorState('realtimeCards', 'Error al cargar datos en tiempo real');
+            }
+        }
+
+        // Renderizar tarjetas de resumen general
+        function renderOverviewCards(stats) {
+            const container = document.getElementById('overviewCards');
+            
+            const engagementRate = stats.users.total_users > 0 ? 
+                ((stats.engagement.active_users / stats.users.total_users) * 100).toFixed(1) : 0;
+                
+            const completionRate = stats.tours.total_tours > 0 ?
+                ((stats.tours.completed_tours / stats.tours.total_tours) * 100).toFixed(1) : 0;
+
+            container.innerHTML = `
+                <div class="overview-card card-users">
+                    <h3>👥 Usuarios Totales</h3>
+                    <div class="card-value">${stats.users.total_users}</div>
+                    <div class="card-subtitle">
+                        ${stats.users.admin_users} admins • ${stats.users.regular_users} usuarios
+                    </div>
+                    <div class="card-trend trend-up">
+                        ↗ ${stats.users.new_users_month} nuevos este mes
+                    </div>
+                </div>
+
+                <div class="overview-card card-tours">
+                    <h3>🎨 Tours Realizados</h3>
+                    <div class="card-value">${stats.tours.total_tours}</div>
+                    <div class="card-subtitle">
+                        ${stats.tours.completed_tours} completados • ${stats.tours.active_tours} activos
+                    </div>
+                    <div class="card-trend trend-up">
+                        ↗ ${stats.tours.tours_this_month} este mes
+                    </div>
+                </div>
+
+                <div class="overview-card card-engagement">
+                    <h3>📈 Tasa de Engagement</h3>
+                    <div class="card-value">${engagementRate}%</div>
+                    <div class="card-subtitle">
+                        ${stats.engagement.active_users} usuarios activos
+                    </div>
+                    <div class="card-trend trend-up">
+                        ${stats.engagement.active_users_month} activos este mes
+                    </div>
+                </div>
+
+                <div class="overview-card card-satisfaction">
+                    <h3>⭐ Satisfacción Media</h3>
+                    <div class="card-value">${stats.tours.avg_rating ? stats.tours.avg_rating.toFixed(1) : 'N/A'}</div>
+                    <div class="card-subtitle">
+                        ${stats.tours.total_ratings} calificaciones totales
+                    </div>
+                    <div class="card-trend trend-neutral">
+                        Basado en ${stats.tours.total_ratings} reviews
+                    </div>
+                </div>
+
+                <div class="overview-card card-growth">
+                    <h3>📊 Tasa de Finalización</h3>
+                    <div class="card-value">${completionRate}%</div>
+                    <div class="card-subtitle">
+                        De ${stats.tours.total_tours} tours iniciados
+                    </div>
+                    <div class="card-trend ${completionRate >= 80 ? 'trend-up' : completionRate >= 60 ? 'trend-neutral' : 'trend-down'}">
+                        ${completionRate >= 80 ? '✓ Excelente' : completionRate >= 60 ? '~ Aceptable' : '⚠ Mejorable'}
+                    </div>
+                </div>
+
+                <div class="overview-card card-users">
+                    <h3>🗂 Rutas Disponibles</h3>
+                    <div class="card-value">${stats.routes.total_routes}</div>
+                    <div class="card-subtitle">
+                        Rutas activas en el sistema
+                    </div>
+                    <div class="card-trend trend-neutral">
+                        Tours promedio: ${(stats.tours.total_tours / stats.routes.total_routes).toFixed(1)}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Continúa con las demás funciones de renderizado...
+        // (Por razones de espacio, incluyo las principales - el resto sigue el mismo patrón)
+
+        // Función para mostrar estado de error
+        function showErrorState(containerId, message) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div class="error-state">
+                    <h3>⚠️ Error</h3>
+                    <p>${message}</p>
+                    <button class="refresh-btn" onclick="refreshAllStats()">Reintentar</button>
+                </div>
+            `;
+        }
+
+        // Refrescar todas las estadísticas
+        async function refreshAllStats() {
+            // Resetear datos
+            statsData = {};
+            
+            // Mostrar estados de carga
+            showLoadingStates();
+            
+            // Recargar datos
+            await loadAllStats();
+        }
+
+        // Mostrar estados de carga
+        function showLoadingStates() {
+            const loadingHTML = `
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Actualizando datos...</p>
+                </div>
+            `;
+            
+            document.getElementById('overviewCards').innerHTML = loadingHTML;
+            document.getElementById('realtimeCards').innerHTML = loadingHTML;
+            document.getElementById('topUsersTable').innerHTML = loadingHTML;
+            document.getElementById('routesPerformanceTable').innerHTML = loadingHTML;
+            document.getElementById('recentFeedbackTable').innerHTML = loadingHTML;
+        }
+
+        // Configurar navegación
+        function setupNavigation() {
+            // Manejar navegación móvil
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', () => {
+                    navMenu.classList.toggle('nav-menu-active');
+                    navToggle.classList.toggle('toggle-active');
+                });
+            }
+
+            // Dropdown de usuario
+            const navUserToggle = document.getElementById('navUserToggle');
+            const navDropdownMenu = document.getElementById('navDropdownMenu');
+
+            if (navUserToggle && navDropdownMenu) {
+                navUserToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    navDropdownMenu.classList.toggle('nav-dropdown-open');
+                });
+
+                document.addEventListener('click', (event) => {
+                    if (!navUserToggle.contains(event.target) && !navDropdownMenu.contains(event.target)) {
+                        navDropdownMenu.classList.remove('nav-dropdown-open');
+                    }
+                });
+            }
+
+            // Logout
+            const navLogoutBtn = document.getElementById('navLogoutBtn');
+            if (navLogoutBtn) {
+                navLogoutBtn.addEventListener('click', async () => {
+                    try {
+                        const response = await fetch('/api/logout', { method: 'POST' });
+                        if (response.ok) {
+                            window.location.replace('/login');
+                        }
+                    } catch (error) {
+                        console.error('Error al cerrar sesión:', error);
+                    }
+                });
+            }
+        }
+
+        // Funciones de renderizado de gráficos (implementación básica)
+        function renderMonthlyTrendChart(data) {
+            const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+            
+            if (charts.monthlyTrend) {
+                charts.monthlyTrend.destroy();
+            }
+            
+            charts.monthlyTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.userRegistrations.map(d => d.month),
+                    datasets: [{
+                        label: 'Nuevos Usuarios',
+                        data: data.userRegistrations.map(d => d.count),
+                        borderColor: '#4129ca',
+                        backgroundColor: 'rgba(65, 41, 202, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Tours Iniciados',
+                        data: data.toursStarted.map(d => d.count),
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderRoutesChart(data) {
+            const ctx = document.getElementById('routesChart').getContext('2d');
+            
+            if (charts.routes) {
+                charts.routes.destroy();
+            }
+            
+            charts.routes = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.slice(0, 8).map(d => d.name),
+                    datasets: [{
+                        label: 'Tours Totales',
+                        data: data.slice(0, 8).map(d => d.total_tours),
+                        backgroundColor: '#4129ca',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Renderizar gráfico de distribución de usuarios
+        function renderUserDistributionChart(data) {
+            const ctx = document.getElementById('userDistributionChart').getContext('2d');
+            
+            if (charts.userDistribution) {
+                charts.userDistribution.destroy();
+            }
+            
+            charts.userDistribution = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(d => d.category),
+                    datasets: [{
+                        data: data.map(d => d.user_count),
+                        backgroundColor: [
+                            '#dc3545', '#ffc107', '#28a745', 
+                            '#4129ca', '#17a2b8', '#6f42c1'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Renderizar gráfico de retención
+        function renderRetentionChart(data) {
+            const ctx = document.getElementById('retentionChart').getContext('2d');
+            
+            if (charts.retention) {
+                charts.retention.destroy();
+            }
+            
+            const retentionRate = data.total_active_users > 0 ? 
+                ((data.returning_users / data.total_active_users) * 100).toFixed(1) : 0;
+            
+            charts.retention = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Un solo tour', 'Usuarios recurrentes'],
+                    datasets: [{
+                        data: [data.single_tour_users, data.returning_users],
+                        backgroundColor: ['#ffc107', '#28a745'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label;
+                                    const value = context.parsed;
+                                    const total = data.total_active_users;
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Renderizar tabla de usuarios más activos
+        function renderTopUsersTable(data) {
+            const container = document.getElementById('topUsersTable');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-center">No hay datos de usuarios activos</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Email</th>
+                            <th>Tours Completados</th>
+                            <th>Rating Promedio</th>
+                            <th>Último Tour</th>
+                            <th>Registrado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(user => `
+                            <tr>
+                                <td><strong>${user.username}</strong></td>
+                                <td>${user.email}</td>
+                                <td>${user.completed_tours} de ${user.total_tours}</td>
+                                <td>
+                                    ${user.avg_rating ? 
+                                        `<span class="rating-stars">${'★'.repeat(Math.round(user.avg_rating))} ${user.avg_rating.toFixed(1)}</span>` : 
+                                        'Sin rating'
+                                    }
+                                </td>
+                                <td>${user.last_tour_date ? new Date(user.last_tour_date).toLocaleDateString() : 'Nunca'}</td>
+                                <td>${new Date(user.created_at).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Renderizar tabla de rendimiento de rutas
+        function renderRoutesPerformanceTable(data) {
+            const container = document.getElementById('routesPerformanceTable');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-center">No hay datos de rutas</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Ruta</th>
+                            <th>Tours Totales</th>
+                            <th>Completados</th>
+                            <th>Tasa Finalización</th>
+                            <th>Rating Promedio</th>
+                            <th>Último Mes</th>
+                            <th>Última Semana</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(route => `
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                        <span style="font-size: 1.2em;">${route.icon || '🎨'}</span>
+                                        <strong>${route.name}</strong>
+                                    </div>
+                                </td>
+                                <td>${route.total_tours}</td>
+                                <td>
+                                    <span style="color: #28a745;">${route.completed_tours}</span> / 
+                                    <span style="color: #dc3545;">${route.abandoned_tours}</span>
+                                </td>
+                                <td>
+                                    <span style="color: ${route.completion_rate >= 80 ? '#28a745' : route.completion_rate >= 60 ? '#ffc107' : '#dc3545'};">
+                                        ${route.completion_rate || 0}%
+                                    </span>
+                                </td>
+                                <td>
+                                    ${route.avg_rating ? 
+                                        `<span class="rating-stars">${'★'.repeat(Math.round(route.avg_rating))} ${route.avg_rating.toFixed(1)}</span>` : 
+                                        'Sin rating'
+                                    }
+                                    <small>(${route.total_ratings} reviews)</small>
+                                </td>
+                                <td>${route.tours_last_month}</td>
+                                <td>${route.tours_last_week}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Renderizar gráfico de distribución de ratings
+        function renderRatingsChart(data) {
+            const ctx = document.getElementById('ratingsChart').getContext('2d');
+            
+            if (charts.ratings) {
+                charts.ratings.destroy();
+            }
+            
+            charts.ratings = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => `${d.rating} ⭐`),
+                    datasets: [{
+                        label: 'Cantidad',
+                        data: data.map(d => d.count),
+                        backgroundColor: data.map(d => {
+                            const colors = {
+                                5: '#28a745', 4: '#6f42c1', 3: '#ffc107', 
+                                2: '#fd7e14', 1: '#dc3545'
+                            };
+                            return colors[d.rating] || '#6c757d';
+                        }),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Renderizar gráfico de ratings por ruta
+        function renderRouteRatingsChart(data) {
+            const ctx = document.getElementById('routeRatingsChart').getContext('2d');
+            
+            if (charts.routeRatings) {
+                charts.routeRatings.destroy();
+            }
+            
+            const topRoutes = data.slice(0, 8);
+            
+            charts.routeRatings = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: topRoutes.map(d => d.route_name),
+                    datasets: [{
+                        label: 'Rating Promedio',
+                        data: topRoutes.map(d => d.avg_rating),
+                        backgroundColor: '#4129ca',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            max: 5
+                        }
+                    }
+                }
+            });
+        }
+
+        // Renderizar tabla de comentarios recientes
+        function renderRecentFeedbackTable(data) {
+            const container = document.getElementById('recentFeedbackTable');
+            
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-center">No hay comentarios recientes</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Ruta</th>
+                            <th>Rating</th>
+                            <th>Comentario</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.slice(0, 20).map(feedback => `
+                            <tr>
+                                <td><strong>${feedback.username}</strong></td>
+                                <td>${feedback.route_name}</td>
+                                <td>
+                                    <span class="rating-stars">${'★'.repeat(feedback.rating)} ${feedback.rating}/5</span>
+                                </td>
+                                <td style="max-width: 300px;">
+                                    <div style="max-height: 50px; overflow: hidden; text-overflow: ellipsis;">
+                                        "${feedback.feedback}"
+                                    </div>
+                                </td>
+                                <td>${new Date(feedback.started_at).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Renderizar tarjetas de tiempo real
+        function renderRealtimeCards(data) {
+            const container = document.getElementById('realtimeCards');
+            
+            const growthUserPercent = data.growthTrends.users_last_month > 0 ? 
+                (((data.growthTrends.users_this_month - data.growthTrends.users_last_month) / data.growthTrends.users_last_month) * 100).toFixed(1) : 0;
+                
+            const growthTourPercent = data.growthTrends.tours_last_month > 0 ? 
+                (((data.growthTrends.tours_this_month - data.growthTrends.tours_last_month) / data.growthTrends.tours_last_month) * 100).toFixed(1) : 0;
+
+            container.innerHTML = `
+                <div class="overview-card card-growth">
+                    <h3>📈 Actividad Hoy</h3>
+                    <div class="card-value">${data.todayActivity.tours_started_today}</div>
+                    <div class="card-subtitle">
+                        Tours iniciados hoy
+                    </div>
+                    <div class="card-trend trend-neutral">
+                        ${data.todayActivity.new_users_today} nuevos usuarios
+                    </div>
+                </div>
+
+                <div class="overview-card card-tours">
+                    <h3>⚡ Tours Activos</h3>
+                    <div class="card-value">${data.activeTours.active_tours_count}</div>
+                    <div class="card-subtitle">
+                        Tours en progreso
+                    </div>
+                    <div class="card-trend trend-up">
+                        ${data.activeTours.started_today} iniciados hoy
+                    </div>
+                </div>
+
+                <div class="overview-card card-users">
+                    <h3>📊 Crecimiento Usuarios</h3>
+                    <div class="card-value">${growthUserPercent}%</div>
+                    <div class="card-subtitle">
+                        ${data.growthTrends.users_this_month} este mes vs ${data.growthTrends.users_last_month} anterior
+                    </div>
+                    <div class="card-trend ${growthUserPercent > 0 ? 'trend-up' : growthUserPercent < 0 ? 'trend-down' : 'trend-neutral'}">
+                        ${growthUserPercent > 0 ? '↗' : growthUserPercent < 0 ? '↘' : '→'} vs mes anterior
+                    </div>
+                </div>
+
+                <div class="overview-card card-engagement">
+                    <h3>🎯 Crecimiento Tours</h3>
+                    <div class="card-value">${growthTourPercent}%</div>
+                    <div class="card-subtitle">
+                        ${data.growthTrends.tours_this_month} este mes vs ${data.growthTrends.tours_last_month} anterior
+                    </div>
+                    <div class="card-trend ${growthTourPercent > 0 ? 'trend-up' : growthTourPercent < 0 ? 'trend-down' : 'trend-neutral'}">
+                        ${growthTourPercent > 0 ? '↗' : growthTourPercent < 0 ? '↘' : '→'} vs mes anterior
+                    </div>
+                </div>
+            `;
+        }
+
+        // Renderizar gráfico de actividad semanal
+        function renderWeeklyActivityChart(data) {
+            const ctx = document.getElementById('weeklyActivityChart').getContext('2d');
+            
+            if (charts.weeklyActivity) {
+                charts.weeklyActivity.destroy();
+            }
+            
+            charts.weeklyActivity = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.day_name),
+                    datasets: [{
+                        label: 'Tours por día',
+                        data: data.map(d => d.tour_count),
+                        borderColor: '#4129ca',
+                        backgroundColor: 'rgba(65, 41, 202, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Renderizar gráfico de tendencias de crecimiento
+        function renderGrowthTrendChart(data) {
+            const ctx = document.getElementById('growthTrendChart').getContext('2d');
+            
+            if (charts.growthTrend) {
+                charts.growthTrend.destroy();
+            }
+            
+            charts.growthTrend = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Usuarios', 'Tours'],
+                    datasets: [{
+                        label: 'Mes Anterior',
+                        data: [data.users_last_month, data.tours_last_month],
+                        backgroundColor: 'rgba(108, 117, 125, 0.6)'
+                    }, {
+                        label: 'Este Mes',
+                        data: [data.users_this_month, data.tours_this_month],
+                        backgroundColor: '#4129ca'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>
