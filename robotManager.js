@@ -292,7 +292,65 @@ class RobotManager {
         }, 60000); // Verificar cada minuto
     }
 
-    // Método para obtener estado de batería
+    // Enviar datos de tour al robot
+    sendTourData(robotId, tourData) {
+        if (!this.connected || !this.connection) {
+            throw new Error('No hay conexión ROS disponible');
+        }
+
+        try {
+            // Publicar datos del tour en un tópico específico
+            const tourMessage = {
+                robot_id: robotId,
+                tour_id: tourData.tour.tour_id,
+                tour_name: tourData.tour.name,
+                waypoints: tourData.tour.waypoints,
+                pin: tourData.pin_string,
+                usuario: tourData.usuario,
+                timestamp: new Date().toISOString()
+            };
+
+            // Usar tópico personalizado para enviar datos de tours
+            this.publish('/web_tour_assignment', 'std_msgs/String', {
+                data: JSON.stringify(tourMessage)
+            });
+
+            console.log(`📡 Datos del tour enviados al robot ${robotId} via ROS`);
+            return true;
+        } catch (error) {
+            console.error('Error al enviar datos del tour:', error);
+            return false;
+        }
+    }
+
+    // Enviar comando de navegación a waypoint específico
+    sendNavigationGoal(x, y, z = 0, orientation = { x: 0, y: 0, z: 0, w: 1 }) {
+        if (!this.connected || !this.connection) {
+            throw new Error('No hay conexión ROS disponible');
+        }
+
+        const goalMessage = {
+            header: {
+                stamp: { sec: Math.floor(Date.now() / 1000), nanosec: 0 },
+                frame_id: 'map'
+            },
+            pose: {
+                position: { x: x, y: y, z: z },
+                orientation: orientation
+            }
+        };
+
+        try {
+            this.publish('/move_base_simple/goal', 'geometry_msgs/PoseStamped', goalMessage);
+            console.log(`🎯 Objetivo de navegación enviado: (${x}, ${y}, ${z})`);
+            return true;
+        } catch (error) {
+            console.error('Error al enviar objetivo de navegación:', error);
+            return false;
+        }
+    }
+
+    // Obtener estado de batería
     getBatteryStatus() {
         return {
             level: Math.round(this.batteryLevel),

@@ -40,6 +40,16 @@ module.exports = {
             priority: 'medium'
         },
         
+        // Notificaciones de robot activado
+        ROBOT_ACTIVATED: {
+            enabled: true,
+            priority: 'medium'
+        },
+        ROBOT_TOUR_STARTED: {
+            enabled: true,
+            priority: 'medium'
+        },
+        
         // Notificaciones de batería (CRÍTICAS)
         BATTERY_LOW: {
             enabled: true,
@@ -107,6 +117,8 @@ module.exports = {
         TOUR_STARTED: 0,           // Sin throttling
         TOUR_COMPLETED: 0,         // Sin throttling
         TOUR_ABANDONED: 2,         // Una vez cada 2 minutos máximo
+        ROBOT_ACTIVATED: 0,        // Sin throttling
+        ROBOT_TOUR_STARTED: 0,     // Sin throttling  
         ROBOT_RECONNECTED: 5,      // Una vez cada 5 minutos máximo
         ROUTE_CREATED: 0,          // Sin throttling
         ROUTE_DELETED: 0           // Sin throttling

@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seleccionar Tour - artTEC</title>
+    <link rel="icon" type="image/x-icon" href="icon.ico">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Reset y base */
+        * {
+            box-sizing: border-box;
+        }
+        
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .container { 
+            max-width: 100%;
+            margin: 0;
+            background: transparent;
+            box-shadow: none;
+            padding: 20px;
+        }
+        
+        /* Header moderno */
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+        
+        .page-header h1 { 
+            color: white;
+            margin: 0 0 10px 0;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .page-subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            margin: 0;
+            font-weight: 300;
+        }
+        
+        /* Cards de tours modernas */
+        .tour-list { 
+            display: grid;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .tour-card { 
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tour-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .tour-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .tour-title { 
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: #333;
+            margin: 0 0 15px 0;
+            line-height: 1.3;
+        }
+        
+        .tour-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .tour-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+            font-size: 0.9rem;
+            background: #f8f9fa;
+            padding: 6px 12px;
+            border-radius: 20px;
+        }
+        
+        .tour-meta-item .icon {
+            font-size: 1.1rem;
+        }
+        
+        .tour-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        .status-reserved {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status-ready {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        
+        .status-active {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+        
+        .tour-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+            min-height: 48px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #495057;
+            border: 2px solid #dee2e6;
+        }
+        
+        .btn-secondary:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+        
+        /* Estado vacío mejorado */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.7;
+        }
+        
+        .empty-state h3 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .empty-state p {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .empty-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Mensajes mejorados */
+        .message { 
+            margin: 0 20px 25px 20px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .message.success { 
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        
+        .message.error { 
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        
+        /* Modal QR mejorado */
+        .qr-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .qr-modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        .qr-modal-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        
+        .qr-modal h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+        
+        .qr-steps {
+            text-align: left;
+            margin: 25px 0;
+        }
+        
+        .qr-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .qr-step-number {
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+        
+        .qr-step-content h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        
+        .qr-step-content p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .page-header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .page-subtitle {
+                font-size: 1rem;
+            }
+            
+            .tour-card {
+                padding: 20px;
+            }
+            
+            .tour-title {
+                font-size: 1.2rem;
+            }
+            
+            .tour-meta {
+                gap: 10px;
+            }
+            
+            .tour-meta-item {
+                font-size: 0.8rem;
+                padding: 4px 8px;
+            }
+            
+            .tour-actions {
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 10px 16px;
+                font-size: 0.85rem;
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .empty-state {
+                padding: 40px 15px;
+            }
+            
+            .empty-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .qr-modal-content {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .qr-step {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .page-header h1 {
+                font-size: 1.6rem;
+            }
+            
+            .tour-meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .tour-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+        
+        /* Animaciones */
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        .tour-card {
+            animation: cardFadeIn 0.5s ease-out;
+        }
+        
+        @keyframes cardFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Barra de navegación fija -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="icon.ico" alt="artTEC Logo" class="nav-logo-img">
+                <span class="nav-logo-text">artTEC</span>
+            </div>
+            <ul class="nav-menu" id="navMenu">
+                <li class="nav-item">
+                    <a href="/" class="nav-link">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/#tours" class="nav-link">Tours</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/#how-it-works" class="nav-link">Cómo Funciona</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/robot" class="nav-link" id="navRobotControl" style="display: none;">Control Robot</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/admin" class="nav-link" id="navAdmin" style="display: none;">Administración</a>
+                </li>
+                <li class="nav-item">
+                    <a href="/stats" class="nav-link" id="navStats" style="display: none;">Estadísticas</a>
+                </li>
+            </ul>
+            
+            <!-- Sección de usuario -->
+            <div class="nav-user-section">
+                <!-- Menú para usuarios no autenticados -->
+                <div class="nav-auth-menu" id="navAuthMenu">
+                    <a href="/login" class="nav-btn nav-btn-outline">Iniciar Sesión</a>
+                    <a href="/register" class="nav-btn nav-btn-primary">Registrarse</a>
+                </div>
+                
+                <!-- Menú para usuarios autenticados -->
+                <div class="nav-user-menu" id="navUserMenu" style="display: none;">
+                    <div class="nav-user-info">
+                        <span class="nav-username" id="navUsername">Usuario</span>
+                        <img src="" alt="Foto de perfil" class="nav-user-avatar" id="navUserAvatar">
+                    </div>
+                    <div class="nav-dropdown">
+                        <a href="/dashboard" class="nav-dropdown-item">Mi Dashboard</a>
+                        <a href="#" class="nav-dropdown-item" onclick="logout()">Cerrar Sesión</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Botón hamburguesa para móvil -->
+            <div class="nav-toggle" id="navToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <div class="page-header">
+            <h1 id="pageTitle">Asigna un robot</h1>
+            <p class="page-subtitle" id="pageSubtitle">Gestiona tus tours activos</p>
+        </div>
+        
+        <div id="message" class="message" style="display:none;"></div>
+        <div id="tourList" class="tour-list">
+            <!-- Los tours se cargarán aquí -->
+        </div>
+    </div>
+    <script>
+        let currentUser = null;
+        let robotParam = null;
+
+        // Verificar si viene del QR del robot
+        function checkRobotMode() {
+            const urlParams = new URLSearchParams(window.location.search);
+            robotParam = urlParams.get('robot');
+            if (robotParam) {
+                document.getElementById('pageSubtitle').textContent = 'Selecciona tu tour para el robot';
+            }
+        }
+
+        // Comprobar usuario al cargar la página
+        async function checkUser() {
+            try {
+                const res = await fetch('/api/user');
+                if (!res.ok) throw new Error();
+                currentUser = await res.json();
+            } catch {
+                // Si no hay sesión, redirigir a login con parámetros de retorno
+                const returnUrl = encodeURIComponent(window.location.href);
+                window.location.href = `/login?return=${returnUrl}`;
+            }
+        }
+
+        // Obtener tours disponibles para el usuario
+        async function loadTours() {
+            try {
+                let tours;
+                
+                if (robotParam) {
+                    // Si viene del QR, obtener tours activos del usuario
+                    const res = await fetch('/api/user/tours');
+                    if (!res.ok) throw new Error('No se pudo obtener los tours activos');
+                    tours = await res.json();
+                    renderActiveTours(tours || []);
+                } else {
+                    // Si no viene del QR, también mostrar tours activos del usuario
+                    const res = await fetch('/api/user/tours');
+                    if (!res.ok) throw new Error('No se pudo obtener los tours activos');
+                    tours = await res.json();
+                    renderUserActiveTours(tours || []);
+                }
+            } catch (err) {
+                showMessage('Error al cargar tours', 'error');
+                document.getElementById('tourList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3>Error al cargar tours</h3>
+                        <p>No se pudieron cargar tus tours en este momento.</p>
+                        <div class="empty-actions">
+                            <button onclick="location.reload()" class="btn btn-primary">
+                                🔄 Reintentar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Renderizar lista de tours activos del usuario (vista normal, sin robot)        // Renderizar lista de tours activos del usuario (para cuando viene del QR)
+        function renderActiveTours(tours) {
+            const list = document.getElementById('tourList');
+            
+            if (!tours.length) {
+                // Redirect to index.html #tours section if no tours available
+                window.location.href = '/#tours';
+                return;
+            }
+
+            list.innerHTML = tours.map(tour => {
+                const hasRobot = tour.robot_id;
+                const isActive = tour.robot_status === 'in_progress';
+                
+                let statusClass, statusText, statusIcon;
+                if (hasRobot && isActive) {
+                    statusClass = 'status-active';
+                    statusText = 'En ejecución';
+                    statusIcon = '🤖';
+                } else if (hasRobot) {
+                    statusClass = 'status-ready';
+                    statusText = 'Listo para robot';
+                    statusIcon = '⏳';
+                } else {
+                    statusClass = 'status-reserved';
+                    statusText = 'Disponible';
+                    statusIcon = '📱';
+                }
+                
+                return `
+                    <div class="tour-card">
+                        <h3 class="tour-title">${tour.tour_name}</h3>
+                        
+                        <div class="tour-status ${statusClass}">
+                            <span class="icon">${statusIcon}</span>
+                            ${statusText}
+                        </div>
+                        
+                        <div class="tour-meta">
+                            <div class="tour-meta-item">
+                                <span class="icon">🔑</span>
+                                PIN: ${tour.pin}
+                            </div>
+                            ${tour.robot_id ? `
+                                <div class="tour-meta-item">
+                                    <span class="icon">🤖</span>
+                                    Robot: ${tour.robot_id}
+                                </div>
+                            ` : ''}
+                            <div class="tour-meta-item">
+                                <span class="icon">📅</span>
+                                ${new Date(tour.started_at).toLocaleDateString('es-ES')}
+                            </div>
+                        </div>
+                        
+                        <div class="tour-actions">
+                            ${hasRobot && isActive ? 
+                                `<button onclick="checkTourStatus('${tour.id}')" class="btn btn-info">
+                                    📊 Ver Estado
+                                </button>` :
+                                `<button onclick="assignToRobot('${tour.id}', '${tour.tour_name}')" class="btn btn-success">
+                                    🚀 Usar con ${robotParam}
+                                </button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Renderizar lista de tours activos del usuario (vista normal, sin robot)
+        function renderUserActiveTours(tours) {
+            const list = document.getElementById('tourList');
+            
+            if (!tours.length) {
+                // Redirect to index.html #tours section if no tours available
+                window.location.href = '/#tours';
+                return;
+            }
+
+            list.innerHTML = tours.map(tour => {
+                const hasRobot = tour.robot_id;
+                const isActive = tour.robot_status === 'in_progress';
+                
+                let statusClass, statusText, statusIcon;
+                if (hasRobot && isActive) {
+                    statusClass = 'status-active';
+                    statusText = 'En ejecución con robot';
+                    statusIcon = '🤖';
+                } else if (hasRobot) {
+                    statusClass = 'status-ready';
+                    statusText = 'Listo para robot';
+                    statusIcon = '⏳';
+                } else {
+                    statusClass = 'status-reserved';
+                    statusText = 'Tour reservado';
+                    statusIcon = '📱';
+                }
+                
+                return `
+                    <div class="tour-card">
+                        <h3 class="tour-title">${tour.tour_name}</h3>
+                        
+                        <div class="tour-status ${statusClass}">
+                            <span class="icon">${statusIcon}</span>
+                            ${statusText}
+                        </div>
+                        
+                        <div class="tour-meta">
+                            <div class="tour-meta-item">
+                                <span class="icon">🔑</span>
+                                PIN: ${tour.pin}
+                            </div>
+                            ${tour.robot_id ? `
+                                <div class="tour-meta-item">
+                                    <span class="icon">🤖</span>
+                                    Robot: ${tour.robot_id}
+                                </div>
+                            ` : ''}
+                            <div class="tour-meta-item">
+                                <span class="icon">📅</span>
+                                ${new Date(tour.started_at).toLocaleDateString('es-ES')}
+                            </div>
+                        </div>
+                        
+                        <div class="tour-actions">
+                            ${!hasRobot ? `
+                                <button onclick="window.location.href='/#tours'" class="btn btn-success">
+                                    🚀 Usar Ahora
+                                </button>
+                                <button onclick="showTourQRInfo()" class="btn btn-secondary">
+                                    � Código QR
+                                </button>
+                            ` : `
+                                <button onclick="checkTourStatus('${tour.id}')" class="btn btn-info">
+                                    📊 Ver Estado
+                                </button>
+                                <button onclick="showTourQRInfo()" class="btn btn-secondary">
+                                    📱 Código QR
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Mostrar información sobre cómo usar el QR
+        function showTourQRInfo() {
+            const modal = document.createElement('div');
+            modal.className = 'qr-modal';
+            modal.innerHTML = `
+                <div class="qr-modal-content">
+                    <div class="qr-modal-icon">📱</div>
+                    <h2>¿Cómo usar el código QR?</h2>
+                    
+                    <div class="qr-steps">
+                        <div class="qr-step">
+                            <div class="qr-step-number">1</div>
+                            <div class="qr-step-content">
+                                <h4>Encuentra un robot</h4>
+                                <p>Busca un robot disponible en el museo. Tendrán códigos QR visibles en su pantalla.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="qr-step">
+                            <div class="qr-step-number">2</div>
+                            <div class="qr-step-content">
+                                <h4>Escanea el QR</h4>
+                                <p>Usa la cámara de tu teléfono para escanear el código QR del robot.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="qr-step">
+                            <div class="qr-step-number">3</div>
+                            <div class="qr-step-content">
+                                <h4>Selecciona tu tour</h4>
+                                <p>Se abrirá esta página donde podrás asignar tu tour activo al robot.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="qr-step">
+                            <div class="qr-step-number">4</div>
+                            <div class="qr-step-content">
+                                <h4>¡Disfruta!</h4>
+                                <p>El robot recibirá tu tour y te guiará por el museo.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="this.closest('.qr-modal').remove()" class="btn btn-primary">
+                        Entendido
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Asignar tour existente a robot
+        async function assignToRobot(tourHistoryId, tourName) {
+            try {
+                showMessage(`🤖 Enviando "${tourName}" al robot ${robotParam}...`, 'success');
+                
+                const res = await fetch('/api/robot/send-tour', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        tour_history_id: tourHistoryId
+                    })
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok && result.success) {
+                    showMessage(`✅ Tour "${tourName}" enviado al robot ${robotParam}`, 'success');
+                    
+                    // Mostrar confirmación simple
+                    document.getElementById('tourList').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">✅</div>
+                            <h3>¡Tour Enviado!</h3>
+                            <p><strong>${tourName}</strong> ha sido enviado al robot <strong>${robotParam}</strong> exitosamente.</p>
+                            <p>El robot ya tiene toda la información necesaria para comenzar tu tour.</p>
+                            <div class="empty-actions">
+                                <button onclick="location.reload()" class="btn btn-primary">
+                                    🔄 Actualizar Estado
+                                </button>
+                                <button onclick="checkTourStatus('${tourHistoryId}')" class="btn btn-secondary">
+                                    📊 Ver Estado
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    showMessage(result.error || 'Error al enviar tour al robot', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error al asignar tour:', error);
+                showMessage('Error al comunicarse con el servidor', 'error');
+            }
+        }
+
+        // Iniciar tour en el robot
+        async function startRobotTour(tourId) {
+            const robotId = robotParam;
+            
+            if (!robotId) {
+                showMessage('Error: No se especificó el robot', 'error');
+                return;
+            }
+            
+            try {
+                showMessage('🤖 Iniciando tour...', 'success');
+                
+                const res = await fetch('/api/robot/start-tour', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        tour_id: tourId,
+                        robot_id: robotId
+                    })
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok && result.success) {
+                    showMessage(`✅ Tour iniciado en robot ${robotId}`, 'success');
+                    
+                    document.getElementById('tourList').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🚀</div>
+                            <h3>¡Tour Iniciado!</h3>
+                            <p><strong>${result.tourName}</strong> está activo en el robot <strong>${robotId}</strong>.</p>
+                            <p>Tu guía robótico está listo para comenzar el tour.</p>
+                            <div class="empty-actions">
+                                <button onclick="location.reload()" class="btn btn-secondary">
+                                    Actualizar
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    if (result.robotBusy) {
+                        showMessage(`Robot ocupado: ${result.details}`, 'error');
+                    } else if (result.activeTour) {
+                        showMessage(`Ya tienes un tour activo`, 'error');
+                    } else {
+                        showMessage(result.error || 'No se pudo iniciar el tour', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error al comunicarse con el servidor', 'error');
+            }
+        }
+
+        // Mostrar mensajes
+        function showMessage(msg, type) {
+            const el = document.getElementById('message');
+            el.innerHTML = `<span class="icon">${type === 'success' ? '✅' : '❌'}</span>${msg}`;
+            el.className = `message ${type}`;
+            el.style.display = 'block';
+            setTimeout(() => { el.style.display = 'none'; }, 4000);
+        }
+
+        // Inicialización
+        window.addEventListener('DOMContentLoaded', async () => {
+            checkRobotMode();
+            await checkUser();
+            await loadTours();
+            
+            // Cargar navegación común
+            loadNavigation();
+        });
+
+        // Función de logout
+        async function logout() {
+            try {
+                await fetch('/api/logout', { method: 'POST' });
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+                window.location.href = '/';
+            }
+        }
+
+        // Cargar navegación común
+        function loadNavigation() {
+            // Configurar navegación móvil
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+            
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', () => {
+                    navMenu.classList.toggle('nav-menu-active');
+                    navToggle.classList.toggle('nav-toggle-active');
+                });
+            }
+
+            // Actualizar información del usuario en el navbar si está logueado
+            if (currentUser) {
+                updateNavbarUser(currentUser);
+            }
+        }
+
+        // Actualizar navbar con información del usuario
+        function updateNavbarUser(user) {
+            const navAuthMenu = document.getElementById('navAuthMenu');
+            const navUserMenu = document.getElementById('navUserMenu');
+            const navUsername = document.getElementById('navUsername');
+            const navUserAvatar = document.getElementById('navUserAvatar');
+            const navRobotControl = document.getElementById('navRobotControl');
+            const navAdmin = document.getElementById('navAdmin');
+            const navStats = document.getElementById('navStats');
+
+            if (navAuthMenu && navUserMenu && navUsername) {
+                // Ocultar menú de autenticación y mostrar menú de usuario
+                navAuthMenu.style.display = 'none';
+                navUserMenu.style.display = 'flex';
+                
+                // Actualizar información del usuario
+                navUsername.textContent = user.username;
+                
+                if (navUserAvatar && user.profilePicture) {
+                    navUserAvatar.src = user.profilePicture;
+                } else if (navUserAvatar) {
+                    navUserAvatar.src = '/icon.ico'; // Imagen por defecto
+                }
+
+                // Mostrar enlaces según el rol del usuario
+                if (user.role === 'admin' && navAdmin && navStats) {
+                    navAdmin.style.display = 'block';
+                    navStats.style.display = 'block';
+                }
+                
+                if ((user.role === 'admin' || user.role === 'tech') && navRobotControl) {
+                    navRobotControl.style.display = 'block';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

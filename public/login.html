@@ -129,10 +129,18 @@
                     messageDiv.textContent = 'Login exitoso. Redirigiendo...';
                     messageDiv.className = 'message success';
                     
-                    // Si es admin, redirigir al panel administrativo
-                    if (data.isAdmin) {
+                    // Verificar si hay URL de retorno en los parámetros
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const returnUrl = urlParams.get('return');
+                    
+                    if (returnUrl) {
+                        // Redirigir a la URL de retorno (decodificada)
+                        window.location.href = decodeURIComponent(returnUrl);
+                    } else if (data.isAdmin) {
+                        // Si es admin y no hay URL de retorno, ir al panel administrativo
                         window.location.href = '/admin';
                     } else {
+                        // Por defecto, ir al inicio
                         window.location.href = '/';
                     }
                 } else {

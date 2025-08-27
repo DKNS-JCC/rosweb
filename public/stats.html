@@ -596,19 +596,16 @@
                 if (navRobotControl) navRobotControl.style.display = 'block';
                 if (navAdmin) navAdmin.style.display = 'block';
                 if (navStats) navStats.style.display = 'block';
-                console.log('Stats - Rol admin: Todos los botones disponibles');
             } else if (user.role === 'tecnico') {
                 // Técnico: Inicio, Tours, Cómo Funciona, Control Robot
                 if (navRobotControl) navRobotControl.style.display = 'block';
                 if (navAdmin) navAdmin.style.display = 'none';
                 if (navStats) navStats.style.display = 'none';
-                console.log('Stats - Rol técnico: Control Robot disponible, botones admin ocultos');
             } else {
                 // Usuario normal: solo Inicio, Tours, Cómo Funciona
                 if (navRobotControl) navRobotControl.style.display = 'none';
                 if (navAdmin) navAdmin.style.display = 'none';
                 if (navStats) navStats.style.display = 'none';
-                console.log('Stats - Rol usuario normal: Solo menú básico disponible');
             }
         }
 

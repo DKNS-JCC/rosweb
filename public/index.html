@@ -196,7 +196,7 @@
                     <a href="/" class="nav-link">Inicio</a>
                 </li>
                 <li class="nav-item">
-                    <a href="#tours" class="nav-link">Tours</a>
+                    <a href="#tours" class="nav-link" id="navToursLink">Tours</a>
                 </li>
                 <li class="nav-item">
                     <a href="#how-it-works" class="nav-link">Cómo Funciona</a>
@@ -787,9 +787,7 @@
                         return;
                     }
                     
-                    if (confirm(`¿Deseas iniciar el tour "${tourName}"?\n\nTu guía robótico te estará esperando en la sala principal.`)) {
-                        await startTour(tourId, tourName);
-                    }
+                    showTourOptionsModal(tourId, tourName);
                 });
             });
         }
@@ -811,53 +809,309 @@
             });
         }
 
-        // Iniciar tour
-        async function startTour(tourId, tourName) {
+        // Mostrar modal con opciones de tour
+        function showTourOptionsModal(tourId, tourName) {
+            const modal = document.createElement('div');
+            modal.className = 'tour-modal';
+            modal.innerHTML = `
+                <div class="tour-modal-content">
+                    <h2>¡Inicia tu Tour!</h2>
+                    <p><strong>${tourName}</strong></p>
+                    <p>Tu guía robótico te está esperando en la <strong>entrada del museo</strong>.</p>
+
+                    <div style="margin: 12px 0; text-align:left;">
+                        <label for="robotSelect" style="display:block; font-weight:600; margin-bottom:6px;">Elige un robot disponible</label>
+                        <select id="robotSelect" style="width:100%; padding:10px; border-radius:6px; border:1px solid #e1e5e9;">
+                            <option value="" disabled selected>Cargando robots...</option>
+                        </select>
+                        <div style="text-align:center; margin:10px 0; color:#888;">— o —</div>
+                        <label for="scannedRobot" style="display:block; font-weight:600; margin-bottom:6px; text-align:center;">Escanear QR en el robot</label>
+                        <div style="text-align:center; margin:10px 0; color:#888;">— o —</div>
+                        <button onclick="startTourLater('${tourId}', '${tourName}')" class="btn btn-outline btn-large" style="width:100%; margin-top:10px;">
+                            Iniciar más tarde
+                        </button>
+                    </div>
+
+                    <div class="loading-section" id="loadingSection" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p>Preparando tu tour...</p>
+                        <p class="loading-details" id="loadingDetails">Conectando con el robot...</p>
+                    </div>
+
+                    <div class="tour-buttons" id="tourButtons">
+                        <button onclick="startTourNow('${tourId}', '${tourName}')" class="btn btn-primary btn-large">
+                            🚀 Iniciar Ahora
+                        </button>
+                    </div>
+
+                    <div class="tour-success" id="tourSuccess" style="display: none;">
+                        <div class="success-icon">✅</div>
+                        <p><strong>¡Tour preparado exitosamente!</strong></p>
+                        <p class="tour-id">ID del tour: <code id="tourIdDisplay"></code></p>
+                        <button onclick="closeModal()" class="btn btn-primary">
+                            Entendido
+                        </button>
+                    </div>
+                    <div class="tour-pin-highlight" id="pinSection" style="display: none;">
+                        <p class="tour-pin-label">PIN para dificultades técnicas:</p>
+                        <div class="tour-pin-value" id="pinValue">
+                            <strong id="tourPin">...</strong>
+                        </div>
+                        <p class="tour-pin-note">Entrégale este PIN al personal en caso de problemas.</p>
+                    </div>
+
+                    <button onclick="closeModal()" class="btn btn-secondary tour-close-btn" id="closeBtn">
+                        Cerrar
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Guardar referencia al modal actual
+            window.currentTourModal = modal;
+
+            // Intentar cargar robots disponibles desde la API y poblar el select
+            (async function populateRobots() {
+                const select = document.getElementById('robotSelect');
+                try {
+                    const res = await fetch('/api/robots');
+                    if (!res.ok) throw new Error('No se pudieron obtener los robots');
+                    const robots = await res.json();
+
+                    // Limpiar opciones
+                    select.innerHTML = '';
+                    if (!robots || robots.length === 0) {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.disabled = true;
+                        opt.selected = true;
+                        opt.textContent = 'No hay robots disponibles';
+                        select.appendChild(opt);
+                        return;
+                    }
+
+                    // Añadir opción por defecto
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = '';
+                    defaultOpt.selected = true;
+                    defaultOpt.disabled = true;
+                    defaultOpt.textContent = 'Selecciona un robot...';
+                    select.appendChild(defaultOpt);
+
+                    robots.forEach(r => {
+                        const option = document.createElement('option');
+                        // Asumimos que la API devuelve { id, name }
+                        option.value = r.name || r.id;
+                        option.textContent = r.name || r.id;
+                        select.appendChild(option);
+                    });
+                } catch (err) {
+                    console.warn('Robots fetch error', err);
+                    select.innerHTML = '';
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.disabled = true;
+                    opt.selected = true;
+                    opt.textContent = 'Error cargando robots';
+                    select.appendChild(opt);
+                }
+            })();
+        }
+
+        // Iniciar tour ahora (proceso completo con WebSocket)
+        async function startTourNow(tourId, tourName) {
+            const loadingSection = document.getElementById('loadingSection');
+            const tourButtons = document.getElementById('tourButtons');
+            const closeBtn = document.getElementById('closeBtn');
+
+            // Obtener robot seleccionado o QR pegado
+            const scanned = document.getElementById('scannedRobot') ? document.getElementById('scannedRobot').value.trim() : '';
+            const selectEl = document.getElementById('robotSelect');
+            const selectedRobot = scanned || (selectEl ? selectEl.value : '');
+
+            if (!selectedRobot) {
+                showMessage('Por favor selecciona o escanea un robot antes de iniciar el tour', 'info');
+                return;
+            }
+
+            // Mostrar loading y ocultar botones
+            loadingSection.style.display = 'block';
+            tourButtons.style.display = 'none';
+            closeBtn.style.display = 'none';
+
+            try {
+                // Paso 1: Iniciar el tour (enviamos el robot seleccionado)
+                updateLoadingDetails('Iniciando tour...');
+                const startResponse = await fetch('/api/start-tour', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tourId, robot: selectedRobot })
+                });
+
+                const startData = await startResponse.json();
+
+                if (!startData.success) {
+                    throw new Error(startData.error || 'Error al iniciar el tour');
+                }
+
+                // Mostrar PIN para dificultades
+                if (document.getElementById('tourPin')) document.getElementById('tourPin').textContent = startData.PIN;
+                if (document.getElementById('pinSection')) document.getElementById('pinSection').style.display = 'block';
+
+                // Paso 2: Enviar al robot (simular proceso de tours.html)
+                updateLoadingDetails('Enviando datos al robot...');
+
+                // Obtener el tour_history_id del tour recién creado
+                const userStatusResponse = await fetch('/api/user/status');
+                const userStatus = await userStatusResponse.json();
+
+                if (!userStatus.hasActiveTour) {
+                    throw new Error('No se pudo obtener el tour activo');
+                }
+
+                const tourHistoryId = userStatus.activeTour.id;
+
+                // Enviar al robot usando el mismo endpoint que tours.html
+                updateLoadingDetails('Conectando con el robot...');
+                const robotResponse = await fetch('/api/robot/send-tour', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        tour_history_id: tourHistoryId,
+                        robot: selectedRobot
+                    })
+                });
+
+                const robotResult = await robotResponse.json();
+
+                if (!robotResponse.ok || !robotResult.success) {
+                    throw new Error(robotResult.error || 'Error al comunicar con el robot');
+                }
+
+                // Éxito completo
+                updateLoadingDetails('¡Tour preparado exitosamente!');
+
+                setTimeout(() => {
+                    showTourCompleteSuccess(startData.tourId, tourName);
+                }, 1000);
+
+            } catch (error) {
+                console.error('Error al iniciar tour:', error);
+                showTourError(error.message);
+            }
+        }
+
+        // Iniciar tour más tarde (solo crear en base de datos)
+        async function startTourLater(tourId, tourName) {
+            const loadingSection = document.getElementById('loadingSection');
+            const tourButtons = document.getElementById('tourButtons');
+            const closeBtn = document.getElementById('closeBtn');
+
+            // Obtener robot seleccionado o QR pegado
+            const scanned = document.getElementById('scannedRobot') ? document.getElementById('scannedRobot').value.trim() : '';
+            const selectEl = document.getElementById('robotSelect');
+            const selectedRobot = scanned || (selectEl ? selectEl.value : '');
+
+            if (!selectedRobot) {
+                showMessage('Por favor selecciona o escanea un robot antes de reservar el tour', 'info');
+                return;
+            }
+
+            // Mostrar loading breve
+            loadingSection.style.display = 'block';
+            tourButtons.style.display = 'none';
+            closeBtn.style.display = 'none';
+
+            updateLoadingDetails('Reservando tu tour...');
+
             try {
                 const response = await fetch('/api/start-tour', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ tourId })
+                    body: JSON.stringify({ tourId, robot: selectedRobot })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showTourStartedModal(tourName, data.tourId, data.PIN);
+                    // Mostrar PIN para dificultades
+                    if (document.getElementById('tourPin')) document.getElementById('tourPin').textContent = data.PIN;
+                    if (document.getElementById('pinSection')) document.getElementById('pinSection').style.display = 'block';
+
+                    setTimeout(() => {
+                        showTourLaterSuccess(data.tourId, tourName, data.PIN);
+                    }, 800);
                 } else {
-                    showMessage(data.error || 'Error al iniciar el tour', 'error');
+                    throw new Error(data.error || 'Error al reservar el tour');
                 }
             } catch (error) {
-                showMessage('Error de conexión', 'error');
+                console.error('Error al reservar tour:', error);
+                showTourError(error.message);
             }
         }
 
-        // Mostrar modal de tour iniciado
-        function showTourStartedModal(tourName, tourId, tourPIN) {
-            const modal = document.createElement('div');
-            modal.className = 'tour-modal';
-            modal.innerHTML = `
-                <div class="tour-modal-content">
-                    <div class="tour-success-icon">✨</div>
-                    <h2>¡Tour Iniciado!</h2>
-                    <p><strong>${tourName}</strong></p>
-                    <p>Tu guía robótico te está esperando en la <strong>entrada del museo</strong>.</p>
-                    <div class="tour-pin-highlight">
-                        <p class="tour-pin-label">PIN para el robot:</p>
-                        <div class="tour-pin-value">
-                            <strong>${tourPIN}</strong>
-                        </div>
-                        <p class="tour-pin-note">¡Recuerda este PIN! Es necesario para comenzar tu tour.</p>
-                    </div>
-                    <p class="tour-id">ID del tour: <code>${tourId}</code></p>
-                    <button onclick="this.closest('.tour-modal').remove()" class="btn btn-primary">
-                        Entendido
-                    </button>
-                </div>
+        // Mostrar éxito para "iniciar ahora"
+        function showTourCompleteSuccess(tourId, tourName) {
+            const loadingSection = document.getElementById('loadingSection');
+            const tourSuccess = document.getElementById('tourSuccess');
+            
+            loadingSection.style.display = 'none';
+            tourSuccess.style.display = 'block';
+            
+            document.getElementById('tourIdDisplay').textContent = tourId;
+        }
+
+        // Mostrar éxito para "iniciar más tarde"
+        function showTourLaterSuccess(tourId, tourName, pin) {
+            const loadingSection = document.getElementById('loadingSection');
+            const tourSuccess = document.getElementById('tourSuccess');
+            
+            loadingSection.style.display = 'none';
+            
+            // Customizar mensaje para "más tarde"
+            tourSuccess.innerHTML = `
+                <p><strong>¡Tour reservado!</strong></p>
+                <p>Cuando estés listo, puedes escanear el código QR de cualquier robot disponible.</p>
+                <p class="tour-id">ID del tour: <code>${tourId}</code></p>
+                <button onclick="closeModal()" class="btn btn-primary">
+                    Entendido
+                </button>
             `;
-            document.body.appendChild(modal);
+            
+            tourSuccess.style.display = 'block';
+        }
+
+        // Mostrar error en el modal
+        function showTourError(errorMessage) {
+            const loadingSection = document.getElementById('loadingSection');
+            const tourButtons = document.getElementById('tourButtons');
+            const closeBtn = document.getElementById('closeBtn');
+            
+            loadingSection.style.display = 'none';
+            tourButtons.style.display = 'block';
+            closeBtn.style.display = 'block';
+            
+            showMessage(errorMessage, 'error');
+        }
+
+        // Actualizar detalles de carga
+        function updateLoadingDetails(message) {
+            const loadingDetails = document.getElementById('loadingDetails');
+            if (loadingDetails) {
+                loadingDetails.textContent = message;
+            }
+        }
+
+        // Cerrar modal
+        function closeModal() {
+            if (window.currentTourModal) {
+                window.currentTourModal.remove();
+                window.currentTourModal = null;
+            }
         }
 
         // Mostrar mensajes
@@ -891,7 +1145,7 @@
                     navDropdownMenu.classList.toggle('nav-dropdown-open');
                 });
 
-                // Cerrar dropdown al hacer clic fuera11101
+                // Cerrar dropdown al hacer clic fuera
                 document.addEventListener('click', (event) => {
                     if (!navUserToggle.contains(event.target) && !navDropdownMenu.contains(event.target)) {
                         navDropdownMenu.classList.remove('nav-dropdown-open');
@@ -946,7 +1200,8 @@
 
         // Cargar script de navegación y actualizar al cargar la página
         document.addEventListener('DOMContentLoaded', async () => {
-            await updateNavigationByRole();
+            // Remove undefined function call; if needed, define updateNavigationByRole() separately
+            // await updateNavigationByRole(); // Commented out as it's undefined
         });
 
     </script>

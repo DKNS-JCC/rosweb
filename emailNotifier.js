@@ -168,6 +168,30 @@ class EmailNotifier {
                            Fecha: ${timestamp}</p>`
                 };
 
+            case 'ROBOT_TOUR_STARTED':
+                return {
+                    subject: `[artTEC] Tour iniciado en robot ${data.robotId}`,
+                    body: `Robot: ${data.robotId}\nTour: ${data.tourName}\nUsuario: ${data.username}\nEmail: ${data.email}\nRuta: ${data.routeName}\nFecha: ${timestamp}`,
+                    html: `<p><strong>Tour iniciado en robot</strong></p>
+                           <p>Robot: ${data.robotId}<br>
+                           Tour: ${data.tourName}<br>
+                           Usuario: ${data.username}<br>
+                           Email: ${data.email}<br>
+                           Ruta: ${data.routeName}<br>
+                           Fecha: ${timestamp}</p>`
+                };
+
+            case 'ROBOT_ACTIVATED':
+                return {
+                    subject: `[artTEC] Robot activado via QR`,
+                    body: `Robot: ${data.robotName}\nTour: ${data.tourName}\nRuta: ${data.routeName}\nFecha: ${timestamp}`,
+                    html: `<p><strong>Robot activado via QR</strong></p>
+                           <p>Robot: ${data.robotName}<br>
+                           Tour: ${data.tourName}<br>
+                           Ruta: ${data.routeName}<br>
+                           Fecha: ${timestamp}</p>`
+                };
+
             case 'TOUR_COMPLETED':
                 return {
                     subject: `[artTEC] Tour completado`,
