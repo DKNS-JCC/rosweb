@@ -10,34 +10,164 @@ Un sistema completo de control web para robot TurtleBot con integración ROS, mo
 - ✅ **Parada de emergencia** múltiple (botón STOP, tecla Espacio)
 - ✅ **Velocidades configurables** (linear: 0.2 m/s, angular: 0.5 rad/s)
 - ✅ **Conexión ROS Bridge** a `ws://turtlebot-NUC.local:9090`
+- ✅ **Control en tiempo real** con feedback visual inmediato
+- ✅ **Interfaz táctil** optimizada para dispositivos móviles
+- ✅ **Modo administrador** con controles avanzados
 
 ### 📡 **Sensores en Tiempo Real**
 - ✅ **Odometría** - Posición X, Y, Z y orientación en grados
 - ✅ **LIDAR** - Sensor láser 360° con detección de obstáculos
-- ✅ **Batería Kobuki** - Nivel, voltaje, estado de carga
+- ✅ **Batería Kobuki** - Nivel, voltaje, estado de carga y alertas
 - ✅ **Cámara** - Stream de video 640x480 en tiempo real
 - ✅ **Diagnósticos** - Estado completo del sistema TurtleBot
+- ✅ **Monitoreo continuo** de conectividad y tópicos ROS
+- ✅ **Alertas automáticas** por email de batería baja
 
-### 👥 **Sistema Multiusuario**
+### 👥 **Sistema Multiusuario Avanzado**
 - ✅ **Autenticación completa** con email/username + password
-- ✅ **Roles diferenciados** (Usuario/Administrador)
-- ✅ **Sesiones seguras** con express-session
+- ✅ **Roles diferenciados** (Usuario/Administrador/Técnico)
+- ✅ **Sesiones seguras** con express-session y expiración
 - ✅ **Contraseñas hasheadas** con bcrypt
-- ✅ **Control de acceso** a funciones del robot
+- ✅ **Control de acceso** basado en roles y permisos
+- ✅ **Perfiles de usuario** con fotos personalizables
+- ✅ **Gestión de usuarios** completa para administradores
+- ✅ **Historial de actividad** por usuario
 
-### 🔧 **Panel Administrativo**
-- ✅ **Gestión de usuarios** completa
+### 🗺️ **Sistema de Tours Inteligente**
+- ✅ **Gestión completa de tours** con rutas predefinidas
+- ✅ **Waypoints interactivos** con descripciones detalladas
+- ✅ **Asignación automática de robots** a tours
+- ✅ **Seguimiento de progreso** en tiempo real
+- ✅ **Historial de tours** con calificaciones y feedback
+- ✅ **IA generativa** con Gemini para descripciones automáticas
+- ✅ **Soporte multiidioma** para tours
+- ✅ **Sistema de pines** para acceso seguro a tours
+
+### 📧 **Sistema de Notificaciones Avanzado**
+- ✅ **Notificaciones por email** configurables
+- ✅ **Throttling inteligente** para evitar spam
+- ✅ **Horarios de trabajo** configurables
+- ✅ **Múltiples tipos** de notificaciones (batería, errores, desconexiones)
+- ✅ **Prioridades** (crítico, alto, medio, bajo)
+- ✅ **Plantillas HTML** para emails atractivos
+- ✅ **Configuración centralizada** en notificationConfig.js
+
+### 🔧 **Panel Administrativo Completo**
+- ✅ **Gestión de usuarios** completa (CRUD)
 - ✅ **Estadísticas del sistema** en tiempo real
-- ✅ **Historial de comandos** del robot
-- ✅ **Monitoreo de actividad** de usuarios
-- ✅ **Estado del robot** centralizado
+- ✅ **Historial de comandos** del robot con timestamps
+- ✅ **Monitoreo de actividad** de usuarios y robots
+- ✅ **Estado del robot** centralizado y detallado
+- ✅ **Gestión de tours** y rutas
+- ✅ **Configuración del sistema** avanzada
+- ✅ **Logs del sistema** con niveles de error
+
+### 📊 **Dashboard y Estadísticas**
+- ✅ **Dashboard principal** con métricas clave
+- ✅ **Estadísticas en tiempo real** de tópicos activos
+- ✅ **Monitoreo de batería** con gráficos históricos
+- ✅ **Posición del robot** en mapa 2D
+- ✅ **Contadores de obstáculos** detectados por LIDAR
+- ✅ **Usuarios conectados** y sesiones activas
+- ✅ **Historial completo** de comandos enviados
+- ✅ **Gráficos interactivos** con Three.js
 
 ### 🛡️ **Seguridad y Robustez**
 - ✅ **Manejo completo de errores** con try-catch
 - ✅ **Reconexión automática** ROS cada 30 segundos
-- ✅ **Monitoreo de tópicos** con timeouts
+- ✅ **Monitoreo de tópicos** con timeouts configurables
 - ✅ **Logging optimizado** para evitar spam
 - ✅ **Validación de datos** de sensores
+- ✅ **Protección CSRF** con Helmet
+- ✅ **Límite de tamaño** de archivos subidos (5MB)
+- ✅ **Validación de tipos** de archivos para imágenes
+
+### 📱 **Interfaz Web Moderna**
+- ✅ **Diseño responsive** para móviles y tablets
+- ✅ **Interfaz intuitiva** con navegación clara
+- ✅ **Tema moderno** con gradientes y sombras
+- ✅ **Animaciones suaves** y transiciones
+- ✅ **Compatibilidad** con navegadores modernos
+- ✅ **Accesibilidad** mejorada con ARIA labels
+- ✅ **Modo oscuro** opcional
+- ✅ **Iconografía** consistente y moderna
+
+### ⚡ **Optimización y Rendimiento**
+- ✅ **Throttling automático** de mensajes de cámara
+- ✅ **Logging probabilístico** para reducir spam
+- ✅ **Actualización eficiente** de la interfaz
+- ✅ **Gestión inteligente** de recursos del navegador
+- ✅ **Compresión** de respuestas HTTP
+- ✅ **Cache** de descripciones generadas por IA
+- ✅ **Conexiones WebSocket** optimizadas
+- ✅ **Lazy loading** de componentes pesados
+
+## 🚀 Características Avanzadas
+
+### **🔄 Reconexión Automática y Monitoreo**
+- Reintento de conexión ROS cada 30 segundos
+- Notificación visual del estado de conectividad
+- Restablecimiento automático de suscripciones
+- Monitoreo continuo de tópicos activos
+- Alertas por email de desconexiones críticas
+
+### **🧠 Inteligencia Artificial Integrada**
+- **Gemini AI** para generar descripciones detalladas de waypoints
+- Descripciones automáticas en múltiples idiomas
+- Cache inteligente para evitar regeneración innecesaria
+- Optimización de prompts para voz y texto
+
+### **📧 Sistema de Notificaciones Inteligente**
+- Notificaciones por email con throttling configurable
+- Múltiples tipos: batería, errores, desconexiones, tours
+- Prioridades: crítico, alto, medio, bajo
+- Horarios de trabajo configurables
+- Plantillas HTML responsivas
+
+### **👥 Gestión Avanzada de Usuarios**
+- Tres roles diferenciados: Usuario, Técnico, Administrador
+- Sistema de perfiles con fotos personalizables
+- Control de acceso granular por funcionalidades
+- Historial completo de actividad por usuario
+- Gestión de sesiones con expiración automática
+
+### **🎯 Sistema de Tours Robótico**
+- Rutas predefinidas con waypoints geolocalizados
+- Asignación automática de robots disponibles
+- Seguimiento GPS del progreso en tiempo real
+- Sistema de pines para acceso seguro
+- Calificaciones y feedback de usuarios
+- Historial detallado de tours completados
+
+### **📊 Dashboard y Analytics**
+- Métricas en tiempo real de todos los sensores
+- Gráficos históricos de batería y uso
+- Contadores de obstáculos y detecciones LIDAR
+- Estadísticas de usuarios conectados
+- Reportes de rendimiento del sistema
+
+### **🛡️ Seguridad Multicapa**
+- Autenticación obligatoria para todas las funciones
+- Hash seguro de contraseñas con bcrypt
+- Protección CSRF con Helmet
+- Validación de tipos y tamaños de archivos
+- Logging completo de todas las acciones
+- Controles de acceso basados en roles
+
+### **📱 Experiencia Móvil Optimizada**
+- Diseño completamente responsive
+- Controles táctiles optimizados para tablets
+- Navegación móvil intuitiva
+- Compatibilidad con gestos multitáctiles
+- Optimización de batería en dispositivos móviles
+
+### **⚡ Optimización de Rendimiento**
+- Throttling automático de streams de video
+- Logging probabilístico para reducir spam
+- Compresión de respuestas HTTP
+- Cache de descripciones generadas por IA
+- Lazy loading de componentes pesados
+- Gestión inteligente de conexiones WebSocket
 
 ## 🚀 Requisitos
 
@@ -84,29 +214,48 @@ npm run dev
 
 ```
 rosweb/
-├── 📦 package.json                    # Dependencias y scripts npm
-├── 🚀 server.js                      # Servidor Express + API endpoints
+├── 📦 package.json                    # Dependencias y configuración npm
+├── 🚀 server.js                      # Servidor Express principal + API
 ├── 🗄️ database.db                    # Base de datos SQLite
 ├── 🖼️ icon.ico                       # Logo de la aplicación
+├── 🤖 robotManager.js                # Gestor de conexión ROS y sensores
+├── 📧 emailNotifier.js               # Sistema de notificaciones por email
+├── ⚙️ notificationConfig.js          # Configuración de notificaciones
 ├── 📁 public/                        # Archivos estáticos del frontend
-│   ├── 🏠 index.html                 # Página principal
-│   ├── 🔐 login.html                 # Sistema de login
-│   ├── 📝 register.html              # Registro de usuarios
-│   ├── 📊 dashboard.html             # Dashboard de usuario
-│   ├── 🔧 admin.html                 # Panel administrativo
-│   ├── 🤖 robot.html                 # Control completo del robot
+│   ├── 🏠 index.html                 # Página principal con dashboard
+│   ├── 🔐 login.html                 # Sistema de autenticación
+│   ├── 📝 register.html              # Registro de nuevos usuarios
+│   ├── 📊 dashboard.html             # Dashboard personal del usuario
+│   ├── 🔧 admin.html                 # Panel administrativo completo
+│   ├── 🤖 robot.html                 # Control avanzado del robot
+│   ├── 🎯 tours.html                 # Selección y gestión de tours
+│   ├── 📈 stats.html                 # Estadísticas detalladas del sistema
 │   ├── 🎨 styles.css                 # Estilos CSS globales
+│   ├── 🧭 navigation.js              # Utilidades de navegación
 │   └── 🖼️ icon.ico                   # Logo accesible desde frontend
-├── 🤖 robotManager.js                # Gestor de conexión ROS (servidor)
-├── 📋 RESUMEN_SISTEMA.md             # Documentación completa del sistema
-├── 🔧 SOLUCION_COMPLETA.md           # Resolución de problemas técnicos
-├── 🔋 ACTUALIZACION_BATERIA.md       # Actualización sistema de batería
+├── 📁 uploads/                       # Imágenes de perfil de usuarios
+│   ├── profile_1_*.jpg               # Fotos de perfil de usuarios
+│   └── profile_3_*.jpeg
+├── 📋 RESUMEN_SISTEMA.md             # Documentación técnica completa
+├── 🔧 SOLUCION_COMPLETA.md           # Guía de resolución de problemas
+├── 🔋 ACTUALIZACION_BATERIA.md       # Sistema de batería Kobuki
 └── 📖 README.md                      # Esta documentación
 ```
 
 ## 🎮 Uso del Sistema
 
-### **1. Registro e Inicio de Sesión**
+### **1. Cuentas de Usuario por Defecto**
+```bash
+# Administrador (acceso completo)
+Usuario: admin
+Contraseña: admin123
+
+# Técnico (mantenimiento y configuración)
+Usuario: tecnico
+Contraseña: tecnico123
+```
+
+### **2. Registro e Inicio de Sesión**
 ```bash
 # Crear cuenta nueva
 http://localhost:3000/register
@@ -115,7 +264,7 @@ http://localhost:3000/register
 http://localhost:3000/login
 ```
 
-### **2. Control del Robot**
+### **3. Control del Robot**
 ```bash
 # Acceso directo al control
 http://localhost:3000/robot
@@ -130,237 +279,123 @@ http://localhost:3000/robot
   - `D/→` - Girar derecha
   - `Espacio` - Parada de emergencia
 
-### **3. Panel Administrativo**
+### **4. Sistema de Tours**
+```bash
+# Seleccionar tour disponible
+http://localhost:3000/tours
+
+# Iniciar tour con PIN de seguridad
+# El sistema asigna automáticamente un robot disponible
+```
+
+**Características de Tours:**
+- **Rutas predefinidas** con waypoints específicos
+- **Descripciones generadas por IA** para cada punto
+- **Seguimiento GPS** del progreso
+- **Calificaciones y feedback** al completar
+- **Historial completo** de tours realizados
+
+### **5. Panel Administrativo**
 ```bash
 # Solo para administradores
 http://localhost:3000/admin
 ```
 
-**Funcionalidades:**
-- Gestión completa de usuarios
-- Estadísticas del sistema en tiempo real
-- Historial de comandos del robot
-- Estado y diagnósticos del TurtleBot
+**Funcionalidades administrativas:**
+- Gestión completa de usuarios (crear, editar, eliminar)
+- Configuración de tours y rutas
+- Monitoreo en tiempo real del sistema
+- Estadísticas detalladas y reportes
+- Configuración de notificaciones
+- Gestión de robots y asignaciones
 
-## 📡 Tópicos ROS Configurados
-
-| Tópico | Tipo | Función | Frecuencia |
-|--------|------|---------|------------|
-| `/mobile_base/commands/velocity` | `geometry_msgs/Twist` | 📤 Comandos de movimiento | Bajo demanda |
-| `/odom` | `nav_msgs/Odometry` | 📥 Posición y velocidad | ~50 Hz |
-| `/scan` | `sensor_msgs/LaserScan` | 📥 Datos LIDAR 360° | ~10 Hz |
-| `/diagnostics` | `diagnostic_msgs/DiagnosticArray` | 📥 Estado del sistema | ~1 Hz |
-| `/camera/color/image_raw` | `sensor_msgs/Image` | 📥 Stream de video | ~15 FPS |
-
-## 🗄️ Base de Datos
-
-### **Tabla `users`**
-```sql
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    role TEXT DEFAULT 'user',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+### **6. Dashboard Personal**
+```bash
+# Dashboard del usuario
+http://localhost:3000/dashboard
 ```
 
-### **Tabla `robot_commands`**
-```sql
-CREATE TABLE robot_commands (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    action TEXT NOT NULL,
-    parameters TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id)
-);
-```
-
-## 🌐 API Endpoints
-
-### **👤 Autenticación**
-- `POST /api/register` - Registrar nuevo usuario
-- `POST /api/login` - Iniciar sesión
-- `GET /api/user` - Información del usuario actual
-- `POST /api/logout` - Cerrar sesión
-
-### **🤖 Control del Robot**
-- `GET /api/robot/status` - Estado actual del robot
-- `POST /api/robot/command` - Enviar comando al robot
-- `GET /api/robot/topics` - Lista de tópicos ROS disponibles
-
-### **🔧 Administración**
-- `GET /api/admin/users` - Lista de usuarios (admin)
-- `GET /api/admin/stats` - Estadísticas del sistema (admin)
-- `GET /api/admin/robot/commands` - Historial de comandos (admin)
-
-## 🔧 Configuración Técnica
-
-### **Dependencias Principales**
-```json
-{
-  "express": "^4.18.2",           // Servidor web
-  "express-session": "^1.17.3",  // Gestión de sesiones
-  "bcrypt": "^5.1.0",            // Hash de contraseñas
-  "sqlite3": "^5.1.6",          // Base de datos
-  "roslib": "^1.3.0",           // Cliente ROS JavaScript
-  "cors": "^2.8.5"              // Cross-Origin Resource Sharing
-}
-```
+**Funcionalidades del usuario:**
+- Vista general del estado del sistema
+- Historial personal de tours
+- Control rápido del robot
+- Perfil personal con foto
+- Estadísticas de uso
 
 ### **Variables de Entorno**
 ```bash
-# Puerto del servidor (opcional)
-PORT=3000
+# Servidor
+PORT=3000                              # Puerto del servidor web
+NODE_ENV=production                    # Entorno (development/production)
 
-# URL del ROS Bridge (configurable)
-ROS_BRIDGE_URL=ws://turtlebot-NUC.local:9090
+# Base de datos
+DATABASE_PATH=./database.db            # Ruta de la base de datos SQLite
+
+# ROS Bridge
+ROS_BRIDGE_URL=ws://turtlebot-NUC.local:9090  # URL del ROS Bridge
+ROS_RECONNECT_INTERVAL=30000           # Intervalo de reconexión (ms)
+
+# IA Generativa (Gemini)
+GEMINI_API_KEY=your_api_key_here       # API Key de Google Gemini
+
+# Email (Notificaciones)
+EMAIL_USER=artecrobotics25@gmail.com   # Usuario de email
+EMAIL_PASS=hfbn zftl ycvg fain         # Contraseña de aplicación
+EMAIL_DESTINATION=artecrobotics25@gmail.com  # Destino de notificaciones
+
+# Seguridad
+SESSION_SECRET=mi-secreto-super-seguro # Secreto para sesiones
+BCRYPT_ROUNDS=10                       # Rondas de hash para contraseñas
+
+# Configuración de archivos
+MAX_FILE_SIZE=5242880                  # Tamaño máximo de archivos (5MB)
+UPLOAD_PATH=./uploads                  # Directorio de archivos subidos
+
+# Configuración de notificaciones
+NOTIFICATION_THROTTLE=60               # Throttle en minutos
+WORKING_HOURS_ONLY=false               # Solo notificaciones en horario laboral
+WORKING_HOURS_START=09:00              # Hora de inicio
+WORKING_HOURS_END=18:00                # Hora de fin
 ```
-
-## 🛠️ Desarrollo
-
-### **Scripts disponibles**
-```bash
-# Iniciar servidor de producción
-npm start
-
-# Desarrollo con recarga automática
-npm run dev
-
-# Pruebas de conectividad
-npm run test:connection
-
-# Diagnósticos del robot
-npm run test:robot
-```
-
-### **Debugging y Diagnósticos**
-```bash
-# Verificar conectividad ROS
-node diagnostico_completo.js
-
-# Probar tópicos específicos
-node test_scan.js           # LIDAR
-node test_battery_kobuki.js # Batería
-node test_movement.js       # Movimiento
-```
-
-## 🔍 Troubleshooting
-
-### **Problemas Comunes**
-
-#### **1. Error: `topics.filter is not a function`**
-```javascript
-// ✅ SOLUCIONADO: getTopics() devuelve objeto, no array
-// El sistema maneja automáticamente ambos formatos
-```
-
-#### **2. LIDAR sin datos**
-```javascript
-// ✅ SOLUCIONADO: Cambiado de /laser a /scan
-// Suscripción a ambos tópicos para compatibilidad
-```
-
-#### **3. Cámara en negro**
-```javascript
-// ✅ SOLUCIONADO: Manejo robusto de errores
-// Activación manual de cámara para ahorrar ancho de banda
-```
-
-#### **4. Puerto ocupado**
-```bash
-# Liberar puerto 3000
-lsof -ti:3000 | xargs kill -9
-npm start
-```
-
-#### **5. Conexión ROS fallida**
-```bash
-# Verificar conectividad
-ping turtlebot-NUC.local
-telnet turtlebot-NUC.local 9090
-```
-
-## 📈 Monitoreo y Estadísticas
-
-### **Dashboard en Tiempo Real**
-- 📊 **Tópicos activos**: Conteo automático
-- 🔋 **Estado de batería**: Nivel, voltaje, carga
-- 📍 **Posición del robot**: Coordenadas X, Y, Z
-- 🚨 **Obstáculos detectados**: Count LIDAR
-- 👥 **Usuarios conectados**: Sesiones activas
-- 📈 **Comandos enviados**: Historial completo
-
-### **Logs del Sistema**
-- ✅ **Logs optimizados** - Sin spam excesivo
-- ✅ **Timestamps precisos** - Seguimiento detallado
-- ✅ **Niveles de error** - Info, Warning, Error
-- ✅ **Limpieza automática** - Botón de reset
-
-## 🚀 Características Avanzadas
-
-### **🔄 Reconexión Automática**
-- Reintento cada 30 segundos si se pierde conexión ROS
-- Notificación visual del estado de conectividad
-- Restablecimiento automático de suscripciones
-
-### **🛡️ Seguridad Multicapa**
-- Autenticación obligatoria para control del robot
-- Sesiones con expiración automática
-- Logging completo de todas las acciones
-- Controles de acceso basados en roles
-
-### **📱 Diseño Responsive**
-- Compatible con dispositivos móviles
-- Interfaz adaptable a tablets
-- Controles táctiles optimizados
-- Visualización clara en pantallas pequeñas
-
-### **⚡ Optimización de Rendimiento**
-- Throttling automático de mensajes de cámara
-- Logging probabilístico para reducir spam
-- Actualización eficiente de la interfaz
-- Gestión inteligente de recursos
-
-## 🎯 Próximas Mejoras Sugeridas
-
-### **🗺️ Navegación Avanzada**
-- Mapa en tiempo real con posición del robot
-- Navegación por objetivos (click-to-go)
-- Planificación de rutas automática
-- Evitación de obstáculos inteligente
-
-### **🤖 Control Múltiple**
-- Soporte para múltiples robots simultáneos
-- Dashboard centralizado multi-robot
-- Asignación de tareas automática
-- Coordinación de flota
-
-### **☁️ Integración Cloud**
-- Dashboard web en la nube
-- Acceso remoto seguro
-- Backup automático de datos
-- Sincronización multi-dispositivo
-
-### **🧠 Inteligencia Artificial**
-- Navegación autónoma básica
-- Reconocimiento de objetos
-- Comandos por voz
-- Aprendizaje de rutas frecuentes
 
 ## 📞 Soporte
 
 ### **Documentación Adicional**
-- `RESUMEN_SISTEMA.md` - Funcionalidades completas
-- `SOLUCION_COMPLETA.md` - Resolución de problemas
+- `RESUMEN_SISTEMA.md` - Funcionalidades completas del sistema
+- `SOLUCION_COMPLETA.md` - Resolución de problemas técnicos
 - `ACTUALIZACION_BATERIA.md` - Sistema de batería Kobuki
+- `README.md` - Esta documentación general
 
 ### **Información Técnica**
 - **Framework**: Node.js + Express.js
-- **Base de datos**: SQLite
+- **Base de datos**: SQLite con migraciones automáticas
 - **Frontend**: HTML5 + CSS3 + JavaScript vanilla
-- **ROS**: ROSLib.js + WebSocket
+- **ROS**: ROSLib.js + WebSocket Bridge
+- **IA**: Google Gemini 2.5 Flash
 - **Autenticación**: bcrypt + express-session
+- **Notificaciones**: Nodemailer con plantillas HTML
+- **WebSockets**: Express-WS + Socket.IO
+
+### **Arquitectura del Sistema**
+- **Backend**: Node.js con Express.js
+- **Base de datos**: SQLite con esquemas relacionales
+- **Comunicación**: WebSocket + HTTP REST API
+- **Autenticación**: Sesiones con roles y permisos
+- **Monitoreo**: Sistema de logs y notificaciones
+- **IA**: Integración con Gemini para contenido dinámico
+
+### **Configuración Recomendada**
+- **CPU**: 2 núcleos mínimo, 4 recomendado
+- **RAM**: 4GB mínimo, 8GB recomendado
+- **Almacenamiento**: 10GB para datos y logs
+- **Red**: Conexión estable al ROS Bridge
+- **Navegador**: Chrome/Edge/Firefox actualizados
+
+### **Soporte y Contacto**
+- **Email**: artecrobotics25@gmail.com
+- **Repositorio**: https://github.com/DKNS-JCC/rosweb
+- **Issues**: Para reportar bugs o solicitar features
+- **Documentación**: Archivos MD en el repositorio
+
 ---
+**Desarrollado por ArtTEC** 🤖✨

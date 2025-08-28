@@ -919,6 +919,125 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+
+        /* Estilos para gestión de zonas */
+        .zones-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .zones-table th,
+        .zones-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .zones-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .zones-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .zone-polygon-preview {
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Modal específico para zonas */
+        .zones-modal .modal-content {
+            max-width: 1400px;
+            width: 95vw;
+            height: 90vh;
+        }
+
+        .zones-modal .modal-body {
+            display: flex;
+            height: calc(100% - 120px);
+            gap: 20px;
+        }
+
+        .zone-form-panel {
+            width: 350px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow-y: auto;
+        }
+
+        .zone-map-panel {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            position: relative;
+            background: #f0f0f0;
+        }
+
+        .zone-polygon-points {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .polygon-point {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .polygon-point input {
+            width: 80px;
+            padding: 4px 6px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .polygon-point button {
+            padding: 4px 8px;
+            font-size: 12px;
+            min-width: auto;
+        }
+
+        .zone-instructions {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 5px;
+            padding: 12px;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        @media screen and (max-width: 768px) {
+            .zone-form-panel {
+                width: 100%;
+            }
+
+            .zones-modal .modal-body {
+                flex-direction: column;
+                height: auto;
+            }
+        }
     </style>
 </head>
 
@@ -1167,6 +1286,120 @@
             </div>
         </div>
 
+        <!-- Gestión de Zonas -->
+        <div class="admin-section">
+            <h2>Gestión de Zonas</h2>
+
+            <div class="zones-controls" style="margin-bottom: 20px;">
+                <button id="addZoneBtn" class="btn btn-primary">Crear Nueva Zona</button>
+                <button id="loadExistingZones" class="btn btn-secondary">Cargar Zonas Existentes</button>
+            </div>
+
+            <table class="zones-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Polígono (4 puntos)</th>
+                        <th>Centro</th>
+                        <th>Área (m²)</th>
+                        <th>Fecha Creación</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="zonesTableBody">
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 20px;">Cargando zonas...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Modal para crear/editar zona -->
+        <div id="zonesModal" class="modal zones-modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div style="display: flex; align-items: center; gap: 15px; width: 100%;">
+                        <h3 id="zonesModalTitle">Gestión de Zonas</h3>
+                        <div style="margin-left: auto; padding: 5px 10px; background: #e9ecef; border-radius: 15px; font-size: 14px;">
+                            Zonas existentes: <span id="existingZonesCount">0</span>
+                        </div>
+                    </div>
+                    <span class="close" id="closeZonesModal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <!-- Panel de formulario -->
+                    <div class="zone-form-panel">
+                        <form id="zoneForm">
+                            <input type="hidden" id="zoneId">
+
+                            <div class="form-group">
+                                <label for="zoneName">Nombre de la Zona *</label>
+                                <input type="text" id="zoneName" placeholder="Ej: Recepción, Cafetería" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="zoneDescription">Descripción</label>
+                                <textarea id="zoneDescription" rows="3" placeholder="Descripción de la zona"></textarea>
+                            </div>
+
+                            <div class="zone-instructions">
+                                <strong>Instrucciones:</strong><br>
+                                1. Haz clic en el mapa para definir los 4 puntos del polígono<br>
+                                2. Los puntos se conectarán automáticamente<br>
+                                3. Puedes editar las coordenadas manualmente<br>
+                                4. El área se calculará automáticamente
+                            </div>
+
+                            <div class="zone-polygon-points">
+                                <h4>Puntos del Polígono</h4>
+                                <div id="polygonPointsList">
+                                    <!-- Los puntos se generarán dinámicamente -->
+                                </div>
+                                <button type="button" class="btn btn-sm btn-secondary" id="clearZonePoints">
+                                    Limpiar Puntos
+                                </button>
+                            </div>
+
+                            <div class="connection-status" id="zoneConnectionStatus">
+                                <div class="status-indicator" id="zoneStatusIndicator" 
+                                     style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #dc3545; margin-right: 8px;"></div>
+                                <span id="zoneStatusText">Conectando al robot...</span>
+                            </div>
+
+                            <div class="zone-info" style="margin: 15px 0; padding: 10px; background: white; border-radius: 5px;">
+                                <h4>Información del Mapa</h4>
+                                <p>Resolución: <span id="zoneMapResolution">-</span> m/px</p>
+                                <p>Tamaño: <span id="zoneMapSize">-</span></p>
+                                <p>Origen: <span id="zoneMapOrigin">-</span></p>
+                                <p>Centro del Polígono: <span id="zoneCenter">-</span></p>
+                                <p>Área: <span id="zoneArea">-</span> m²</p>
+                            </div>
+
+                            <div class="mouse-coords" style="margin-top: 10px; font-family: monospace; font-size: 12px;">
+                                Coordenadas: <span id="zoneMouseCoords">(0.00, 0.00)</span>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Panel del mapa -->
+                    <div class="zone-map-panel">
+                        <canvas id="zoneMapCanvas" width="800" height="600"></canvas>
+                        <div style="position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 5px; border-radius: 3px; font-size: 12px;">
+                            Zoom: <span id="zoneMapZoom">1.0x</span> | 
+                            Puntos: <span id="zonePointCount">0/4</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelZone">Cerrar</button>
+                    <button type="button" class="btn btn-info" id="newZoneBtn" style="display: none;">Nueva Zona</button>
+                    <button type="button" class="btn btn-primary" id="saveZone">Guardar Zona</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal del Mapa para Crear Tours -->
         <div id="mapModal" class="modal" style="display: none;">
             <div class="modal-content" style="max-width: 1200px; height: 90vh;">
@@ -1352,6 +1585,21 @@
         let amclTopic = null;
         let odomTopic = null;
 
+        // Variables para gestión de zonas
+        let zoneCanvas, zoneCtx;
+        let zoneMapData = null;
+        let zoneRobotPose = null;
+        let zonePolygonPoints = [];
+        let zoneMapScale = 1.0;
+        let zoneMapOffset = { x: 0, y: 0 };
+        let zoneIsDragging = false;
+        let zoneLastMousePos = { x: 0, y: 0 };
+        let zoneRos = null;
+        let zoneMapTopic = null;
+        let zoneAmclTopic = null;
+        let currentEditingZone = null;
+        let existingZones = []; // Para almacenar y mostrar zonas existentes en el mapa
+
         // Configurar eventos de DOM al cargar la página
         document.addEventListener('DOMContentLoaded', function () {
             setupMobileNavigation();
@@ -1364,9 +1612,11 @@
             await loadUsers();
             await loadTours();
             await loadRobots();
+            await loadZones();
             setupTourModal();
             setupRobotModal();
             setupMapModal();
+            setupZonesModal();
         });
 
         // Configurar dropdown de usuario en navegación
@@ -3360,6 +3610,914 @@ Esta acción no se puede deshacer.`;
                     setTimeout(resizeMapCanvas, 100);
                 }
             });
+        }
+
+        // ===== GESTIÓN DE ZONAS =====
+
+        // Cargar zonas existentes
+        async function loadZones() {
+            try {
+                const response = await fetch('/api/admin/zones');
+                if (response.ok) {
+                    const zones = await response.json();
+                    displayZones(zones);
+                } else {
+                    console.error('Error al cargar zonas');
+                    displayZones([]);
+                }
+            } catch (error) {
+                console.error('Error al cargar zonas:', error);
+                displayZones([]);
+            }
+        }
+
+        // Mostrar zonas en la tabla
+        function displayZones(zones) {
+            const tbody = document.getElementById('zonesTableBody');
+            
+            if (!zones || zones.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">No hay zonas definidas</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = zones.map(zone => {
+                const polygonPreview = zone.polygon ? 
+                    JSON.parse(zone.polygon).map(p => `(${p.x.toFixed(1)},${p.y.toFixed(1)})`).join(' → ') :
+                    'Sin polígono';
+                
+                const center = zone.bounds ? 
+                    `(${zone.bounds.center_x.toFixed(2)}, ${zone.bounds.center_y.toFixed(2)})` :
+                    '-';
+                
+                const area = zone.bounds && zone.bounds.area ? 
+                    zone.bounds.area.toFixed(2) : 
+                    '-';
+
+                return `
+                    <tr>
+                        <td>${zone.id}</td>
+                        <td><strong>${zone.name}</strong></td>
+                        <td>${zone.description || '-'}</td>
+                        <td class="zone-polygon-preview" title="${polygonPreview}">${polygonPreview}</td>
+                        <td>${center}</td>
+                        <td>${area}</td>
+                        <td>${new Date(zone.created_at).toLocaleDateString()}</td>
+                        <td>
+                            <button onclick="editZone(${zone.id})" class="btn btn-sm btn-outline">Editar</button>
+                            <button onclick="deleteZone(${zone.id})" class="btn btn-sm btn-danger">Eliminar</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Configurar modal de zonas
+        function setupZonesModal() {
+            const modal = document.getElementById('zonesModal');
+            const addBtn = document.getElementById('addZoneBtn');
+            const loadBtn = document.getElementById('loadExistingZones');
+            const closeBtn = document.getElementById('closeZonesModal');
+            const cancelBtn = document.getElementById('cancelZone');
+            const saveBtn = document.getElementById('saveZone');
+            const clearBtn = document.getElementById('clearZonePoints');
+            const newZoneBtn = document.getElementById('newZoneBtn');
+
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    openZonesModal();
+                });
+            }
+
+            if (loadBtn) {
+                loadBtn.addEventListener('click', () => {
+                    loadZones();
+                });
+            }
+
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    closeZonesModal();
+                });
+            }
+
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    closeZonesModal();
+                });
+            }
+
+            if (saveBtn) {
+                saveBtn.addEventListener('click', () => {
+                    saveZone();
+                });
+            }
+
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    clearZonePolygon();
+                });
+            }
+
+            if (newZoneBtn) {
+                newZoneBtn.addEventListener('click', () => {
+                    resetZoneFormForNewZone();
+                    newZoneBtn.style.display = 'none';
+                });
+            }
+
+            // Cerrar modal al hacer clic fuera
+            window.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    closeZonesModal();
+                }
+            });
+        }
+
+        // Abrir modal de zonas
+        function openZonesModal(editingZone = null) {
+            const modal = document.getElementById('zonesModal');
+            const title = document.getElementById('zonesModalTitle');
+            
+            currentEditingZone = editingZone;
+            
+            if (editingZone) {
+                title.textContent = 'Editar Zona';
+                loadZoneData(editingZone);
+            } else {
+                title.textContent = 'Gestión de Zonas';
+                resetZoneForm();
+            }
+            
+            modal.style.display = 'block';
+            
+            // Cargar zonas existentes para mostrar en el mapa
+            loadExistingZonesForMap();
+            
+            // Inicializar mapa
+            initZoneMapCanvas();
+            initializeZoneROS();
+            
+            updateZoneInfo();
+        }
+
+        // Cerrar modal de zonas
+        function closeZonesModal() {
+            const modal = document.getElementById('zonesModal');
+            modal.style.display = 'none';
+            
+            // Desconectar ROS
+            if (zoneRos) {
+                zoneRos.close();
+                zoneRos = null;
+            }
+            
+            // Limpiar datos
+            zonePolygonPoints = [];
+            zoneMapData = null;
+            zoneRobotPose = null;
+            currentEditingZone = null;
+        }
+
+        // Resetear formulario de zona
+        function resetZoneForm() {
+            document.getElementById('zoneId').value = '';
+            document.getElementById('zoneName').value = '';
+            document.getElementById('zoneDescription').value = '';
+            zonePolygonPoints = [];
+            updateZonePolygonDisplay();
+            updateZoneInfo();
+        }
+
+        // Resetear formulario para crear nueva zona (sin cambiar el modal)
+        function resetZoneFormForNewZone() {
+            document.getElementById('zoneId').value = '';
+            document.getElementById('zoneName').value = '';
+            document.getElementById('zoneDescription').value = '';
+            zonePolygonPoints = [];
+            currentEditingZone = null;
+            updateZonePolygonDisplay();
+            updateZoneInfo();
+            drawZoneMap(); // Redibujar el mapa para actualizar las zonas existentes
+        }
+
+        // Cargar zonas existentes para mostrar en el mapa
+        async function loadExistingZonesForMap() {
+            try {
+                const response = await fetch('/api/admin/zones');
+                if (response.ok) {
+                    existingZones = await response.json();
+                    updateExistingZonesCount();
+                } else {
+                    existingZones = [];
+                    console.error('Error al cargar zonas existentes');
+                    updateExistingZonesCount();
+                }
+            } catch (error) {
+                console.error('Error al cargar zonas existentes:', error);
+                existingZones = [];
+                updateExistingZonesCount();
+            }
+        }
+
+        // Actualizar contador de zonas existentes
+        function updateExistingZonesCount() {
+            const countElement = document.getElementById('existingZonesCount');
+            if (countElement) {
+                countElement.textContent = existingZones.length;
+            }
+        }
+
+        // Cargar datos de zona para editar
+        function loadZoneData(zone) {
+            document.getElementById('zoneId').value = zone.id;
+            document.getElementById('zoneName').value = zone.name;
+            document.getElementById('zoneDescription').value = zone.description || '';
+            
+            // Cargar puntos del polígono
+            if (zone.polygon) {
+                try {
+                    zonePolygonPoints = JSON.parse(zone.polygon);
+                    updateZonePolygonDisplay();
+                } catch (error) {
+                    console.error('Error parsing polygon data:', error);
+                    zonePolygonPoints = [];
+                }
+            }
+        }
+
+        // Inicializar canvas de zona
+        function initZoneMapCanvas() {
+            zoneCanvas = document.getElementById('zoneMapCanvas');
+            zoneCtx = zoneCanvas.getContext('2d');
+            
+            resizeZoneMapCanvas();
+            
+            // Eventos del canvas
+            zoneCanvas.addEventListener('mousedown', onZoneMapMouseDown);
+            zoneCanvas.addEventListener('mousemove', onZoneMapMouseMove);
+            zoneCanvas.addEventListener('mouseup', onZoneMapMouseUp);
+            zoneCanvas.addEventListener('click', onZoneMapClick);
+            zoneCanvas.addEventListener('wheel', onZoneMapWheel);
+            
+            drawZoneMap();
+        }
+
+        // Redimensionar canvas de zona
+        function resizeZoneMapCanvas() {
+            const container = zoneCanvas.parentElement;
+            zoneCanvas.width = container.clientWidth;
+            zoneCanvas.height = container.clientHeight;
+            drawZoneMap();
+        }
+
+        // Inicializar conexión ROS para zonas
+        function initializeZoneROS() {
+            updateZoneMapStatus('Conectando a ROS Bridge...', false);
+            
+            zoneRos = new ROSLIB.Ros({
+                url: 'ws://turtlebot-NUC.local:9090'
+            });
+
+            zoneRos.on('connection', function() {
+                updateZoneMapStatus('Conectado a ROS Bridge', true);
+                setupZoneMapSubscriptions();
+            });
+
+            zoneRos.on('error', function(error) {
+                console.error('❌ Error de ROS (zonas):', error);
+                updateZoneMapStatus('Error de conexión ROS', false);
+            });
+
+            zoneRos.on('close', function() {
+                console.log('❌ Conexión ROS cerrada (zonas)');
+                updateZoneMapStatus('Conexión ROS cerrada', false);
+            });
+        }
+
+        // Configurar suscripciones para zonas
+        function setupZoneMapSubscriptions() {
+            if (!zoneRos || !zoneRos.isConnected) {
+                setTimeout(setupZoneMapSubscriptions, 2000);
+                return;
+            }
+
+            // Suscripción al mapa
+            zoneMapTopic = new ROSLIB.Topic({
+                ros: zoneRos,
+                name: '/map',
+                messageType: 'nav_msgs/OccupancyGrid'
+            });
+
+            zoneMapTopic.subscribe(function(message) {
+                zoneMapData = message;
+                updateZoneMapMetadata();
+                drawZoneMap();
+            });
+
+            // Suscripción a pose AMCL
+            zoneAmclTopic = new ROSLIB.Topic({
+                ros: zoneRos,
+                name: '/amcl_pose',
+                messageType: 'geometry_msgs/PoseWithCovarianceStamped'
+            });
+
+            zoneAmclTopic.subscribe(function(message) {
+                if (!zoneRobotPose) zoneRobotPose = {};
+                zoneRobotPose.amcl = message;
+                drawZoneMap();
+            });
+
+            updateZoneMapStatus('Suscrito a tópicos ROS', true);
+        }
+
+        // Actualizar estado de conexión de zona
+        function updateZoneMapStatus(text, connected) {
+            const indicator = document.getElementById('zoneStatusIndicator');
+            const statusText = document.getElementById('zoneStatusText');
+            
+            if (indicator && statusText) {
+                indicator.style.background = connected ? '#28a745' : '#dc3545';
+                statusText.textContent = text;
+            }
+        }
+
+        // Actualizar metadatos del mapa de zona
+        function updateZoneMapMetadata() {
+            if (!zoneMapData || !zoneMapData.info) return;
+            
+            const info = zoneMapData.info;
+            document.getElementById('zoneMapResolution').textContent = info.resolution.toFixed(3);
+            document.getElementById('zoneMapSize').textContent = `${info.width} x ${info.height}`;
+            document.getElementById('zoneMapOrigin').textContent = 
+                `(${info.origin.position.x.toFixed(2)}, ${info.origin.position.y.toFixed(2)})`;
+        }
+
+        // Eventos del ratón en canvas de zona
+        function onZoneMapMouseDown(event) {
+            zoneIsDragging = true;
+            const rect = zoneCanvas.getBoundingClientRect();
+            zoneLastMousePos = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+            };
+        }
+
+        function onZoneMapMouseMove(event) {
+            const rect = zoneCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            // Actualizar coordenadas del ratón
+            const worldCoords = zoneCanvasToWorld(mouseX, mouseY);
+            document.getElementById('zoneMouseCoords').textContent = 
+                `(${worldCoords.x.toFixed(2)}, ${worldCoords.y.toFixed(2)})`;
+            
+            if (zoneIsDragging) {
+                // Arrastrar el mapa
+                const deltaX = mouseX - zoneLastMousePos.x;
+                const deltaY = mouseY - zoneLastMousePos.y;
+                
+                zoneMapOffset.x += deltaX;
+                zoneMapOffset.y += deltaY;
+                
+                zoneLastMousePos = { x: mouseX, y: mouseY };
+                drawZoneMap();
+            }
+        }
+
+        function onZoneMapMouseUp(event) {
+            zoneIsDragging = false;
+        }
+
+        function onZoneMapClick(event) {
+            if (zoneIsDragging) return;
+            
+            // Solo permitir 4 puntos
+            if (zonePolygonPoints.length >= 4) {
+                showMessage('Ya tienes 4 puntos definidos. Usa "Limpiar Puntos" para reiniciar.', 'warning');
+                return;
+            }
+            
+            const rect = zoneCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            const worldCoords = zoneCanvasToWorld(mouseX, mouseY);
+            
+            zonePolygonPoints.push({
+                x: worldCoords.x,
+                y: worldCoords.y
+            });
+            
+            updateZonePolygonDisplay();
+            updateZoneInfo();
+            drawZoneMap();
+        }
+
+        function onZoneMapWheel(event) {
+            event.preventDefault();
+            
+            const rect = zoneCanvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+            
+            const scaleFactor = event.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = Math.max(0.1, Math.min(5.0, zoneMapScale * scaleFactor));
+            
+            if (newScale !== zoneMapScale) {
+                zoneMapOffset.x = mouseX - (mouseX - zoneMapOffset.x) * (newScale / zoneMapScale);
+                zoneMapOffset.y = mouseY - (mouseY - zoneMapOffset.y) * (newScale / zoneMapScale);
+                
+                zoneMapScale = newScale;
+                document.getElementById('zoneMapZoom').textContent = zoneMapScale.toFixed(1) + 'x';
+                drawZoneMap();
+            }
+        }
+
+        // Convertir coordenadas del canvas a coordenadas del mundo (para zonas)
+        function zoneCanvasToWorld(canvasX, canvasY) {
+            if (!zoneMapData || !zoneMapData.info) return { x: 0, y: 0 };
+            
+            const info = zoneMapData.info;
+            
+            const mapX = (canvasX - zoneMapOffset.x) / zoneMapScale;
+            const mapY = (canvasY - zoneMapOffset.y) / zoneMapScale;
+            
+            const correctedMapY = info.height - 1 - mapY;
+            
+            const worldX = info.origin.position.x + mapX * info.resolution;
+            const worldY = info.origin.position.y + correctedMapY * info.resolution;
+            
+            return { x: worldX, y: worldY };
+        }
+
+        // Convertir coordenadas del mundo a coordenadas del canvas (para zonas)
+        function zoneWorldToCanvas(worldX, worldY) {
+            if (!zoneMapData || !zoneMapData.info) return { x: 0, y: 0 };
+            
+            const info = zoneMapData.info;
+            
+            const mapX = (worldX - info.origin.position.x) / info.resolution;
+            const mapY = (worldY - info.origin.position.y) / info.resolution;
+            
+            const correctedMapY = info.height - 1 - mapY;
+            
+            const canvasX = mapX * zoneMapScale + zoneMapOffset.x;
+            const canvasY = correctedMapY * zoneMapScale + zoneMapOffset.y;
+            
+            return { x: canvasX, y: canvasY };
+        }
+
+        // Dibujar mapa de zona
+        function drawZoneMap() {
+            if (!zoneCtx) return;
+            
+            zoneCtx.fillStyle = '#f0f0f0';
+            zoneCtx.fillRect(0, 0, zoneCanvas.width, zoneCanvas.height);
+            
+            if (!zoneMapData || !zoneMapData.data) {
+                zoneCtx.fillStyle = '#666';
+                zoneCtx.font = '16px Arial';
+                zoneCtx.textAlign = 'center';
+                zoneCtx.fillText('Cargando mapa del robot...', zoneCanvas.width / 2, zoneCanvas.height / 2);
+                return;
+            }
+            
+            drawZoneOccupancyGrid();
+            drawZoneRobotPose();
+            drawExistingZones();
+            drawZonePolygon();
+        }
+
+        // Dibujar grilla de ocupación para zona
+        function drawZoneOccupancyGrid() {
+            if (!zoneMapData || !zoneMapData.data || !zoneMapData.info) return;
+            
+            const info = zoneMapData.info;
+            const data = zoneMapData.data;
+            
+            const imageData = zoneCtx.createImageData(info.width, info.height);
+            const pixels = imageData.data;
+            
+            for (let y = 0; y < info.height; y++) {
+                for (let x = 0; x < info.width; x++) {
+                    const rosIndex = y * info.width + x;
+                    const canvasY = info.height - 1 - y;
+                    const canvasIndex = canvasY * info.width + x;
+                    const pixelIndex = canvasIndex * 4;
+                    
+                    const value = data[rosIndex];
+                    
+                    if (value === -1) {
+                        pixels[pixelIndex] = 128;
+                        pixels[pixelIndex + 1] = 128;
+                        pixels[pixelIndex + 2] = 128;
+                    } else if (value === 0) {
+                        pixels[pixelIndex] = 255;
+                        pixels[pixelIndex + 1] = 255;
+                        pixels[pixelIndex + 2] = 255;
+                    } else {
+                        pixels[pixelIndex] = 0;
+                        pixels[pixelIndex + 1] = 0;
+                        pixels[pixelIndex + 2] = 0;
+                    }
+                    pixels[pixelIndex + 3] = 255;
+                }
+            }
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = info.width;
+            tempCanvas.height = info.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(imageData, 0, 0);
+            
+            zoneCtx.save();
+            zoneCtx.translate(zoneMapOffset.x, zoneMapOffset.y);
+            zoneCtx.scale(zoneMapScale, zoneMapScale);
+            zoneCtx.drawImage(tempCanvas, 0, 0);
+            zoneCtx.restore();
+        }
+
+        // Dibujar posición del robot en zona
+        function drawZoneRobotPose() {
+            if (!zoneRobotPose || !zoneRobotPose.amcl || !zoneRobotPose.amcl.pose) return;
+            
+            const pose = zoneRobotPose.amcl.pose.pose;
+            const canvasPos = zoneWorldToCanvas(pose.position.x, pose.position.y);
+            
+            zoneCtx.save();
+            zoneCtx.fillStyle = '#0066cc';
+            zoneCtx.strokeStyle = '#004499';
+            zoneCtx.lineWidth = 2;
+            
+            zoneCtx.beginPath();
+            zoneCtx.arc(canvasPos.x, canvasPos.y, 8 * zoneMapScale, 0, 2 * Math.PI);
+            zoneCtx.fill();
+            zoneCtx.stroke();
+            
+            zoneCtx.restore();
+        }
+
+        // Dibujar zonas existentes
+        function drawExistingZones() {
+            if (!existingZones || existingZones.length === 0) return;
+            
+            existingZones.forEach((zone, zoneIndex) => {
+                if (!zone.polygon) return;
+                
+                try {
+                    const polygonPoints = JSON.parse(zone.polygon);
+                    if (polygonPoints.length !== 4) return;
+                    
+                    // Convertir puntos del mundo a canvas
+                    const canvasPoints = polygonPoints.map(point => 
+                        zoneWorldToCanvas(point.x, point.y)
+                    );
+                    
+                    zoneCtx.save();
+                    
+                    // Color diferente para zona en edición vs zonas existentes
+                    const isEditingThis = currentEditingZone && currentEditingZone.id === zone.id;
+                    const fillColor = isEditingThis ? 'rgba(255, 102, 0, 0.3)' : 'rgba(0, 128, 255, 0.2)';
+                    const strokeColor = isEditingThis ? '#ff6600' : '#0080ff';
+                    
+                    // Dibujar polígono relleno
+                    zoneCtx.fillStyle = fillColor;
+                    zoneCtx.beginPath();
+                    zoneCtx.moveTo(canvasPoints[0].x, canvasPoints[0].y);
+                    for (let i = 1; i < canvasPoints.length; i++) {
+                        zoneCtx.lineTo(canvasPoints[i].x, canvasPoints[i].y);
+                    }
+                    zoneCtx.closePath();
+                    zoneCtx.fill();
+                    
+                    // Dibujar borde del polígono
+                    zoneCtx.strokeStyle = strokeColor;
+                    zoneCtx.lineWidth = 2;
+                    zoneCtx.setLineDash([]);
+                    zoneCtx.stroke();
+                    
+                    // Dibujar puntos del polígono
+                    zoneCtx.fillStyle = strokeColor;
+                    canvasPoints.forEach((point, index) => {
+                        zoneCtx.beginPath();
+                        zoneCtx.arc(point.x, point.y, 4 * zoneMapScale, 0, 2 * Math.PI);
+                        zoneCtx.fill();
+                        
+                        // Número del punto
+                        zoneCtx.fillStyle = 'white';
+                        zoneCtx.font = `${Math.max(8, 10 * zoneMapScale)}px Arial`;
+                        zoneCtx.textAlign = 'center';
+                        zoneCtx.textBaseline = 'middle';
+                        zoneCtx.fillText(index + 1, point.x, point.y);
+                        zoneCtx.fillStyle = strokeColor;
+                    });
+                    
+                    // Etiqueta con nombre de la zona
+                    const centerX = canvasPoints.reduce((sum, p) => sum + p.x, 0) / canvasPoints.length;
+                    const centerY = canvasPoints.reduce((sum, p) => sum + p.y, 0) / canvasPoints.length;
+                    
+                    zoneCtx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    zoneCtx.strokeStyle = strokeColor;
+                    zoneCtx.lineWidth = 1;
+                    
+                    const text = zone.name;
+                    const textMetrics = zoneCtx.measureText(text);
+                    const padding = 4;
+                    const rectWidth = textMetrics.width + padding * 2;
+                    const rectHeight = 16;
+                    
+                    zoneCtx.fillRect(centerX - rectWidth/2, centerY - rectHeight/2, rectWidth, rectHeight);
+                    zoneCtx.strokeRect(centerX - rectWidth/2, centerY - rectHeight/2, rectWidth, rectHeight);
+                    
+                    zoneCtx.fillStyle = '#333';
+                    zoneCtx.font = `${Math.max(10, 12 * zoneMapScale)}px Arial`;
+                    zoneCtx.textAlign = 'center';
+                    zoneCtx.textBaseline = 'middle';
+                    zoneCtx.fillText(text, centerX, centerY);
+                    
+                    zoneCtx.restore();
+                    
+                } catch (error) {
+                    console.error('Error dibujando zona existente:', error);
+                }
+            });
+        }
+
+        // Dibujar polígono de zona
+        function drawZonePolygon() {
+            if (zonePolygonPoints.length === 0) return;
+            
+            zoneCtx.save();
+            
+            // Dibujar puntos
+            zonePolygonPoints.forEach((point, index) => {
+                const canvasPos = zoneWorldToCanvas(point.x, point.y);
+                
+                // Punto
+                zoneCtx.fillStyle = '#ff6600';
+                zoneCtx.strokeStyle = '#cc4400';
+                zoneCtx.lineWidth = 2;
+                
+                zoneCtx.beginPath();
+                zoneCtx.arc(canvasPos.x, canvasPos.y, 8 * zoneMapScale, 0, 2 * Math.PI);
+                zoneCtx.fill();
+                zoneCtx.stroke();
+                
+                // Número del punto
+                zoneCtx.fillStyle = 'white';
+                zoneCtx.font = `${Math.max(10, 12 * zoneMapScale)}px Arial`;
+                zoneCtx.textAlign = 'center';
+                zoneCtx.textBaseline = 'middle';
+                zoneCtx.fillText(index + 1, canvasPos.x, canvasPos.y);
+            });
+            
+            // Dibujar líneas del polígono
+            if (zonePolygonPoints.length > 1) {
+                zoneCtx.strokeStyle = '#ff9933';
+                zoneCtx.lineWidth = 2;
+                zoneCtx.setLineDash([5, 5]);
+                
+                zoneCtx.beginPath();
+                const firstPoint = zoneWorldToCanvas(zonePolygonPoints[0].x, zonePolygonPoints[0].y);
+                zoneCtx.moveTo(firstPoint.x, firstPoint.y);
+                
+                for (let i = 1; i < zonePolygonPoints.length; i++) {
+                    const point = zoneWorldToCanvas(zonePolygonPoints[i].x, zonePolygonPoints[i].y);
+                    zoneCtx.lineTo(point.x, point.y);
+                }
+                
+                // Cerrar el polígono si tenemos 4 puntos
+                if (zonePolygonPoints.length === 4) {
+                    zoneCtx.closePath();
+                    
+                    // Rellenar polígono con transparencia
+                    zoneCtx.fillStyle = 'rgba(255, 102, 0, 0.2)';
+                    zoneCtx.fill();
+                }
+                
+                zoneCtx.stroke();
+                zoneCtx.setLineDash([]);
+            }
+            
+            zoneCtx.restore();
+        }
+
+        // Actualizar pantalla de puntos del polígono
+        function updateZonePolygonDisplay() {
+            const container = document.getElementById('polygonPointsList');
+            const countElement = document.getElementById('zonePointCount');
+            
+            countElement.textContent = `${zonePolygonPoints.length}/4`;
+            
+            if (zonePolygonPoints.length === 0) {
+                container.innerHTML = '<p style="color: #666; font-style: italic;">Haz clic en el mapa para definir los puntos</p>';
+                return;
+            }
+            
+            const pointsHTML = zonePolygonPoints.map((point, index) => `
+                <div class="polygon-point">
+                    <span style="font-weight: bold; width: 20px; display: inline-block;">${index + 1}:</span>
+                    <label>X:</label>
+                    <input type="number" step="0.01" value="${point.x.toFixed(2)}" 
+                           onchange="updateZonePolygonPoint(${index}, 'x', this.value)">
+                    <label>Y:</label>
+                    <input type="number" step="0.01" value="${point.y.toFixed(2)}" 
+                           onchange="updateZonePolygonPoint(${index}, 'y', this.value)">
+                    <button type="button" class="btn btn-sm btn-danger" 
+                            onclick="removeZonePolygonPoint(${index})" title="Eliminar punto">×</button>
+                </div>
+            `).join('');
+            
+            container.innerHTML = pointsHTML;
+        }
+
+        // Actualizar punto del polígono
+        function updateZonePolygonPoint(index, coord, value) {
+            if (zonePolygonPoints[index]) {
+                zonePolygonPoints[index][coord] = parseFloat(value) || 0;
+                updateZoneInfo();
+                drawZoneMap();
+            }
+        }
+
+        // Eliminar punto del polígono
+        function removeZonePolygonPoint(index) {
+            zonePolygonPoints.splice(index, 1);
+            updateZonePolygonDisplay();
+            updateZoneInfo();
+            drawZoneMap();
+        }
+
+        // Limpiar polígono
+        function clearZonePolygon() {
+            if (zonePolygonPoints.length > 0) {
+                zonePolygonPoints = [];
+                updateZonePolygonDisplay();
+                updateZoneInfo();
+                drawZoneMap();
+            }
+        }
+
+        // Actualizar información de la zona
+        function updateZoneInfo() {
+            const centerElement = document.getElementById('zoneCenter');
+            const areaElement = document.getElementById('zoneArea');
+            
+            if (zonePolygonPoints.length === 4) {
+                // Calcular centro del polígono
+                const centerX = zonePolygonPoints.reduce((sum, p) => sum + p.x, 0) / 4;
+                const centerY = zonePolygonPoints.reduce((sum, p) => sum + p.y, 0) / 4;
+                centerElement.textContent = `(${centerX.toFixed(2)}, ${centerY.toFixed(2)})`;
+                
+                // Calcular área usando fórmula del Shoelace
+                let area = 0;
+                for (let i = 0; i < 4; i++) {
+                    const j = (i + 1) % 4;
+                    area += zonePolygonPoints[i].x * zonePolygonPoints[j].y;
+                    area -= zonePolygonPoints[j].x * zonePolygonPoints[i].y;
+                }
+                area = Math.abs(area) / 2;
+                areaElement.textContent = area.toFixed(2);
+            } else {
+                centerElement.textContent = '-';
+                areaElement.textContent = '-';
+            }
+        }
+
+        // Guardar zona
+        async function saveZone() {
+            const zoneName = document.getElementById('zoneName').value.trim();
+            const zoneDescription = document.getElementById('zoneDescription').value.trim();
+            const zoneId = document.getElementById('zoneId').value;
+
+            if (!zoneName) {
+                showMessage('El nombre de la zona es obligatorio', 'error');
+                return;
+            }
+
+            if (zonePolygonPoints.length !== 4) {
+                showMessage('Debes definir exactamente 4 puntos para el polígono', 'error');
+                return;
+            }
+
+            // Calcular bounds
+            const centerX = zonePolygonPoints.reduce((sum, p) => sum + p.x, 0) / 4;
+            const centerY = zonePolygonPoints.reduce((sum, p) => sum + p.y, 0) / 4;
+            
+            let area = 0;
+            for (let i = 0; i < 4; i++) {
+                const j = (i + 1) % 4;
+                area += zonePolygonPoints[i].x * zonePolygonPoints[j].y;
+                area -= zonePolygonPoints[j].x * zonePolygonPoints[i].y;
+            }
+            area = Math.abs(area) / 2;
+
+            const minX = Math.min(...zonePolygonPoints.map(p => p.x));
+            const maxX = Math.max(...zonePolygonPoints.map(p => p.x));
+            const minY = Math.min(...zonePolygonPoints.map(p => p.y));
+            const maxY = Math.max(...zonePolygonPoints.map(p => p.y));
+
+            const zoneData = {
+                name: zoneName,
+                description: zoneDescription,
+                polygon: zonePolygonPoints, // Send as object, not stringified
+                bounds: {
+                    min_x: minX,
+                    max_x: maxX,
+                    min_y: minY,
+                    max_y: maxY,
+                    center_x: centerX,
+                    center_y: centerY,
+                    area: area
+                }
+            };
+
+            try {
+                const url = zoneId ? `/api/admin/zones/${zoneId}` : '/api/admin/zones';
+                const method = zoneId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(zoneData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    showMessage(zoneId ? 'Zona actualizada exitosamente' : 'Zona creada exitosamente', 'success');
+                    
+                    // Recargar zonas existentes para mostrar en el mapa
+                    await loadExistingZonesForMap();
+                    
+                    // Actualizar tabla de zonas en la página principal
+                    await loadZones();
+                    
+                    // Si estamos editando una zona, cerrar modal
+                    if (zoneId) {
+                        closeZonesModal();
+                    } else {
+                        // Si estamos creando una nueva zona, limpiar formulario para crear otra
+                        resetZoneFormForNewZone();
+                        
+                        // Mostrar botón "Nueva Zona"
+                        const newZoneBtn = document.getElementById('newZoneBtn');
+                        if (newZoneBtn) {
+                            newZoneBtn.style.display = 'inline-block';
+                        }
+                        
+                        showMessage('Zona guardada. Puedes crear otra zona o cerrar el modal.', 'info');
+                    }
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Error al guardar la zona', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving zone:', error);
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Editar zona
+        async function editZone(zoneId) {
+            try {
+                const response = await fetch(`/api/admin/zones/${zoneId}`);
+                if (response.ok) {
+                    const zone = await response.json();
+                    openZonesModal(zone);
+                } else {
+                    showMessage('Error al cargar los datos de la zona', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading zone:', error);
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Eliminar zona
+        async function deleteZone(zoneId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar esta zona?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/zones/${zoneId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showMessage('Zona eliminada exitosamente', 'success');
+                    await loadZones();
+                } else {
+                    const error = await response.json();
+                    showMessage(error.error || 'Error al eliminar la zona', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting zone:', error);
+                showMessage('Error de conexión', 'error');
+            }
         }
     </script>
 </body>

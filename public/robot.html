@@ -4400,20 +4400,31 @@
                 updateZoneNavStatus('Cargando zonas...', 'navigating');
                 
                 const response = await fetch('/api/robot/zones?robot_id=roberto');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                
+                console.log('Respuesta del servidor:', data); // Debug
                 
                 if (data.success && data.zones) {
                     availableZones = data.zones;
                     updateZoneSelector();
                     updateZoneNavStatus(`${data.zones_count} zonas cargadas`, 'ready');
-                    addLog(`✅ Cargadas ${data.zones_count} zonas disponibles`);
+                    
+                } else if (data.error) {
+                    throw new Error(data.error);
+                } else if (!data.success) {
+                    throw new Error('Error desconocido en la respuesta del servidor');
                 } else {
-                    throw new Error(data.error || 'Error al cargar zonas');
+                    throw new Error('Formato de respuesta inválido del servidor');
                 }
             } catch (error) {
                 console.error('Error cargando zonas:', error);
                 updateZoneNavStatus('Error cargando zonas', 'error');
-                addLog(`❌ Error cargando zonas: ${error.message}`);
+                
             }
         }
 
@@ -4454,14 +4465,36 @@
             document.getElementById('zoneInfoName').textContent = zone.name;
             document.getElementById('zoneInfoType').textContent = zone.type || 'Polígono';
             
-            // Calcular y mostrar el centro de la zona
+            // Calcular y mostrar el centro de la zona basado en la nueva estructura
             let centerText = 'Calculando...';
-            if (zone.bounds && zone.bounds.center) {
+            if (zone.bounds && zone.bounds.center_x !== undefined && zone.bounds.center_y !== undefined) {
+                // Nueva estructura con center_x, center_y
+                centerText = `(${zone.bounds.center_x.toFixed(2)}, ${zone.bounds.center_y.toFixed(2)})`;
+            } else if (zone.bounds && zone.bounds.min_x !== undefined && zone.bounds.max_x !== undefined) {
+                // Calcular centro a partir de min/max
+                const centerX = (zone.bounds.min_x + zone.bounds.max_x) / 2;
+                const centerY = (zone.bounds.min_y + zone.bounds.max_y) / 2;
+                centerText = `(${centerX.toFixed(2)}, ${centerY.toFixed(2)})`;
+            } else if (zone.bounds && zone.bounds.center) {
+                // Compatibilidad con estructura antigua center.x, center.y
                 centerText = `(${zone.bounds.center.x.toFixed(2)}, ${zone.bounds.center.y.toFixed(2)})`;
-            } else if (zone.bounds) {
+            } else if (zone.bounds && zone.bounds.x !== undefined) {
+                // Compatibilidad con estructura legacy x, y, width, height
                 const centerX = zone.bounds.x + zone.bounds.width / 2;
                 const centerY = zone.bounds.y + zone.bounds.height / 2;
                 centerText = `(${centerX.toFixed(2)}, ${centerY.toFixed(2)})`;
+            } else if (zone.polygon) {
+                // Calcular centro del polígono si solo tenemos puntos
+                try {
+                    const points = typeof zone.polygon === 'string' ? JSON.parse(zone.polygon) : zone.polygon;
+                    if (Array.isArray(points) && points.length > 0) {
+                        const centerX = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+                        const centerY = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+                        centerText = `(${centerX.toFixed(2)}, ${centerY.toFixed(2)})`;
+                    }
+                } catch (error) {
+                    console.error('Error calculando centro del polígono:', error);
+                }
             }
             
             document.getElementById('zoneInfoCenter').textContent = centerText;
@@ -4482,7 +4515,7 @@
             const selectedOption = zoneSelect.options[zoneSelect.selectedIndex];
             
             if (!selectedOption.dataset.zone) {
-                addLog('❌ No hay zona seleccionada');
+                
                 return;
             }
             
@@ -4500,14 +4533,37 @@
                     throw new Error('No hay conexión con ROS Bridge');
                 }
                 
-                // Calcular coordenadas de destino (centro de la zona)
+                // Calcular coordenadas de destino (centro de la zona) basado en la nueva estructura
                 let targetX, targetY;
-                if (zone.bounds && zone.bounds.center) {
+                if (zone.bounds && zone.bounds.center_x !== undefined && zone.bounds.center_y !== undefined) {
+                    // Nueva estructura con center_x, center_y
+                    targetX = zone.bounds.center_x;
+                    targetY = zone.bounds.center_y;
+                } else if (zone.bounds && zone.bounds.min_x !== undefined && zone.bounds.max_x !== undefined) {
+                    // Calcular centro a partir de min/max
+                    targetX = (zone.bounds.min_x + zone.bounds.max_x) / 2;
+                    targetY = (zone.bounds.min_y + zone.bounds.max_y) / 2;
+                } else if (zone.bounds && zone.bounds.center) {
+                    // Compatibilidad con estructura antigua center.x, center.y
                     targetX = zone.bounds.center.x;
                     targetY = zone.bounds.center.y;
-                } else if (zone.bounds) {
+                } else if (zone.bounds && zone.bounds.x !== undefined) {
+                    // Compatibilidad con estructura legacy x, y, width, height
                     targetX = zone.bounds.x + zone.bounds.width / 2;
                     targetY = zone.bounds.y + zone.bounds.height / 2;
+                } else if (zone.polygon) {
+                    // Calcular centro del polígono si solo tenemos puntos
+                    try {
+                        const points = typeof zone.polygon === 'string' ? JSON.parse(zone.polygon) : zone.polygon;
+                        if (Array.isArray(points) && points.length > 0) {
+                            targetX = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+                            targetY = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+                        } else {
+                            throw new Error('Datos de polígono inválidos');
+                        }
+                    } catch (error) {
+                        throw new Error(`Error procesando polígono: ${error.message}`);
+                    }
                 } else {
                     throw new Error('No se encontraron coordenadas válidas para la zona');
                 }

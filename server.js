@@ -357,16 +357,12 @@ db.run(`ALTER TABLE tour_waypoints ADD COLUMN name TEXT DEFAULT ''`, (err) => {
 db.run(`ALTER TABLE tour_history ADD COLUMN robot_id TEXT`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
         console.error('Error al añadir columna robot_id:', err.message);
-    } else {
-        console.log('✅ Columna robot_id en tour_history verificada');
     }
 });
 
 db.run(`ALTER TABLE tour_history ADD COLUMN robot_status TEXT DEFAULT 'pending'`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
         console.error('Error al añadir columna robot_status:', err.message);
-    } else {
-        console.log('✅ Columna robot_status en tour_history verificada');
     }
 });
 
@@ -382,9 +378,7 @@ db.run(`CREATE TABLE IF NOT EXISTS robots (
 )`, (err) => {
     if (err) {
         console.error('Error al crear tabla robots:', err.message);
-    } else {
-        console.log('✅ Tabla robots creada/verificada');
-        
+    } else {  
         // Insertar robots por defecto si la tabla está vacía
         db.get('SELECT COUNT(*) as count FROM robots', [], (err, row) => {
             if (err) {
@@ -435,6 +429,24 @@ db.run(`CREATE TABLE IF NOT EXISTS zones (
         db.run(`ALTER TABLE zones ADD COLUMN type TEXT DEFAULT 'polygon'`, (err) => {
             if (err && !err.message.includes('duplicate column')) {
                 console.error('Error agregando columna type:', err);
+            }
+        });
+
+        db.run(`ALTER TABLE zones ADD COLUMN description TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error agregando columna description:', err);
+            }
+        });
+
+        db.run(`ALTER TABLE zones ADD COLUMN polygon TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error agregando columna polygon:', err);
+            }
+        });
+
+        db.run(`ALTER TABLE zones ADD COLUMN bounds TEXT`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+                console.error('Error agregando columna bounds:', err);
             }
         });
     }
@@ -3922,6 +3934,214 @@ app.delete('/api/admin/robots/:id', requireTechOrAdmin, (req, res) => {
     });
 });
 
+// ===== API DE ZONAS =====
+
+// API para obtener todas las zonas
+app.get('/api/admin/zones', requireTechOrAdmin, (req, res) => {
+    const query = `
+        SELECT id, name, description, polygon, bounds, created_at
+        FROM zones 
+        ORDER BY created_at DESC
+    `;
+    
+    db.all(query, [], (err, zones) => {
+        if (err) {
+            console.error('Error al obtener zonas:', err);
+            return res.status(500).json({ error: 'Error al obtener zonas' });
+        }
+        
+        // Parsear bounds como JSON si existe
+        const processedZones = zones.map(zone => ({
+            ...zone,
+            bounds: zone.bounds ? JSON.parse(zone.bounds) : null
+        }));
+        
+        res.json(processedZones);
+    });
+});
+
+// API para obtener una zona específica
+app.get('/api/admin/zones/:id', requireTechOrAdmin, (req, res) => {
+    const zoneId = req.params.id;
+    const query = `
+        SELECT id, name, description, polygon, bounds, created_at
+        FROM zones 
+        WHERE id = ?
+    `;
+    
+    db.get(query, [zoneId], (err, zone) => {
+        if (err) {
+            console.error('Error al obtener zona:', err);
+            return res.status(500).json({ error: 'Error al obtener zona' });
+        }
+        
+        if (!zone) {
+            return res.status(404).json({ error: 'Zona no encontrada' });
+        }
+        
+        // Parsear bounds como JSON si existe
+        if (zone.bounds) {
+            zone.bounds = JSON.parse(zone.bounds);
+        }
+        
+        res.json(zone);
+    });
+});
+
+// API para crear una nueva zona
+app.post('/api/admin/zones', requireTechOrAdmin, (req, res) => {
+    const { name, description, polygon, bounds } = req.body;
+    
+    if (!name || !polygon) {
+        return res.status(400).json({ error: 'El nombre y polígono son obligatorios' });
+    }
+    
+    // Validar que el polígono tenga exactamente 4 puntos
+    let parsedPolygon;
+    try {
+        parsedPolygon = typeof polygon === 'string' ? JSON.parse(polygon) : polygon;
+        if (!Array.isArray(parsedPolygon) || parsedPolygon.length !== 4) {
+            return res.status(400).json({ error: 'El polígono debe tener exactamente 4 puntos' });
+        }
+        
+        // Validar estructura de cada punto
+        for (const point of parsedPolygon) {
+            if (typeof point.x !== 'number' || typeof point.y !== 'number') {
+                return res.status(400).json({ error: 'Cada punto debe tener coordenadas x,y válidas' });
+            }
+        }
+    } catch (error) {
+        return res.status(400).json({ error: 'Formato de polígono inválido' });
+    }
+    
+    // Calcular valores legacy para compatibilidad (basados en bounding box)
+    const minX = Math.min(...parsedPolygon.map(p => p.x));
+    const maxX = Math.max(...parsedPolygon.map(p => p.x));
+    const minY = Math.min(...parsedPolygon.map(p => p.y));
+    const maxY = Math.max(...parsedPolygon.map(p => p.y));
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const width = maxX - minX;
+    const height = maxY - minY;
+    
+    const query = `
+        INSERT INTO zones (name, description, polygon, bounds, x, y, width, height, type, color, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'polygon', '#ff6600', datetime('now'))
+    `;
+    
+    const polygonString = JSON.stringify(parsedPolygon);
+    const boundsString = bounds ? JSON.stringify(bounds) : null;
+    
+    db.run(query, [name, description, polygonString, boundsString, centerX, centerY, width, height], function(err) {
+        if (err) {
+            console.error('Error al crear zona:', err);
+            return res.status(500).json({ error: 'Error al crear zona' });
+        }
+        
+        res.status(201).json({
+            message: 'Zona creada exitosamente',
+            id: this.lastID,
+            zone: {
+                id: this.lastID,
+                name,
+                description,
+                polygon: parsedPolygon,
+                bounds
+            }
+        });
+    });
+});
+
+// API para actualizar una zona
+app.put('/api/admin/zones/:id', requireTechOrAdmin, (req, res) => {
+    const zoneId = req.params.id;
+    const { name, description, polygon, bounds } = req.body;
+    
+    if (!name || !polygon) {
+        return res.status(400).json({ error: 'El nombre y polígono son obligatorios' });
+    }
+    
+    // Validar que el polígono tenga exactamente 4 puntos
+    let parsedPolygon;
+    try {
+        parsedPolygon = typeof polygon === 'string' ? JSON.parse(polygon) : polygon;
+        if (!Array.isArray(parsedPolygon) || parsedPolygon.length !== 4) {
+            return res.status(400).json({ error: 'El polígono debe tener exactamente 4 puntos' });
+        }
+        
+        // Validar estructura de cada punto
+        for (const point of parsedPolygon) {
+            if (typeof point.x !== 'number' || typeof point.y !== 'number') {
+                return res.status(400).json({ error: 'Cada punto debe tener coordenadas x,y válidas' });
+            }
+        }
+    } catch (error) {
+        return res.status(400).json({ error: 'Formato de polígono inválido' });
+    }
+    
+    // Calcular valores para campos legacy basados en el polígono
+    const minX = Math.min(...parsedPolygon.map(p => p.x));
+    const maxX = Math.max(...parsedPolygon.map(p => p.x));
+    const minY = Math.min(...parsedPolygon.map(p => p.y));
+    const maxY = Math.max(...parsedPolygon.map(p => p.y));
+    
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    const width = maxX - minX;
+    const height = maxY - minY;
+
+    const query = `
+        UPDATE zones 
+        SET name = ?, description = ?, polygon = ?, bounds = ?, x = ?, y = ?, width = ?, height = ?
+        WHERE id = ?
+    `;
+    
+    const polygonString = JSON.stringify(parsedPolygon);
+    const boundsString = bounds ? JSON.stringify(bounds) : null;
+    
+    db.run(query, [name, description, polygonString, boundsString, centerX, centerY, width, height, zoneId], function(err) {
+        if (err) {
+            console.error('Error al actualizar zona:', err);
+            return res.status(500).json({ error: 'Error al actualizar zona' });
+        }
+        
+        if (this.changes === 0) {
+            return res.status(404).json({ error: 'Zona no encontrada' });
+        }
+        
+        res.json({
+            message: 'Zona actualizada exitosamente',
+            zone: {
+                id: zoneId,
+                name,
+                description,
+                polygon: parsedPolygon,
+                bounds
+            }
+        });
+    });
+});
+
+// API para eliminar una zona
+app.delete('/api/admin/zones/:id', requireTechOrAdmin, (req, res) => {
+    const zoneId = req.params.id;
+    
+    const query = `DELETE FROM zones WHERE id = ?`;
+    
+    db.run(query, [zoneId], function(err) {
+        if (err) {
+            console.error('Error al eliminar zona:', err);
+            return res.status(500).json({ error: 'Error al eliminar zona' });
+        }
+        
+        if (this.changes === 0) {
+            return res.status(404).json({ error: 'Zona no encontrada' });
+        }
+        
+        res.json({ message: 'Zona eliminada exitosamente' });
+    });
+});
+
 // ===== RUTAS DEL ROBOT =====
 
 // Servir la página de control del robot (acceso para técnicos y admins)
@@ -4872,41 +5092,80 @@ app.get('/api/robot/zones', (req, res) => {
             });
         }
         
+        console.log(`📊 Encontradas ${zones.length} zonas en la base de datos`);
+        
+        if (zones.length === 0) {
+            return res.json({
+                success: true,
+                robot_id: robot_id || null,
+                zones_count: 0,
+                zones: [],
+                timestamp: new Date().toISOString(),
+                message: 'No hay zonas definidas'
+            });
+        }
+        
         // Procesar zonas para el robot (formato simplificado)
         const robotZones = zones.map(zone => {
             const robotZone = {
                 id: zone.id,
                 name: zone.name,
-                type: zone.type || 'rectangle',
-                color: zone.color,
+                description: zone.description,
+                type: 'polygon', // Todas las zonas son polígonos ahora
+                color: zone.color || '#ff6600',
                 created_at: zone.created_at
             };
             
-            // Agregar información geométrica
-            if (zone.type === 'polygon' && zone.points) {
+            // Agregar información geométrica desde la nueva estructura
+            if (zone.polygon) {
                 try {
-                    robotZone.points = JSON.parse(zone.points);
-                    robotZone.bounds = calculatePolygonBounds(robotZone.points);
+                    robotZone.polygon = JSON.parse(zone.polygon);
+                    
+                    // Usar bounds existentes si están disponibles
+                    if (zone.bounds) {
+                        robotZone.bounds = JSON.parse(zone.bounds);
+                    } else {
+                        // Calcular bounds del polígono si no están disponibles
+                        const points = robotZone.polygon;
+                        if (Array.isArray(points) && points.length > 0) {
+                            const xs = points.map(p => p.x);
+                            const ys = points.map(p => p.y);
+                            robotZone.bounds = {
+                                min_x: Math.min(...xs),
+                                max_x: Math.max(...xs),
+                                min_y: Math.min(...ys),
+                                max_y: Math.max(...ys),
+                                center_x: xs.reduce((sum, x) => sum + x, 0) / xs.length,
+                                center_y: ys.reduce((sum, y) => sum + y, 0) / ys.length,
+                                area: calculatePolygonArea(points)
+                            };
+                        }
+                    }
                 } catch (e) {
-                    console.error('Error parseando puntos de zona:', e);
+                    console.error('Error parseando polígono de zona:', e);
                 }
             } else if (zone.x !== null && zone.y !== null && zone.width !== null && zone.height !== null) {
+                // Compatibilidad con estructura legacy - convertir a polígono
+                robotZone.polygon = [
+                    { x: zone.x, y: zone.y },
+                    { x: zone.x + zone.width, y: zone.y },
+                    { x: zone.x + zone.width, y: zone.y + zone.height },
+                    { x: zone.x, y: zone.y + zone.height }
+                ];
                 robotZone.bounds = {
-                    x: zone.x,
-                    y: zone.y,
-                    width: zone.width,
-                    height: zone.height,
-                    center: {
-                        x: zone.x + zone.width / 2,
-                        y: zone.y + zone.height / 2
-                    }
+                    min_x: zone.x,
+                    max_x: zone.x + zone.width,
+                    min_y: zone.y,
+                    max_y: zone.y + zone.height,
+                    center_x: zone.x + zone.width / 2,
+                    center_y: zone.y + zone.height / 2,
+                    area: zone.width * zone.height
                 };
             }
             
             return robotZone;
         });
         
-        console.log(`📋 Robot ${robot_id || 'desconocido'} recibió ${robotZones.length} zonas`);
         
         res.json({
             success: true,
@@ -5134,6 +5393,19 @@ function calculatePolygonBounds(points) {
             y: (minY + maxY) / 2
         }
     };
+}
+
+// Función auxiliar para calcular el área de un polígono usando la fórmula de Shoelace
+function calculatePolygonArea(points) {
+    if (!Array.isArray(points) || points.length < 3) return 0;
+    
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+        const j = (i + 1) % points.length;
+        area += points[i].x * points[j].y;
+        area -= points[j].x * points[i].y;
+    }
+    return Math.abs(area) / 2;
 }
 
 // Actualizar zona
