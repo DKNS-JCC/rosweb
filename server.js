@@ -5081,7 +5081,6 @@ app.post('/api/robot/location/zones-batch', (req, res) => {
 app.get('/api/robot/zones', (req, res) => {
     const { robot_id } = req.query;
     
-    console.log(`🤖 Robot ${robot_id || 'desconocido'} solicitando lista de zonas`);
     
     db.all('SELECT * FROM zones ORDER BY created_at DESC', [], (err, zones) => {
         if (err) {
@@ -5092,7 +5091,6 @@ app.get('/api/robot/zones', (req, res) => {
             });
         }
         
-        console.log(`📊 Encontradas ${zones.length} zonas en la base de datos`);
         
         if (zones.length === 0) {
             return res.json({
