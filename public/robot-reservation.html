@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva de Robot - ArtTec Museum</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .reservation-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .robot-status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .robot-reserved {
+            background-color: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .robot-available {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+
+        .robot-unavailable {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .countdown {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .countdown.warning {
+            color: #dc3545;
+        }
+
+        .robot-info {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .robot-icon {
+            font-size: 3rem;
+        }
+
+        .robot-details h3 {
+            margin: 0;
+            color: #007bff;
+        }
+
+        .robot-details p {
+            margin: 0.5rem 0;
+            color: #666;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .btn-extend {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-extend:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-cancel {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-cancel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .reservation-history {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .history-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            border: 1px solid #c3e6cb;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <nav id="navbar"></nav>
+
+    <div class="reservation-container">
+        <h1>🤖 Reserva de Robot</h1>
+        
+        <div id="reservationStatus">
+            <!-- Contenido dinámico -->
+        </div>
+
+        <div id="robotInfo" class="robot-info" style="display: none;">
+            <div class="robot-icon">🤖</div>
+            <div class="robot-details">
+                <h3 id="robotName"></h3>
+                <p id="robotStatus"></p>
+                <p id="reservationTime"></p>
+            </div>
+        </div>
+
+        <div id="countdown" class="countdown" style="display: none;"></div>
+
+        <div class="action-buttons">
+            <button id="extendBtn" class="btn-extend" style="display: none;" onclick="extendReservation()">
+                <span id="extendText">🔄 Extender Reserva (+5 min)</span>
+            </button>
+            <button id="cancelBtn" class="btn-cancel" style="display: none;" onclick="cancelReservation()">
+                ❌ Cancelar Reserva
+            </button>
+            <button id="backBtn" class="btn" onclick="window.history.back()">
+                ← Volver
+            </button>
+        </div>
+
+        <div id="userReservations" class="reservation-history" style="display: none;">
+            <h3>📋 Tus Reservas Activas</h3>
+            <div id="reservationsList"></div>
+        </div>
+    </div>
+
+    <script src="navigation.js"></script>
+    <script>
+        let currentRobotId = null;
+        let countdownTimer = null;
+        let currentReservation = null;
+        let statusCheckTimer = null;
+
+        // Obtener parámetros de URL
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                robotId: params.get('robot') || params.get('robotId'),
+                action: params.get('action')
+            };
+        }
+
+        // Mostrar mensaje
+        function showMessage(message, type = 'info') {
+            const statusDiv = document.getElementById('reservationStatus');
+            const className = type === 'error' ? 'error-message' : 'success-message';
+            statusDiv.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+
+        // Formatear tiempo restante
+        function formatTimeRemaining(expiresAt) {
+            const now = new Date();
+            const expires = new Date(expiresAt);
+            const diff = expires - now;
+
+            if (diff <= 0) return '00:00';
+
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Actualizar countdown
+        function updateCountdown(expiresAt) {
+            const countdownDiv = document.getElementById('countdown');
+            const timeRemaining = formatTimeRemaining(expiresAt);
+            
+            countdownDiv.textContent = timeRemaining;
+            
+            const now = new Date();
+            const expires = new Date(expiresAt);
+            const diff = expires - now;
+            
+            if (diff <= 0) {
+                countdownDiv.textContent = '⏰ EXPIRADO';
+                countdownDiv.classList.add('warning');
+                clearInterval(countdownTimer);
+                loadReservationStatus();
+                return;
+            } else if (diff <= 2 * 60 * 1000) { // Últimos 2 minutos
+                countdownDiv.classList.add('warning');
+            }
+        }
+
+        // Iniciar countdown
+        function startCountdown(expiresAt) {
+            clearInterval(countdownTimer);
+            updateCountdown(expiresAt);
+            countdownTimer = setInterval(() => updateCountdown(expiresAt), 1000);
+        }
+
+        // Cargar estado de reserva
+        async function loadReservationStatus() {
+            try {
+                const params = getUrlParams();
+                currentRobotId = params.robotId;
+
+                if (!currentRobotId) {
+                    showMessage('❌ No se especificó un robot válido', 'error');
+                    return;
+                }
+
+                const response = await fetch(`/api/robot/${currentRobotId}/reservation-status`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al cargar estado');
+                }
+
+                displayReservationStatus(data);
+                
+                // Si hay reserva activa del usuario, cargar todas sus reservas
+                if (data.isReservedByUser) {
+                    loadUserReservations();
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage(`❌ Error al cargar estado: ${error.message}`, 'error');
+            }
+        }
+
+        // Mostrar estado de reserva
+        function displayReservationStatus(data) {
+            const statusDiv = document.getElementById('reservationStatus');
+            const robotInfo = document.getElementById('robotInfo');
+            const countdownDiv = document.getElementById('countdown');
+            const extendBtn = document.getElementById('extendBtn');
+            const cancelBtn = document.getElementById('cancelBtn');
+
+            // Limpiar timers previos
+            clearInterval(countdownTimer);
+
+            if (data.isReservedByUser) {
+                // Usuario tiene la reserva
+                statusDiv.innerHTML = `
+                    <div class="robot-status robot-reserved">
+                        ✅ Tienes reservado el robot "${data.robotId}"
+                    </div>
+                `;
+
+                document.getElementById('robotName').textContent = data.robotId;
+                document.getElementById('robotStatus').textContent = 'Reservado por ti';
+                document.getElementById('reservationTime').textContent = 
+                    `Expira: ${new Date(data.expiresAt).toLocaleString()}`;
+
+                robotInfo.style.display = 'flex';
+                countdownDiv.style.display = 'block';
+                extendBtn.style.display = 'inline-block';
+                cancelBtn.style.display = 'inline-block';
+
+                startCountdown(data.expiresAt);
+                currentReservation = data;
+
+            } else if (data.isReserved) {
+                // Robot reservado por otro usuario
+                statusDiv.innerHTML = `
+                    <div class="robot-status robot-unavailable">
+                        ❌ Robot "${data.robotId}" reservado por ${data.reservedBy}
+                    </div>
+                    <p>Expira: ${new Date(data.expiresAt).toLocaleString()}</p>
+                `;
+
+                robotInfo.style.display = 'none';
+                countdownDiv.style.display = 'none';
+                extendBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+
+            } else {
+                // Robot disponible
+                statusDiv.innerHTML = `
+                    <div class="robot-status robot-available">
+                        ✅ Robot "${data.robotId}" disponible
+                    </div>
+                    <button class="btn" onclick="reserveRobot()">🔒 Reservar Robot</button>
+                `;
+
+                robotInfo.style.display = 'none';
+                countdownDiv.style.display = 'none';
+                extendBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+            }
+        }
+
+        // Reservar robot
+        async function reserveRobot() {
+            try {
+                if (!currentRobotId) {
+                    showMessage('❌ No hay robot seleccionado', 'error');
+                    return;
+                }
+
+                const button = event.target;
+                const originalText = button.textContent;
+                button.innerHTML = '<span class="loading"></span> Reservando...';
+                button.disabled = true;
+
+                const response = await fetch(`/api/robot/${currentRobotId}/reserve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al reservar robot');
+                }
+
+                showMessage(`✅ ${data.message}`, 'success');
+                
+                // Recargar estado después de reservar
+                setTimeout(() => {
+                    loadReservationStatus();
+                }, 1000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage(`❌ Error al reservar: ${error.message}`, 'error');
+                
+                // Restaurar botón
+                const button = event.target;
+                button.textContent = '🔒 Reservar Robot';
+                button.disabled = false;
+            }
+        }
+
+        // Extender reserva
+        async function extendReservation() {
+            try {
+                const button = document.getElementById('extendBtn');
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span class="loading"></span> Extendiendo...';
+                button.disabled = true;
+
+                const response = await fetch(`/api/robot/${currentRobotId}/extend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ minutes: 5 })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al extender reserva');
+                }
+
+                showMessage(`✅ ${data.message}`, 'success');
+                loadReservationStatus();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage(`❌ Error al extender: ${error.message}`, 'error');
+            } finally {
+                const button = document.getElementById('extendBtn');
+                button.innerHTML = '🔄 Extender Reserva (+5 min)';
+                button.disabled = false;
+            }
+        }
+
+        // Cancelar reserva
+        async function cancelReservation() {
+            try {
+                if (!confirm('¿Estás seguro de que quieres cancelar la reserva?')) {
+                    return;
+                }
+
+                const button = document.getElementById('cancelBtn');
+                button.innerHTML = '<span class="loading"></span> Cancelando...';
+                button.disabled = true;
+
+                const response = await fetch(`/api/robot/${currentRobotId}/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al cancelar reserva');
+                }
+
+                showMessage(`✅ ${data.message}`, 'success');
+                loadReservationStatus();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage(`❌ Error al cancelar: ${error.message}`, 'error');
+            } finally {
+                const button = document.getElementById('cancelBtn');
+                button.innerHTML = '❌ Cancelar Reserva';
+                button.disabled = false;
+            }
+        }
+
+        // Cargar reservas del usuario
+        async function loadUserReservations() {
+            try {
+                const response = await fetch('/api/user/reservations');
+                const reservations = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(reservations.error || 'Error al cargar reservas');
+                }
+
+                if (reservations.length > 0) {
+                    const reservationsDiv = document.getElementById('userReservations');
+                    const listDiv = document.getElementById('reservationsList');
+                    
+                    listDiv.innerHTML = reservations.map(r => `
+                        <div class="history-item">
+                            <strong>🤖 ${r.robot_id}</strong><br>
+                            <small>Reservado: ${new Date(r.reserved_at).toLocaleString()}</small><br>
+                            <small>Expira: ${new Date(r.expires_at).toLocaleString()}</small>
+                        </div>
+                    `).join('');
+                    
+                    reservationsDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error al cargar reservas:', error);
+            }
+        }
+
+        // Verificar estado periódicamente
+        function startStatusCheck() {
+            clearInterval(statusCheckTimer);
+            statusCheckTimer = setInterval(() => {
+                if (currentReservation) {
+                    const now = new Date();
+                    const expires = new Date(currentReservation.expiresAt);
+                    
+                    // Si faltan menos de 30 segundos o ya expiró, recargar estado
+                    if (expires - now <= 30000) {
+                        loadReservationStatus();
+                    }
+                }
+            }, 10000); // Cada 10 segundos
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            loadReservationStatus();
+            startStatusCheck();
+        });
+
+        // Limpiar timers al salir
+        window.addEventListener('beforeunload', function() {
+            clearInterval(countdownTimer);
+            clearInterval(statusCheckTimer);
+        });
+    </script>
+</body>
+</html>
