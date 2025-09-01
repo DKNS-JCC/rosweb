@@ -131,7 +131,15 @@
                     
                     // Verificar si hay URL de retorno en los parámetros
                     const urlParams = new URLSearchParams(window.location.search);
-                    const returnUrl = urlParams.get('return');
+                    let returnUrl = urlParams.get('return');
+                    
+                    // Si no hay parámetro return, verificar localStorage
+                    if (!returnUrl) {
+                        returnUrl = localStorage.getItem('redirectAfterLogin');
+                        if (returnUrl) {
+                            localStorage.removeItem('redirectAfterLogin');
+                        }
+                    }
                     
                     if (returnUrl) {
                         // Redirigir a la URL de retorno (decodificada)

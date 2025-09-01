@@ -143,6 +143,15 @@
             border: 1px solid #f5c6cb;
         }
 
+        .error-message h3 {
+            margin: 0 0 1rem 0;
+            color: #721c24;
+        }
+
+        .error-message p {
+            margin: 0.5rem 0;
+        }
+
         .success-message {
             background-color: #d4edda;
             color: #155724;
@@ -285,6 +294,13 @@
                 }
 
                 const response = await fetch(`/api/robot/${currentRobotId}/reservation-status`);
+                
+                // Verificar si es un error de autenticación
+                if (response.status === 401) {
+                    handleAuthenticationRequired();
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -300,7 +316,74 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                showMessage(`❌ Error al cargar estado: ${error.message}`, 'error');
+                
+                // Si el error contiene información de autenticación
+                if (error.message.includes('No autorizado') || error.message.includes('401')) {
+                    handleAuthenticationRequired();
+                } else {
+                    showMessage(`❌ Error al cargar estado: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Manejar requerimiento de autenticación
+        function handleAuthenticationRequired() {
+            showMessage('Debes iniciar sesión para reservar robots', 'error');
+            
+            // Guardar la URL actual para volver después del login
+            const currentUrl = window.location.href;
+            localStorage.setItem('redirectAfterLogin', currentUrl);
+            
+            // Mostrar mensaje y botón para ir al login
+            const statusDiv = document.getElementById('reservationStatus');
+            statusDiv.innerHTML = `
+                <div class="error-message">
+                    <h3>Sesión Requerida</h3>
+                    <p>Debes iniciar sesión para reservar robots.</p>
+                    <button class="btn" onclick="goToLogin()" style="margin-top: 1rem;">
+                        Ir a Iniciar Sesión
+                    </button>
+                </div>
+            `;
+            
+            // Ocultar otros elementos
+            document.getElementById('robotInfo').style.display = 'none';
+            document.getElementById('countdown').style.display = 'none';
+            document.getElementById('extendBtn').style.display = 'none';
+            document.getElementById('cancelBtn').style.display = 'none';
+            document.getElementById('userReservations').style.display = 'none';
+            
+            // Redirigir automáticamente después de 3 segundos
+            setTimeout(() => {
+                goToLogin();
+            }, 3000);
+        }
+
+        // Ir al login preservando la URL actual
+        function goToLogin() {
+            const currentUrl = window.location.href;
+            localStorage.setItem('redirectAfterLogin', currentUrl);
+            
+            // También usar parámetro return en la URL del login
+            const loginUrl = `/login?return=${encodeURIComponent(currentUrl)}`;
+            window.location.href = loginUrl;
+        }
+
+        // Verificar autenticación del usuario
+        async function checkUserAuthentication() {
+            try {
+                const response = await fetch('/api/user');
+                
+                if (response.status === 401) {
+                    return false;
+                }
+                
+                const userData = await response.json();
+                return !!userData.id;
+                
+            } catch (error) {
+                console.error('Error al verificar autenticación:', error);
+                return false;
             }
         }
 
@@ -386,6 +469,12 @@
                     }
                 });
 
+                // Verificar autenticación
+                if (response.status === 401) {
+                    handleAuthenticationRequired();
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -401,12 +490,17 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                showMessage(`❌ Error al reservar: ${error.message}`, 'error');
                 
-                // Restaurar botón
-                const button = event.target;
-                button.textContent = '🔒 Reservar Robot';
-                button.disabled = false;
+                if (error.message.includes('No autorizado') || error.message.includes('401')) {
+                    handleAuthenticationRequired();
+                } else {
+                    showMessage(`❌ Error al reservar: ${error.message}`, 'error');
+                    
+                    // Restaurar botón
+                    const button = event.target;
+                    button.textContent = '🔒 Reservar Robot';
+                    button.disabled = false;
+                }
             }
         }
 
@@ -426,6 +520,12 @@
                     body: JSON.stringify({ minutes: 5 })
                 });
 
+                // Verificar autenticación
+                if (response.status === 401) {
+                    handleAuthenticationRequired();
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -437,11 +537,18 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                showMessage(`❌ Error al extender: ${error.message}`, 'error');
+                
+                if (error.message.includes('No autorizado') || error.message.includes('401')) {
+                    handleAuthenticationRequired();
+                } else {
+                    showMessage(`❌ Error al extender: ${error.message}`, 'error');
+                }
             } finally {
                 const button = document.getElementById('extendBtn');
-                button.innerHTML = '🔄 Extender Reserva (+5 min)';
-                button.disabled = false;
+                if (button) {
+                    button.innerHTML = '🔄 Extender Reserva (+5 min)';
+                    button.disabled = false;
+                }
             }
         }
 
@@ -463,6 +570,12 @@
                     }
                 });
 
+                // Verificar autenticación
+                if (response.status === 401) {
+                    handleAuthenticationRequired();
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -474,11 +587,18 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                showMessage(`❌ Error al cancelar: ${error.message}`, 'error');
+                
+                if (error.message.includes('No autorizado') || error.message.includes('401')) {
+                    handleAuthenticationRequired();
+                } else {
+                    showMessage(`❌ Error al cancelar: ${error.message}`, 'error');
+                }
             } finally {
                 const button = document.getElementById('cancelBtn');
-                button.innerHTML = '❌ Cancelar Reserva';
-                button.disabled = false;
+                if (button) {
+                    button.innerHTML = '❌ Cancelar Reserva';
+                    button.disabled = false;
+                }
             }
         }
 
@@ -486,6 +606,13 @@
         async function loadUserReservations() {
             try {
                 const response = await fetch('/api/user/reservations');
+                
+                // Verificar autenticación
+                if (response.status === 401) {
+                    // No mostrar error aquí, ya se maneja en loadReservationStatus
+                    return;
+                }
+
                 const reservations = await response.json();
 
                 if (!response.ok) {
@@ -508,6 +635,7 @@
                 }
             } catch (error) {
                 console.error('Error al cargar reservas:', error);
+                // No mostrar error al usuario para las reservas, es información adicional
             }
         }
 
@@ -528,7 +656,16 @@
         }
 
         // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Verificar autenticación primero
+            const isAuthenticated = await checkUserAuthentication();
+            
+            if (!isAuthenticated) {
+                handleAuthenticationRequired();
+                return;
+            }
+            
+            // Si está autenticado, proceder normalmente
             loadReservationStatus();
             startStatusCheck();
         });

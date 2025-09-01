@@ -111,13 +111,36 @@ async function assignRobotToTour(tourHistoryId, robotId) {
 
 async function completeRobotTour(tourHistoryId) {
     return new Promise((resolve, reject) => {
-        db.run(`
-            UPDATE tour_history 
-            SET completed = 1, robot_status = 'completed' 
+        // Primero obtener información del tour incluyendo robot_id y user_id
+        db.get(`
+            SELECT robot_id, user_id, tour_name
+            FROM tour_history 
             WHERE id = ?
-        `, [tourHistoryId], function(err) {
+        `, [tourHistoryId], (err, tourInfo) => {
             if (err) return reject(err);
-            resolve(this.changes > 0);
+            
+            // Actualizar el tour como completado
+            db.run(`
+                UPDATE tour_history 
+                SET completed = 1, robot_status = 'completed' 
+                WHERE id = ?
+            `, [tourHistoryId], function(err) {
+                if (err) return reject(err);
+                
+                // Si había un robot asignado, liberar su reserva
+                if (tourInfo && tourInfo.robot_id && tourInfo.user_id) {
+                    cancelRobotReservation(tourInfo.robot_id, tourInfo.user_id)
+                        .then(() => {
+                            console.log(`🤖 Reserva del robot "${tourInfo.robot_id}" liberada al completar tour "${tourInfo.tour_name}"`);
+                        })
+                        .catch(reservationError => {
+                            console.error('Error al liberar reserva del robot:', reservationError);
+                            // No fallar el completado del tour por esto
+                        });
+                }
+                
+                resolve(this.changes > 0);
+            });
         });
     });
 }
@@ -511,8 +534,6 @@ db.run(`CREATE TABLE IF NOT EXISTS robot_reservations (
 )`, (err) => {
     if (err) {
         console.error('Error al crear tabla robot_reservations:', err.message);
-    } else {
-        console.log('✅ Tabla robot_reservations creada/verificada');
     }
 });
 
@@ -1331,8 +1352,8 @@ app.put('/api/admin/users/:id/password', requireAdminOnly, async (req, res) => {
 
 // ========== FIN RUTAS ADMINISTRATIVAS ==========
 
-// API para iniciar un tour
-app.post('/api/start-tour', requireAuth, (req, res) => {
+// API para iniciar un tour con reserva automática de robot
+app.post('/api/start-tour', requireAuth, async (req, res) => {
     const { tourId, robot } = req.body;
     
     if (!tourId) {
@@ -1344,107 +1365,137 @@ app.post('/api/start-tour', requireAuth, (req, res) => {
     }
 
     const robotName = robot.trim();
+    const userId = req.session.userId;
 
-    // Verificar que el tour existe y está activo
-    db.get('SELECT * FROM tour_routes WHERE id = ? AND is_active = 1', [tourId], (err, tour) => {
-        if (err) {
-            console.error('Error al verificar tour:', err);
-            return res.status(500).json({ error: 'Error al verificar tour' });
-        }
-        
+    try {
+        // Verificar que el tour existe y está activo
+        const tour = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM tour_routes WHERE id = ? AND is_active = 1', [tourId], (err, tour) => {
+                if (err) return reject(err);
+                resolve(tour);
+            });
+        });
+
         if (!tour) {
             return res.status(404).json({ error: 'Tour no encontrado o no disponible' });
         }
 
-        // Verificar disponibilidad del robot
-        checkRobotAvailability(robotName, (err, robotStatus) => {
-            if (err) {
-                console.error('Error al verificar disponibilidad del robot:', err);
-                return res.status(400).json({ error: err.error });
-            }
+        // Verificar que el robot existe y está activo
+        const robotExists = await new Promise((resolve, reject) => {
+            db.get('SELECT name, status FROM robots WHERE name = ?', [robotName], (err, robot) => {
+                if (err) return reject(err);
+                resolve(robot);
+            });
+        });
 
-            // Si el robot no está disponible, preguntar si cancelar tour activo
-            if (!robotStatus.isAvailable) {
-                const activeTour = robotStatus.activeTour;
-                const message = `Robot "${robotName}" ocupado con tour "${activeTour.tour_name}" del usuario "${activeTour.username}". Iniciado: ${new Date(activeTour.started_at).toLocaleString()}`;
-                
-                console.log(`⚠️ ${message}`);
-                
-                // Cancelar automáticamente el tour anterior y continuar
-                cancelRobotActiveTour(robotName, `Nuevo tour iniciado por ${req.session.username || 'usuario'}`, (cancelErr, cancelledCount) => {
-                    if (cancelErr) {
-                        console.error('Error al cancelar tour anterior:', cancelErr);
-                        return res.status(500).json({ error: 'Error al liberar robot' });
-                    }
+        if (!robotExists) {
+            return res.status(404).json({ error: `Robot "${robotName}" no encontrado` });
+        }
 
-                    console.log(`✅ Robot "${robotName}" liberado. ${cancelledCount} tour(s) cancelado(s)`);
-                    
-                    // Enviar notificación del tour abandonado
-                    if (activeTour) {
-                        emailNotifier.sendNotification('TOUR_ABANDONED', {
-                            tourName: activeTour.tour_name,
-                            username: activeTour.username,
-                            progress: 'Desconocido - Tour cancelado por conflicto de robot'
-                        });
-                    }
+        if (robotExists.status !== 'active') {
+            return res.status(400).json({ error: `Robot "${robotName}" no está disponible (estado: ${robotExists.status})` });
+        }
 
-                    // Continuar con el nuevo tour
-                    initializeNewTour();
+        // Verificar si el robot está reservado
+        const existingReservation = await checkRobotReservation(robotName);
+        
+        if (existingReservation) {
+            if (existingReservation.user_id !== userId) {
+                return res.status(409).json({ 
+                    error: `Robot "${robotName}" está reservado por ${existingReservation.username} hasta ${new Date(existingReservation.expires_at).toLocaleString()}`,
+                    reservedBy: existingReservation.username,
+                    expiresAt: existingReservation.expires_at
                 });
-            } else {
-                // Robot disponible, iniciar tour normalmente
-                initializeNewTour();
             }
+            // Si ya lo tiene reservado el mismo usuario, cancelar la reserva anterior
+            await cancelRobotReservation(robotName, userId);
+        }
 
-            function initializeNewTour() {
-                // Generar ID único para esta instancia del tour y PIN
-                const tourInstanceId = Math.random().toString(36).substr(2, 9);
-                const PIN = Array.from({ length: 5 }, () => Math.floor(Math.random() * 3)).join('');
+        // Verificar si el usuario ya tiene un tour activo
+        const userActiveTour = await checkUserActiveStatus(userId);
+        if (userActiveTour) {
+            // Completar tour anterior automáticamente
+            await completeRobotTour(userActiveTour.id);
+            console.log(`🔄 Tour anterior del usuario completado automáticamente: ${userActiveTour.tour_name}`);
+        }
 
-                // Guardar en historial de tours incluyendo robot_id
-                db.run(
-                    `INSERT INTO tour_history 
-                     (user_id, tour_route_id, tour_type, tour_name, tour_id, pin, robot_id, robot_status) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                    [req.session.userId, tourId, tour.name.toLowerCase().replace(/\s+/g, '-'), tour.name, tourInstanceId, PIN, robotName, 'pending'],
-                    function(err) {
-                        if (err) {
-                            console.error('Error al guardar historial de tour:', err);
-                            return res.status(500).json({ error: 'Error al iniciar tour' });
-                        }
-                        
-                        // Obtener información del usuario para la notificación
-                        db.get('SELECT username FROM users WHERE id = ?', [req.session.userId], (err, user) => {
-                            if (!err && user) {
-                                // Enviar notificación de tour iniciado
-                                emailNotifier.sendNotification('TOUR_STARTED', {
-                                    tourName: tour.name,
-                                    username: user.username,
-                                    routeName: tour.name,
-                                    robotName: robotName
-                                });
-                            }
-                        });
-                        
-                        console.log(`🎭 Tour "${tour.name}" iniciado por ${req.session.username || 'usuario'} con robot "${robotName}"`);
-                        
-                        res.json({ 
-                            success: true, 
-                            message: `Tour "${tour.name}" iniciado exitosamente con ${robotName}`,
-                            tourId: tourInstanceId,
-                            tourName: tour.name,
-                            tourDescription: tour.description,
-                            duration: tour.duration,
-                            robotName: robotName,
-                            PIN: PIN,
-                            startTime: new Date().toISOString(),
-                            robotStatus: 'assigned'
-                        });
-                    }
-                );
+        // Verificar si el robot tiene un tour activo con otro usuario
+        const robotActiveTour = await checkRobotActiveStatus(robotName);
+        if (robotActiveTour && robotActiveTour.user_id !== userId) {
+            // Completar tour del otro usuario automáticamente
+            await completeRobotTour(robotActiveTour.id);
+            console.log(`🔄 Tour activo del robot completado automáticamente: ${robotActiveTour.tour_name} (usuario: ${robotActiveTour.username})`);
+            
+            // Enviar notificación del tour interrumpido
+            emailNotifier.sendNotification('TOUR_INTERRUPTED', {
+                tourName: robotActiveTour.tour_name,
+                username: robotActiveTour.username,
+                robotName: robotName,
+                interruptedBy: req.session.username || 'usuario'
+            });
+        }
+
+        // Crear reserva del robot por la duración del tour (en minutos)
+        const tourDurationMinutes = tour.duration || 30; // Por defecto 30 minutos si no está especificado
+        const reservation = await createRobotReservation(robotName, userId, tourDurationMinutes);
+
+        // Generar ID único para esta instancia del tour y PIN
+        const tourInstanceId = Math.random().toString(36).substr(2, 9);
+        const PIN = Array.from({ length: 5 }, () => Math.floor(Math.random() * 3)).join('');
+
+        // Guardar en historial de tours incluyendo robot_id
+        const tourHistoryId = await new Promise((resolve, reject) => {
+            db.run(
+                `INSERT INTO tour_history 
+                 (user_id, tour_route_id, tour_type, tour_name, tour_id, pin, robot_id, robot_status) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [userId, tourId, tour.name.toLowerCase().replace(/\s+/g, '-'), tour.name, tourInstanceId, PIN, robotName, 'in_progress'],
+                function(err) {
+                    if (err) return reject(err);
+                    resolve(this.lastID);
+                }
+            );
+        });
+
+        // Obtener información del usuario para la notificación
+        db.get('SELECT username FROM users WHERE id = ?', [userId], (err, user) => {
+            if (!err && user) {
+                // Enviar notificación de tour iniciado
+                emailNotifier.sendNotification('TOUR_STARTED', {
+                    tourName: tour.name,
+                    username: user.username,
+                    routeName: tour.name,
+                    robotName: robotName,
+                    duration: tourDurationMinutes,
+                    reservationExpires: reservation.expiresAt
+                });
             }
         });
-    });
+        
+        console.log(`🎭 Tour "${tour.name}" iniciado por ${req.session.username} con robot "${robotName}" reservado por ${tourDurationMinutes} minutos`);
+        
+        res.json({ 
+            success: true, 
+            message: `Tour "${tour.name}" iniciado exitosamente. Robot "${robotName}" reservado por ${tourDurationMinutes} minutos`,
+            tourId: tourInstanceId,
+            tourHistoryId: tourHistoryId,
+            tourName: tour.name,
+            tourDescription: tour.description,
+            duration: tour.duration,
+            robotName: robotName,
+            PIN: PIN,
+            startTime: new Date().toISOString(),
+            robotStatus: 'reserved',
+            reservation: {
+                expiresAt: reservation.expiresAt,
+                durationMinutes: tourDurationMinutes
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al iniciar tour:', error);
+        res.status(500).json({ error: 'Error interno al iniciar tour' });
+    }
 });
 
 // API para login
@@ -1839,21 +1890,23 @@ app.post('/api/tours/:tourId/rating', requireAuth, (req, res) => {
     });
 });
 
-// API para completar un tour (depuración)
-app.post('/api/tours/:tourId/complete', requireAuth, (req, res) => {
+// API para completar un tour con liberación automática de reserva
+app.post('/api/tours/:tourId/complete', requireAuth, async (req, res) => {
     const { tourId } = req.params;
     const userId = req.session.userId;
     
-    // Verificar que el tour pertenece al usuario
-    db.get(`
-        SELECT id, completed 
-        FROM tour_history 
-        WHERE id = ? AND user_id = ?
-    `, [tourId, userId], (err, tour) => {
-        if (err) {
-            console.error('Error al verificar tour:', err);
-            return res.status(500).json({ error: 'Error en la base de datos' });
-        }
+    try {
+        // Verificar que el tour pertenece al usuario y obtener información del robot
+        const tour = await new Promise((resolve, reject) => {
+            db.get(`
+                SELECT id, completed, robot_id, tour_name, started_at
+                FROM tour_history 
+                WHERE id = ? AND user_id = ?
+            `, [tourId, userId], (err, tour) => {
+                if (err) return reject(err);
+                resolve(tour);
+            });
+        });
         
         if (!tour) {
             return res.status(404).json({ error: 'Tour no encontrado' });
@@ -1864,27 +1917,55 @@ app.post('/api/tours/:tourId/complete', requireAuth, (req, res) => {
         }
         
         // Marcar tour como completado
-        db.run(`
-            UPDATE tour_history 
-            SET completed = 1 
-            WHERE id = ? AND user_id = ?
-        `, [tourId, userId], function(err) {
-            if (err) {
-                console.error('Error al completar tour:', err);
-                return res.status(500).json({ error: 'Error al completar el tour' });
-            }
-            
-            if (this.changes === 0) {
-                return res.status(404).json({ error: 'Tour no encontrado' });
-            }
-            
-            res.json({ 
-                success: true, 
-                message: 'Tour marcado como completado',
-                tourId
+        const tourCompleted = await new Promise((resolve, reject) => {
+            db.run(`
+                UPDATE tour_history 
+                SET completed = 1, robot_status = 'completed'
+                WHERE id = ? AND user_id = ?
+            `, [tourId, userId], function(err) {
+                if (err) return reject(err);
+                resolve(this.changes > 0);
             });
         });
-    });
+        
+        if (!tourCompleted) {
+            return res.status(404).json({ error: 'Tour no encontrado' });
+        }
+        
+        // Liberar reserva del robot si existe
+        if (tour.robot_id) {
+            try {
+                await cancelRobotReservation(tour.robot_id, userId);
+                console.log(`🤖 Reserva del robot "${tour.robot_id}" liberada al completar el tour "${tour.tour_name}"`);
+            } catch (reservationError) {
+                console.error('Error al liberar reserva del robot:', reservationError);
+                // No fallar el completado del tour por esto
+            }
+        }
+        
+        // Enviar notificación de tour completado
+        emailNotifier.sendNotification('TOUR_COMPLETED', {
+            tourName: tour.tour_name,
+            username: req.session.username,
+            robotId: tour.robot_id || 'desconocido',
+            duration: Math.round((new Date() - new Date(tour.started_at)) / 60000) + ' minutos',
+            completedAt: new Date().toLocaleString('es-ES')
+        });
+        
+        console.log(`✅ Tour "${tour.tour_name}" completado por ${req.session.username} - Robot ${tour.robot_id} liberado`);
+        
+        res.json({ 
+            success: true, 
+            message: 'Tour completado exitosamente y robot liberado',
+            tourId,
+            robotId: tour.robot_id,
+            robotReleased: !!tour.robot_id
+        });
+        
+    } catch (error) {
+        console.error('Error al completar tour:', error);
+        res.status(500).json({ error: 'Error interno al completar el tour' });
+    }
 });
 
 // API para verificar PIN del robot (sin autenticación - para uso del robot)
@@ -3392,13 +3473,63 @@ app.get('/api/robots/available', requireAuth, (req, res) => {
 });
 
 // Ruta de acceso directo para reservar robot (simplificada)
-app.get('/api/robot/:robotId/reserve', requireAuth, (req, res) => {
+app.get('/api/robot/:robotId/reserve', (req, res) => {
     const robotId = req.params.robotId;
-    // Redirigir a la página de reserva con el robot especificado
+    
+    // Verificar si hay sesión activa
+    if (!req.session || !req.session.userId) {
+        // No hay sesión - redirigir al login con URL de retorno
+        const returnUrl = `/api/robot/${robotId}/reserve`;
+        return res.redirect(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+    }
+    
+    // Hay sesión - redirigir a la página de reserva con el robot especificado
     res.redirect(`/robot-reservation?robot=${robotId}&action=reserve`);
 });
 
 // ========== FIN APIS DE RESERVA DE ROBOTS ==========
+
+// Limpiador automático de reservas expiradas
+function cleanupExpiredReservations() {
+    const now = new Date().toISOString();
+    
+    // Primero obtener las reservas que van a expirar
+    db.all(`
+        SELECT rr.*, u.username 
+        FROM robot_reservations rr
+        JOIN users u ON rr.user_id = u.id
+        WHERE rr.is_active = 1 AND rr.expires_at <= ?
+    `, [now], (err, expiredReservations) => {
+        if (err) {
+            console.error('Error al obtener reservas expiradas:', err);
+            return;
+        }
+        
+        if (expiredReservations.length > 0) {
+            // Marcar como inactivas
+            db.run(`
+                UPDATE robot_reservations 
+                SET is_active = 0 
+                WHERE is_active = 1 AND expires_at <= ?
+            `, [now], function(updateErr) {
+                if (updateErr) {
+                    console.error('Error al limpiar reservas expiradas:', updateErr);
+                } else if (this.changes > 0) {
+                    console.log(`🧹 ${this.changes} reserva(s) expirada(s) limpiadas automáticamente:`);
+                    expiredReservations.forEach(res => {
+                        console.log(`   - Robot: ${res.robot_id}, Usuario: ${res.username}, Expiró: ${res.expires_at}`);
+                    });
+                }
+            });
+        }
+    });
+}
+
+// Ejecutar limpieza cada 2 minutos
+setInterval(cleanupExpiredReservations, 2 * 60 * 1000);
+
+// Ejecutar limpieza inicial después de 10 segundos
+setTimeout(cleanupExpiredReservations, 10000);
 
 // Iniciar servidor
 app.listen(PORT, () => {
